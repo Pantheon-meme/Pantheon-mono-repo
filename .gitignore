@@ -9,6 +9,8 @@ out/
 .next/
 .turbo/
 coverage/
+generated/
+packages/assets/generated/
 
 # Environment
 .env
