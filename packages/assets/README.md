@@ -44,33 +44,52 @@ The command writes:
 
 Use OpenRouter models with image output modalities for `--image-model`.
 
-## Generate 47 Dual-Grid Autotile Segments
+## Generate 47 Dual-Grid Autotiles From Masks
 
-Provide a square texture reference image. The workflow asks a text model for a compact style plan, then generates the 10 required segment sheets in parallel with the reference image attached to every image request.
+Provide a texture reference image. The workflow uses the PNG masks in `packages/assets/masks`, sends the texture plus one mask to the OpenRouter image model for each request, and generates the full 47-tile set as mask sheets.
 
 ```sh
 pnpm --filter @pantheon/assets generate-autotiles -- \
   --texture "/absolute/path/to/grass-texture.png" \
   --material "leafy grass with small purple flowers" \
-  --tile-size 128 \
-  --concurrency 10 \
+  --image-model "openai/gpt-5.4-image-2" \
+  --reasoning-effort high \
+  --concurrency 4 \
   --out "generated/autotiles/grass"
 ```
 
 The command writes:
 
-- `autotile-manifest.json` with the text-model style plan, all prompts, tile counts, grid layouts, and image file paths.
-- 10 segment images containing 47 total tiles:
-  - Segment 1: 9 basic outer edge/center tiles.
-  - Segments 2-6: 15 inner-corner cutout variants.
-  - Segments 7-8: 16 mixed outer edge/corner plus inner cutout variants.
-  - Segment 9: 6 strip and single-connection tiles.
-  - Segment 10: 1 isolated island tile.
+- `autotile-manifest.json` with the prompt, mask path, model id, and output image path for each generated sheet.
+- Generated mask-sheet images corresponding to:
+  - `Land Grid Map_Left Top.png`
+  - `Land Grid Map_Right Top A.png`
+  - `Land Grid Map_Right Top B.png`
+  - `Land Grid Map_Left Bottom.png`
+  - `Land Grid Map_Right Bottom.png`
+
+The prompt for each mask asks the image model to replace the red mask regions with the provided texture, preserve the macro silhouette, and make only small texture-aware edge deviations so the border blends naturally.
+
+To test one mask without regenerating every sheet:
+
+```sh
+pnpm --filter @pantheon/assets generate-autotiles -- \
+  --texture "/absolute/path/to/grass-texture.png" \
+  --material "leafy grass with small purple flowers" \
+  --image-model "openai/gpt-5.4-image-2" \
+  --reasoning-effort high \
+  --mask left-bottom \
+  --concurrency 1 \
+  --out "generated/autotiles/grass-left-bottom-test"
+```
+
+Valid mask IDs are `left-top`, `right-top-a`, `right-top-b`, `left-bottom`, and `right-bottom`.
 
 Environment defaults:
 
 ```sh
 PANTHEON_AUTOTILE_MATERIAL="leafy grass"
-PANTHEON_AUTOTILE_TILE_SIZE=128
-PANTHEON_AUTOTILE_CONCURRENCY=10
+PANTHEON_AUTOTILE_MASK_DIR=masks
+PANTHEON_AUTOTILE_CONCURRENCY=4
+OPENROUTER_REASONING_EFFORT=high
 ```

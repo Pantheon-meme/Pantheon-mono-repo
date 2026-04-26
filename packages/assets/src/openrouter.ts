@@ -2,7 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateObject } from "ai";
 import { z } from "zod";
 
-import { autotilePlanSchema, textAssetSchema, type AutotilePlan, type GeneratedImage, type TextAsset } from "./schemas.js";
+import { textAssetSchema, type GeneratedImage, type TextAsset } from "./schemas.js";
 
 type OpenRouterConfig = {
   apiKey?: string;
@@ -74,46 +74,19 @@ export async function generateWorldTextAssets(args: {
   return object;
 }
 
-export async function generateAutotilePlan(args: {
-  material: string;
-  textModel: string;
-  tileSize: number;
-  config?: OpenRouterConfig;
-}): Promise<AutotilePlan> {
-  const config = { ...readOpenRouterConfig(), ...args.config };
-  const openrouter = createOpenRouter({
-    apiKey: config.apiKey,
-    headers: {
-      "HTTP-Referer": config.siteUrl,
-      "X-Title": config.appName,
-    },
-  });
-
-  const { object } = await generateObject({
-    model: openrouter(args.textModel),
-    schema: autotilePlanSchema,
-    prompt: [
-      "Create a concise universal art direction plan for a 47-tile dual-grid autotiling tileset.",
-      `Material/biome: ${args.material}.`,
-      `Each tile is ${args.tileSize}x${args.tileSize}px.`,
-      "The image generator will receive a texture reference image separately.",
-      "Focus on preserving the provided texture as the material, cohesive segment-to-segment style, seamless connected edges, transparent exposed edges, and practical game tileset readability.",
-      "Do not invent labels, frames, grid lines, or decorative backgrounds.",
-    ].join("\n"),
-  });
-
-  return object;
-}
-
 export async function generateOpenRouterImage(args: {
   id: string;
   title: string;
   prompt: string;
   imageModel: string;
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
   referenceImageDataUrl?: string;
+  referenceImageDataUrls?: string[];
   config?: OpenRouterConfig;
 }): Promise<GeneratedImage> {
   const config = { ...readOpenRouterConfig(), ...args.config };
+  const referenceImageDataUrls = args.referenceImageDataUrls ?? (args.referenceImageDataUrl ? [args.referenceImageDataUrl] : []);
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -124,21 +97,27 @@ export async function generateOpenRouterImage(args: {
     },
     body: JSON.stringify({
       model: args.imageModel,
+      reasoning: args.reasoningEffort
+        ? {
+            effort: args.reasoningEffort,
+            exclude: true,
+          }
+        : undefined,
       messages: [
         {
           role: "user",
-          content: args.referenceImageDataUrl
+          content: referenceImageDataUrls.length > 0
             ? [
                 {
                   type: "text",
                   text: args.prompt,
                 },
-                {
+                ...referenceImageDataUrls.map((url) => ({
                   type: "image_url",
                   image_url: {
-                    url: args.referenceImageDataUrl,
+                    url,
                   },
-                },
+                })),
               ]
             : args.prompt,
         },

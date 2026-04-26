@@ -8,9 +8,10 @@ import { runAutotileWorkflow } from "./autotile-workflow.js";
 type CliOptions = {
   texture?: string;
   material?: string;
-  textModel?: string;
   imageModel?: string;
-  tileSize?: number;
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+  maskDir?: string;
+  maskIds?: Array<"left-top" | "right-top-a" | "right-top-b" | "left-bottom" | "right-bottom">;
   concurrency?: number;
   out?: string;
   help?: boolean;
@@ -29,13 +30,20 @@ if (!existsSync(options.texture)) {
   throw new Error(`Texture image not found: ${options.texture}`);
 }
 
+const maskDir = options.maskDir ?? process.env.PANTHEON_AUTOTILE_MASK_DIR ?? "masks";
+
+if (!existsSync(maskDir)) {
+  throw new Error(`Autotile mask directory not found: ${maskDir}`);
+}
+
 const manifest = await runAutotileWorkflow({
   texturePath: options.texture,
   material: options.material ?? process.env.PANTHEON_AUTOTILE_MATERIAL ?? "provided texture material",
-  textModel: options.textModel ?? process.env.OPENROUTER_TEXT_MODEL ?? "openai/gpt-4o-mini",
   imageModel: options.imageModel ?? process.env.OPENROUTER_IMAGE_MODEL ?? "google/gemini-2.5-flash-image",
-  tileSize: options.tileSize ?? Number.parseInt(process.env.PANTHEON_AUTOTILE_TILE_SIZE ?? "128", 10),
-  concurrency: options.concurrency ?? Number.parseInt(process.env.PANTHEON_AUTOTILE_CONCURRENCY ?? "10", 10),
+  reasoningEffort: options.reasoningEffort ?? parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high"),
+  maskDir,
+  maskIds: options.maskIds,
+  concurrency: options.concurrency ?? Number.parseInt(process.env.PANTHEON_AUTOTILE_CONCURRENCY ?? "4", 10),
   outputDir: options.out ?? "generated/autotiles",
 });
 
@@ -61,16 +69,20 @@ function parseArgs(args: string[]): CliOptions {
         parsed.material = readValue(arg, next);
         index += 1;
         break;
-      case "--text-model":
-        parsed.textModel = readValue(arg, next);
-        index += 1;
-        break;
       case "--image-model":
         parsed.imageModel = readValue(arg, next);
         index += 1;
         break;
-      case "--tile-size":
-        parsed.tileSize = Number.parseInt(readValue(arg, next), 10);
+      case "--reasoning-effort":
+        parsed.reasoningEffort = parseReasoningEffort(readValue(arg, next));
+        index += 1;
+        break;
+      case "--mask-dir":
+        parsed.maskDir = readValue(arg, next);
+        index += 1;
+        break;
+      case "--mask":
+        parsed.maskIds = [...(parsed.maskIds ?? []), parseMaskId(readValue(arg, next))];
         index += 1;
         break;
       case "--concurrency":
@@ -103,7 +115,7 @@ function readValue(flag: string, value: string | undefined): string {
 }
 
 function printHelp(): void {
-  console.log(`Generate a 47-tile dual-grid autotile set with OpenRouter.
+  console.log(`Generate a 47-tile dual-grid autotile set from mask sheets with OpenRouter.
 
 Usage:
   pnpm --filter @pantheon/assets generate-autotiles -- --texture "<image-path>" [options]
@@ -111,12 +123,46 @@ Usage:
 Options:
   -t, --texture <path>      Square reference texture image to use as the material.
   -m, --material <name>     Material or biome name, e.g. grass, dirt, snow.
-      --text-model <model>  OpenRouter text model id for the style plan.
-      --image-model <model> OpenRouter image-capable model id for segment sheets.
-      --tile-size <number>  Intended square tile size in pixels. Default: 128.
-      --concurrency <n>     Parallel image segment requests, 1-10. Default: 10.
+      --image-model <model> OpenRouter image-capable model id for mask sheets.
+      --reasoning-effort <level>
+                             Reasoning effort: none, minimal, low, medium, high, xhigh. Default: high.
+      --mask-dir <dir>      Directory containing the autotile mask PNGs. Default: masks.
+      --mask <id>           Generate only one mask: left-top, right-top-a, right-top-b, left-bottom, right-bottom.
+                             Can be provided more than once.
+      --concurrency <n>     Parallel image mask requests, 1-4. Default: 4.
   -o, --out <dir>           Output directory. Default: generated/autotiles.
   -h, --help                Show this help.`);
+}
+
+function parseMaskId(value: string): "left-top" | "right-top-a" | "right-top-b" | "left-bottom" | "right-bottom" {
+  const maskId = value.trim();
+
+  switch (maskId) {
+    case "left-top":
+    case "right-top-a":
+    case "right-top-b":
+    case "left-bottom":
+    case "right-bottom":
+      return maskId;
+    default:
+      throw new Error(`Invalid mask id: ${value}`);
+  }
+}
+
+function parseReasoningEffort(value: string): "none" | "minimal" | "low" | "medium" | "high" | "xhigh" {
+  const effort = value.trim();
+
+  switch (effort) {
+    case "none":
+    case "minimal":
+    case "low":
+    case "medium":
+    case "high":
+    case "xhigh":
+      return effort;
+    default:
+      throw new Error(`Invalid reasoning effort: ${value}`);
+  }
 }
 
 function loadNearestEnvFile(): void {

@@ -2,7 +2,6 @@ export { autotileWorkflow, runAutotileWorkflow } from "./autotile-workflow.js";
 export { runWorldAssetWorkflow, worldAssetWorkflow } from "./workflow.js";
 export {
   autotileManifestSchema,
-  autotilePlanSchema,
   autotileRequestSchema,
   autotileSegmentSchema,
   generatedImageSchema,
@@ -10,7 +9,6 @@ export {
   worldAssetManifestSchema,
   worldAssetRequestSchema,
   type AutotileManifest,
-  type AutotilePlan,
   type AutotileRequest,
   type AutotileSegment,
   type GeneratedImage,

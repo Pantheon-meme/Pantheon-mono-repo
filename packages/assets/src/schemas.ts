@@ -65,25 +65,18 @@ export const worldAssetManifestSchema = z.object({
 export const autotileRequestSchema = z.object({
   texturePath: z.string().min(1),
   material: z.string().min(1).default("provided texture material"),
-  textModel: z.string().min(1),
   imageModel: z.string().min(1),
-  tileSize: z.number().int().min(16).max(1024).default(128),
+  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).default("high"),
+  maskDir: z.string().default("masks"),
+  maskIds: z.array(z.enum(["left-top", "right-top-a", "right-top-b", "left-bottom", "right-bottom"])).optional(),
   outputDir: z.string().default("generated/autotiles"),
-  concurrency: z.number().int().min(1).max(10).default(10),
-});
-
-export const autotilePlanSchema = z.object({
-  materialName: z.string(),
-  visualStyleGuide: z.string(),
-  consistencyNotes: z.array(z.string()),
+  concurrency: z.number().int().min(1).max(4).default(4),
 });
 
 export const autotileSegmentSchema = z.object({
   id: z.string(),
   title: z.string(),
-  tileCount: z.number().int(),
-  columns: z.number().int(),
-  rows: z.number().int(),
+  maskPath: z.string(),
   prompt: z.string(),
   image: generatedImageSchema.optional(),
 });
@@ -91,9 +84,7 @@ export const autotileSegmentSchema = z.object({
 export const autotileManifestSchema = z.object({
   generatedAt: z.string(),
   request: autotileRequestSchema,
-  plan: autotilePlanSchema,
   imageModel: z.string(),
-  textModel: z.string(),
   totalTiles: z.number().int(),
   segments: z.array(autotileSegmentSchema),
 });
@@ -103,6 +94,5 @@ export type TextAsset = z.infer<typeof textAssetSchema>;
 export type GeneratedImage = z.infer<typeof generatedImageSchema>;
 export type WorldAssetManifest = z.infer<typeof worldAssetManifestSchema>;
 export type AutotileRequest = z.infer<typeof autotileRequestSchema>;
-export type AutotilePlan = z.infer<typeof autotilePlanSchema>;
 export type AutotileSegment = z.infer<typeof autotileSegmentSchema>;
 export type AutotileManifest = z.infer<typeof autotileManifestSchema>;
