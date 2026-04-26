@@ -2,40 +2,60 @@ import Phaser from "phaser";
 import type { System } from "../../ecs/System";
 import type { World } from "../../ecs/World";
 import { TerrainGrid } from "../components/TerrainGrid";
+import { TerrainMaterial } from "../components/TerrainMaterial";
 import { TerrainPainter } from "../components/TerrainPainter";
 
 export class TerrainPaintSystem implements System {
   private readonly shiftKey?: Phaser.Input.Keyboard.Key;
-  private readonly paintKey?: Phaser.Input.Keyboard.Key;
-  private readonly eraseKey?: Phaser.Input.Keyboard.Key;
   private readonly clearKey?: Phaser.Input.Keyboard.Key;
+  private readonly materialKeys = new Map<string, Phaser.Input.Keyboard.Key>();
 
   constructor(private readonly scene: Phaser.Scene) {
     this.scene.input.mouse?.disableContextMenu();
     this.shiftKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.paintKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
-    this.eraseKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
     this.clearKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.C);
   }
 
   update(world: World): void {
-    for (const [, grid, painter] of world.query(TerrainGrid, TerrainPainter)) {
-      this.updateToolKeys(painter);
-      this.paintFromPointer(grid, painter);
+    const materials = world.query(TerrainGrid, TerrainMaterial);
+
+    for (const [, painter] of world.query(TerrainPainter)) {
+      this.updateMaterialKeys(painter, materials);
+
+      const target = materials.find(([, , material]) => material.id === painter.activeMaterialId);
+
+      if (target) {
+        this.paintFromPointer(target[1], painter, materials);
+      }
     }
   }
 
-  private updateToolKeys(painter: TerrainPainter): void {
-    if (this.paintKey && Phaser.Input.Keyboard.JustDown(this.paintKey)) {
-      painter.activeTool = "paint";
+  private updateMaterialKeys(painter: TerrainPainter, materials: Array<[number, TerrainGrid, TerrainMaterial]>): void {
+    const keyboard = this.scene.input.keyboard;
+
+    if (!keyboard) {
+      return;
     }
 
-    if (this.eraseKey && Phaser.Input.Keyboard.JustDown(this.eraseKey)) {
-      painter.activeTool = "erase";
+    for (const [, , material] of materials) {
+      let key = this.materialKeys.get(material.id);
+
+      if (!key) {
+        key = keyboard.addKey(material.selectKey);
+        this.materialKeys.set(material.id, key);
+      }
+
+      if (Phaser.Input.Keyboard.JustDown(key)) {
+        painter.activeMaterialId = material.id;
+      }
     }
   }
 
-  private paintFromPointer(grid: TerrainGrid, painter: TerrainPainter): void {
+  private paintFromPointer(
+    grid: TerrainGrid,
+    painter: TerrainPainter,
+    materials: Array<[number, TerrainGrid, TerrainMaterial]>,
+  ): void {
     if (this.clearKey && Phaser.Input.Keyboard.JustDown(this.clearKey)) {
       grid.clear();
       return;
@@ -53,9 +73,20 @@ export class TerrainPaintSystem implements System {
       return;
     }
 
-    const erase = painter.activeTool === "erase" || pointer.rightButtonDown() || this.shiftKey?.isDown;
+    const erase = pointer.rightButtonDown() || this.shiftKey?.isDown;
 
-    grid.set(cell.x, cell.y, !erase);
+    if (erase) {
+      grid.set(cell.x, cell.y, false);
+      return;
+    }
+
+    for (const [, otherGrid, material] of materials) {
+      if (material.id !== painter.activeMaterialId) {
+        otherGrid.set(cell.x, cell.y, false);
+      }
+    }
+
+    grid.set(cell.x, cell.y, true);
   }
 }
 

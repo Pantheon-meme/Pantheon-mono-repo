@@ -1,18 +1,27 @@
 import Phaser from "phaser";
 import dirtAtlasUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-blob-7x7.png?url";
+import vibrantGrassAtlasUrl from "../../../../packages/assets/generated/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import waterAtlasUrl from "../../../../packages/assets/generated/autotiles/water/autotile-blob-7x7.png?url";
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/autotile/BlobAutotile";
 import { AutotileLayer } from "../game/components/AutotileLayer";
 import { TerrainBaseLayer } from "../game/components/TerrainBaseLayer";
+import { TerrainBackground } from "../game/components/TerrainBackground";
 import { TerrainCursor } from "../game/components/TerrainCursor";
 import { TerrainGrid } from "../game/components/TerrainGrid";
+import { TerrainHelpOverlay } from "../game/components/TerrainHelpOverlay";
+import { TerrainMaterial } from "../game/components/TerrainMaterial";
 import { TerrainPainter } from "../game/components/TerrainPainter";
 import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
+import { TerrainBackgroundSystem } from "../game/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../game/systems/TerrainBaseRenderSystem";
 import { TerrainCursorSystem } from "../game/systems/TerrainCursorSystem";
+import { TerrainHelpOverlaySystem } from "../game/systems/TerrainHelpOverlaySystem";
 import { TerrainPaintSystem } from "../game/systems/TerrainPaintSystem";
 
-const atlasKey = "dirt-blob-7x7";
+const dirtAtlasKey = "dirt-blob-7x7";
+const vibrantGrassAtlasKey = "vibrant-grass-blob-7x7";
+const waterAtlasKey = "water-blob-7x7";
 const gridWidth = 120;
 const gridHeight = 120;
 const tileSize = 256;
@@ -30,33 +39,94 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image(atlasKey, dirtAtlasUrl);
+    this.load.image(dirtAtlasKey, dirtAtlasUrl);
+    this.load.image(vibrantGrassAtlasKey, vibrantGrassAtlasUrl);
+    this.load.image(waterAtlasKey, waterAtlasUrl);
   }
 
   create(): void {
     const world = new World();
-    const terrain = world.createEntity();
-    const grid = new TerrainGrid(gridWidth, gridHeight, tileSize);
+    const baseTerrain = world.createEntity();
+    const backgroundTerrain = world.createEntity();
+    const dirtTerrain = world.createEntity();
+    const grassTerrain = world.createEntity();
+    const waterTerrain = world.createEntity();
+    const painter = world.createEntity();
+    const helpOverlay = world.createEntity();
+    const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
+    const dirtGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
+    const grassGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
+    const waterGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
+    const backgroundLayer = this.add.container(0, 0).setDepth(1);
+    const dirtLayer = this.add.container(0, 0).setDepth(2);
+    const grassLayer = this.add.container(0, 0).setDepth(3);
+    const waterLayer = this.add.container(0, 0).setDepth(4);
+    const cursorLayer = this.add.graphics().setDepth(5);
 
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.centerOn(worldWidth / 2, worldHeight / 2);
     this.cameras.main.setZoom(0.16);
 
-    seedDirtPatch(grid);
+    seedDirtPatch(dirtGrid);
 
-    world.addComponent(terrain, TerrainGrid, grid);
-    world.addComponent(terrain, TerrainPainter, new TerrainPainter());
-    world.addComponent(terrain, TerrainBaseLayer, new TerrainBaseLayer(this.add.graphics(), 0x496f50, 0x547a59, 0x213d2a));
-    world.addComponent(terrain, AutotileLayer, new AutotileLayer(this.add.container(0, 0), atlasKey, "dirt", blobAtlasCellSize));
-    world.addComponent(terrain, TerrainCursor, new TerrainCursor(this.add.graphics()));
+    world.addComponent(baseTerrain, TerrainGrid, baseGrid);
+    world.addComponent(baseTerrain, TerrainBaseLayer, new TerrainBaseLayer(this.add.graphics().setDepth(0), 0x496f50, 0x547a59, 0x213d2a));
+
+    world.addComponent(backgroundTerrain, TerrainGrid, baseGrid);
+    world.addComponent(
+      backgroundTerrain,
+      TerrainBackground,
+      new TerrainBackground(backgroundLayer, ["flat", "dirt", "vibrant-grass", "water"], "flat"),
+    );
+
+    world.addComponent(dirtTerrain, TerrainGrid, dirtGrid);
+    world.addComponent(dirtTerrain, TerrainMaterial, new TerrainMaterial("dirt", Phaser.Input.Keyboard.KeyCodes.D, 0xffd080));
+    world.addComponent(dirtTerrain, AutotileLayer, new AutotileLayer(dirtLayer, dirtAtlasKey, "dirt", blobAtlasCellSize));
+
+    world.addComponent(grassTerrain, TerrainGrid, grassGrid);
+    world.addComponent(
+      grassTerrain,
+      TerrainMaterial,
+      new TerrainMaterial("vibrant-grass", Phaser.Input.Keyboard.KeyCodes.G, 0x9dff7a),
+    );
+    world.addComponent(
+      grassTerrain,
+      AutotileLayer,
+      new AutotileLayer(grassLayer, vibrantGrassAtlasKey, "vibrant-grass", blobAtlasCellSize),
+    );
+
+    world.addComponent(waterTerrain, TerrainGrid, waterGrid);
+    world.addComponent(waterTerrain, TerrainMaterial, new TerrainMaterial("water", Phaser.Input.Keyboard.KeyCodes.W, 0x7bd7ff));
+    world.addComponent(waterTerrain, AutotileLayer, new AutotileLayer(waterLayer, waterAtlasKey, "water", blobAtlasCellSize));
+
+    world.addComponent(painter, TerrainPainter, new TerrainPainter("dirt"));
+    world.addComponent(painter, TerrainCursor, new TerrainCursor(cursorLayer));
+    world.addComponent(helpOverlay, TerrainHelpOverlay, new TerrainHelpOverlay(this.createHelpText()));
 
     world.addSystem(new TerrainBaseRenderSystem());
-    world.addSystem(new TerrainPaintSystem(this));
     world.addSystem(new AutotileRenderSystem(this));
+    world.addSystem(new TerrainBackgroundSystem(this));
+    world.addSystem(new TerrainPaintSystem(this));
     world.addSystem(new TerrainCursorSystem());
+    world.addSystem(new TerrainHelpOverlaySystem());
 
     this.registerCameraInput();
     this.world = world;
+  }
+
+  private createHelpText(): Phaser.GameObjects.Text {
+    return this.add
+      .text(24, 24, "", {
+        backgroundColor: "rgba(12, 18, 24, 0.82)",
+        color: "#eef7f4",
+        fixedWidth: 560,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "24px",
+        lineSpacing: 8,
+        padding: { x: 18, y: 16 },
+      })
+      .setScrollFactor(0)
+      .setDepth(1000);
   }
 
   update(_time: number, delta: number): void {
