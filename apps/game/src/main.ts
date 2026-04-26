@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { AutogridPlaygroundScene } from "./scenes/AutogridPlaygroundScene";
 import { WorldScene } from "./scenes/WorldScene";
 import "./styles.css";
 
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [WorldScene],
+  scene: [AutogridPlaygroundScene, WorldScene],
 };
 
 new Phaser.Game(config);

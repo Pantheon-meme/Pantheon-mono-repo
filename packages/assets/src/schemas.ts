@@ -86,6 +86,7 @@ export const autotileManifestSchema = z.object({
   request: autotileRequestSchema,
   imageModel: z.string(),
   totalTiles: z.number().int(),
+  combinedAtlasPath: z.string().optional(),
   segments: z.array(autotileSegmentSchema),
 });
 

@@ -4,6 +4,7 @@ import path from "node:path";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
+import { combineAutotileAtlas } from "./autotile-atlas.js";
 import { readImageAsDataUrl, writeAutotileManifest, writeGeneratedImage } from "./files.js";
 import { generateOpenRouterImage } from "./openrouter.js";
 import {
@@ -67,6 +68,7 @@ const autotileGeneratedStateSchema = z.object({
   request: autotileRequestSchema,
   imageModel: z.string(),
   totalTiles: z.number().int(),
+  combinedAtlasPath: z.string().optional(),
   segments: z.array(autotileSegmentSchema),
 });
 
@@ -145,6 +147,30 @@ const generateAutotileMasksStep = createStep({
   },
 });
 
+const combineAutotileAtlasStep = createStep({
+  id: "combine-autotile-atlas",
+  inputSchema: autotileGeneratedStateSchema,
+  outputSchema: autotileGeneratedStateSchema,
+  execute: async ({ inputData }) => {
+    const generatedMaskIds = new Set(inputData.segments.map((segment) => segment.id));
+    const hasAllAtlasInputs = maskDefinitions.every((mask) => generatedMaskIds.has(mask.id));
+
+    if (!hasAllAtlasInputs) {
+      logProgress("Skipping combined autotile atlas because not all mask sheets were generated.");
+      return inputData;
+    }
+
+    logProgress(`Combining generated mask sheets into 7x7 atlas in ${inputData.request.outputDir}.`);
+    const combinedAtlasPath = await combineAutotileAtlas(inputData.request.outputDir);
+    logProgress(`Wrote combined autotile atlas: ${combinedAtlasPath}`);
+
+    return {
+      ...inputData,
+      combinedAtlasPath,
+    };
+  },
+});
+
 const writeAutotileManifestStep = createStep({
   id: "write-autotile-manifest",
   inputSchema: autotileGeneratedStateSchema,
@@ -169,6 +195,7 @@ export const autotileWorkflow = createWorkflow({
 })
   .then(loadAutotileInputsStep)
   .then(generateAutotileMasksStep)
+  .then(combineAutotileAtlasStep)
   .then(writeAutotileManifestStep)
   .commit();
 
