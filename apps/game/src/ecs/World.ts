@@ -39,6 +39,12 @@ export class World {
     b: ComponentClass<TB>,
     c: ComponentClass<TC>,
   ): Array<[Entity, TA, TB, TC]>;
+  query<TA, TB, TC, TD>(
+    a: ComponentClass<TA>,
+    b: ComponentClass<TB>,
+    c: ComponentClass<TC>,
+    d: ComponentClass<TD>,
+  ): Array<[Entity, TA, TB, TC, TD]>;
   query(...componentClasses: ComponentClass<unknown>[]): unknown[][] {
     const [primaryClass, ...restClasses] = componentClasses;
     if (!primaryClass) {
