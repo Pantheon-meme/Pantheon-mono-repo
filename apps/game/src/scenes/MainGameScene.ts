@@ -7,9 +7,11 @@ import { ActionBindings } from "../game/components/ActionBindings";
 import { ActionLog } from "../game/components/ActionLog";
 import { ActionQueue } from "../game/components/ActionQueue";
 import { AutotileLayer } from "../game/components/AutotileLayer";
+import { DayNightOverlay } from "../game/components/DayNightOverlay";
 import { Energy } from "../game/components/Energy";
 import { EnergyBar } from "../game/components/EnergyBar";
 import { FacingDirection } from "../game/components/FacingDirection";
+import { GameClock } from "../game/components/GameClock";
 import { GridTargetHighlight } from "../game/components/GridTargetHighlight";
 import { InputState } from "../game/components/InputState";
 import { PlayerControlled } from "../game/components/PlayerControlled";
@@ -24,9 +26,11 @@ import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
 import { ActionInputSystem } from "../game/systems/ActionInputSystem";
 import { ActionSystem } from "../game/systems/ActionSystem";
 import { BoundsSystem } from "../game/systems/BoundsSystem";
+import { DayNightRenderSystem } from "../game/systems/DayNightRenderSystem";
 import { EnergyBarSystem } from "../game/systems/EnergyBarSystem";
 import { EnergySystem } from "../game/systems/EnergySystem";
 import { FacingDirectionSystem } from "../game/systems/FacingDirectionSystem";
+import { GameClockSystem } from "../game/systems/GameClockSystem";
 import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
 import { InputSystem } from "../game/systems/InputSystem";
 import { MovementSystem } from "../game/systems/MovementSystem";
@@ -60,6 +64,8 @@ export class MainGameScene extends Phaser.Scene {
     const backgroundTerrain = world.createEntity();
     const atlasWarmupTerrain = world.createEntity();
     const dirtTerrain = world.createEntity();
+    const time = world.createEntity();
+    const dayNight = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -70,6 +76,7 @@ export class MainGameScene extends Phaser.Scene {
       .circle(spawnX, spawnY, 34, 0xf2c15f)
       .setDepth(10);
     const energyBar = this.createEnergyBar();
+    const dayNightOverlay = this.createDayNightOverlay();
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
@@ -125,6 +132,9 @@ export class MainGameScene extends Phaser.Scene {
       ),
     );
 
+    world.addComponent(time, GameClock, new GameClock());
+    world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
+
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
@@ -171,6 +181,7 @@ export class MainGameScene extends Phaser.Scene {
     );
     world.addSystem(new ActionInputSystem(keyboard));
     world.addSystem(new ActionSystem());
+    world.addSystem(new GameClockSystem());
     world.addSystem(new EnergySystem());
     world.addSystem(new FacingDirectionSystem());
     world.addSystem(new MovementSystem());
@@ -181,6 +192,7 @@ export class MainGameScene extends Phaser.Scene {
     );
     world.addSystem(new GridTargetHighlightSystem());
     world.addSystem(new RenderSystem());
+    world.addSystem(new DayNightRenderSystem());
     world.addSystem(new EnergyBarSystem());
 
     this.world = world;
@@ -214,5 +226,31 @@ export class MainGameScene extends Phaser.Scene {
     background.setStrokeStyle(2, 0xe8f0e8, 0.55);
 
     return new EnergyBar(background, fill, label, width, height, x, y);
+  }
+
+  private createDayNightOverlay(): DayNightOverlay {
+    const shade = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0x07142a, 0)
+      .setOrigin(0)
+      .setDepth(90);
+    const label = this.add
+      .text(0, 0, "", {
+        align: "right",
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "18px",
+        lineSpacing: 4,
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(1, 0)
+      .setDepth(101);
+
+    return new DayNightOverlay(shade, label, 18, 18);
   }
 }
