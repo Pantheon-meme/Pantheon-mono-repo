@@ -8,7 +8,11 @@ import { Energy } from "../components/Energy";
 
 export class ActionSystem implements System {
   update(world: World): void {
-    for (const [, queue, energy, log] of world.query(ActionQueue, Energy, ActionLog)) {
+    for (const [entity, queue, energy, log] of world.query(
+      ActionQueue,
+      Energy,
+      ActionLog,
+    )) {
       let actionId = queue.shift();
 
       while (actionId) {
@@ -20,17 +24,33 @@ export class ActionSystem implements System {
           continue;
         }
 
-        if (action.energyDelta < 0 && energy.current < Math.abs(action.energyDelta)) {
+        if (
+          action.energyDelta < 0 &&
+          energy.current < Math.abs(action.energyDelta)
+        ) {
           log.lastMessage = `${action.label} needs ${Math.abs(action.energyDelta)} energy`;
           actionId = queue.shift();
           continue;
         }
 
-        energy.current = Phaser.Math.Clamp(energy.current + action.energyDelta, 0, energy.max);
+        const result = action.apply?.(world, entity);
+
+        if (result?.applied === false) {
+          log.lastMessage = result.message ?? `${action.label}: no effect`;
+          actionId = queue.shift();
+          continue;
+        }
+
+        energy.current = Phaser.Math.Clamp(
+          energy.current + action.energyDelta,
+          0,
+          energy.max,
+        );
         log.lastMessage =
-          action.energyDelta === 0
+          result?.message ??
+          (action.energyDelta === 0
             ? `${action.label}: no energy change`
-            : `${action.label}: ${action.energyDelta > 0 ? "+" : ""}${action.energyDelta} energy`;
+            : `${action.label}: ${action.energyDelta > 0 ? "+" : ""}${action.energyDelta} energy`);
 
         actionId = queue.shift();
       }

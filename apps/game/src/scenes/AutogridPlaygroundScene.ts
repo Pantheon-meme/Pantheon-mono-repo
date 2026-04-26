@@ -10,6 +10,7 @@ import { TerrainBackground } from "../game/components/TerrainBackground";
 import { TerrainCursor } from "../game/components/TerrainCursor";
 import { TerrainGrid } from "../game/components/TerrainGrid";
 import { TerrainHelpOverlay } from "../game/components/TerrainHelpOverlay";
+import { TerrainLayer } from "../game/components/TerrainLayer";
 import { TerrainMaterial } from "../game/components/TerrainMaterial";
 import { TerrainPainter } from "../game/components/TerrainPainter";
 import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
@@ -70,38 +71,91 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
     seedDirtPatch(dirtGrid);
 
     world.addComponent(baseTerrain, TerrainGrid, baseGrid);
-    world.addComponent(baseTerrain, TerrainBaseLayer, new TerrainBaseLayer(this.add.graphics().setDepth(0), 0x496f50, 0x547a59, 0x213d2a));
+    world.addComponent(
+      baseTerrain,
+      TerrainBaseLayer,
+      new TerrainBaseLayer(
+        this.add.graphics().setDepth(0),
+        0x496f50,
+        0x547a59,
+        0x213d2a,
+      ),
+    );
 
     world.addComponent(backgroundTerrain, TerrainGrid, baseGrid);
     world.addComponent(
       backgroundTerrain,
       TerrainBackground,
-      new TerrainBackground(backgroundLayer, ["flat", "dirt", "vibrant-grass", "water"], "flat"),
+      new TerrainBackground(
+        backgroundLayer,
+        ["flat", "dirt", "vibrant-grass", "water"],
+        "flat",
+      ),
     );
 
     world.addComponent(dirtTerrain, TerrainGrid, dirtGrid);
-    world.addComponent(dirtTerrain, TerrainMaterial, new TerrainMaterial("dirt", Phaser.Input.Keyboard.KeyCodes.D, 0xffd080));
-    world.addComponent(dirtTerrain, AutotileLayer, new AutotileLayer(dirtLayer, dirtAtlasKey, "dirt", blobAtlasCellSize));
+    world.addComponent(dirtTerrain, TerrainLayer, new TerrainLayer("dirt", 20));
+    world.addComponent(
+      dirtTerrain,
+      TerrainMaterial,
+      new TerrainMaterial("dirt", Phaser.Input.Keyboard.KeyCodes.D, 0xffd080),
+    );
+    world.addComponent(
+      dirtTerrain,
+      AutotileLayer,
+      new AutotileLayer(dirtLayer, dirtAtlasKey, "dirt", blobAtlasCellSize),
+    );
 
     world.addComponent(grassTerrain, TerrainGrid, grassGrid);
     world.addComponent(
       grassTerrain,
+      TerrainLayer,
+      new TerrainLayer("vibrant-grass", 30),
+    );
+    world.addComponent(
+      grassTerrain,
       TerrainMaterial,
-      new TerrainMaterial("vibrant-grass", Phaser.Input.Keyboard.KeyCodes.G, 0x9dff7a),
+      new TerrainMaterial(
+        "vibrant-grass",
+        Phaser.Input.Keyboard.KeyCodes.G,
+        0x9dff7a,
+      ),
     );
     world.addComponent(
       grassTerrain,
       AutotileLayer,
-      new AutotileLayer(grassLayer, vibrantGrassAtlasKey, "vibrant-grass", blobAtlasCellSize),
+      new AutotileLayer(
+        grassLayer,
+        vibrantGrassAtlasKey,
+        "vibrant-grass",
+        blobAtlasCellSize,
+      ),
     );
 
     world.addComponent(waterTerrain, TerrainGrid, waterGrid);
-    world.addComponent(waterTerrain, TerrainMaterial, new TerrainMaterial("water", Phaser.Input.Keyboard.KeyCodes.W, 0x7bd7ff));
-    world.addComponent(waterTerrain, AutotileLayer, new AutotileLayer(waterLayer, waterAtlasKey, "water", blobAtlasCellSize));
+    world.addComponent(
+      waterTerrain,
+      TerrainLayer,
+      new TerrainLayer("water", 40),
+    );
+    world.addComponent(
+      waterTerrain,
+      TerrainMaterial,
+      new TerrainMaterial("water", Phaser.Input.Keyboard.KeyCodes.W, 0x7bd7ff),
+    );
+    world.addComponent(
+      waterTerrain,
+      AutotileLayer,
+      new AutotileLayer(waterLayer, waterAtlasKey, "water", blobAtlasCellSize),
+    );
 
     world.addComponent(painter, TerrainPainter, new TerrainPainter("dirt"));
     world.addComponent(painter, TerrainCursor, new TerrainCursor(cursorLayer));
-    world.addComponent(helpOverlay, TerrainHelpOverlay, new TerrainHelpOverlay(this.createHelpText()));
+    world.addComponent(
+      helpOverlay,
+      TerrainHelpOverlay,
+      new TerrainHelpOverlay(this.createHelpText()),
+    );
 
     world.addSystem(new TerrainBaseRenderSystem());
     world.addSystem(new AutotileRenderSystem(this));
@@ -159,7 +213,11 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
         deltaY: number,
       ) => {
         const camera = this.cameras.main;
-        const nextZoom = Phaser.Math.Clamp(camera.zoom * (deltaY > 0 ? 0.9 : 1.1), 0.08, 2.8);
+        const nextZoom = Phaser.Math.Clamp(
+          camera.zoom * (deltaY > 0 ? 0.9 : 1.1),
+          0.08,
+          2.8,
+        );
         const worldPoint = camera.getWorldPoint(pointer.x, pointer.y);
 
         camera.setZoom(nextZoom);
@@ -172,7 +230,10 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
   private startPan(pointer: Phaser.Input.Pointer): void {
     this.isPanning = true;
     this.panStart = new Phaser.Math.Vector2(pointer.x, pointer.y);
-    this.cameraStart = new Phaser.Math.Vector2(this.cameras.main.scrollX, this.cameras.main.scrollY);
+    this.cameraStart = new Phaser.Math.Vector2(
+      this.cameras.main.scrollX,
+      this.cameras.main.scrollY,
+    );
   }
 
   private panCamera(pointer: Phaser.Input.Pointer): void {
@@ -181,8 +242,10 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
     }
 
     const camera = this.cameras.main;
-    camera.scrollX = this.cameraStart.x - (pointer.x - this.panStart.x) / camera.zoom;
-    camera.scrollY = this.cameraStart.y - (pointer.y - this.panStart.y) / camera.zoom;
+    camera.scrollX =
+      this.cameraStart.x - (pointer.x - this.panStart.x) / camera.zoom;
+    camera.scrollY =
+      this.cameraStart.y - (pointer.y - this.panStart.y) / camera.zoom;
   }
 }
 
