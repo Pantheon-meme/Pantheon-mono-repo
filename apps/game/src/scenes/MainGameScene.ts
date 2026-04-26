@@ -2,6 +2,9 @@ import Phaser from "phaser";
 import grassAtlasUrl from "../../../../packages/assets/generated/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/autotile/BlobAutotile";
+import { ActionBindings } from "../game/components/ActionBindings";
+import { ActionLog } from "../game/components/ActionLog";
+import { ActionQueue } from "../game/components/ActionQueue";
 import { AutotileLayer } from "../game/components/AutotileLayer";
 import { Energy } from "../game/components/Energy";
 import { EnergyBar } from "../game/components/EnergyBar";
@@ -16,6 +19,8 @@ import { TerrainBaseLayer } from "../game/components/TerrainBaseLayer";
 import { TerrainGrid } from "../game/components/TerrainGrid";
 import { Velocity } from "../game/components/Velocity";
 import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
+import { ActionInputSystem } from "../game/systems/ActionInputSystem";
+import { ActionSystem } from "../game/systems/ActionSystem";
 import { BoundsSystem } from "../game/systems/BoundsSystem";
 import { EnergyBarSystem } from "../game/systems/EnergyBarSystem";
 import { EnergySystem } from "../game/systems/EnergySystem";
@@ -86,7 +91,18 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
     world.addComponent(player, Position, new Position(spawnX, spawnY));
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
-    world.addComponent(player, Energy, new Energy(100, 100, 8, 14));
+    world.addComponent(player, Energy, new Energy(100, 100, 0));
+    world.addComponent(player, ActionQueue, new ActionQueue());
+    world.addComponent(
+      player,
+      ActionBindings,
+      new ActionBindings({
+        [Phaser.Input.Keyboard.KeyCodes.SPACE]: "gather",
+        [Phaser.Input.Keyboard.KeyCodes.R]: "rest",
+        [Phaser.Input.Keyboard.KeyCodes.E]: "inspect",
+      }),
+    );
+    world.addComponent(player, ActionLog, new ActionLog());
     world.addComponent(player, EnergyBar, energyBar);
     world.addComponent(player, Renderable, new Renderable(playerSprite));
     world.addComponent(player, GridTargetHighlight, new GridTargetHighlight(this.add.graphics().setDepth(9)));
@@ -101,6 +117,8 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new AutotileRenderSystem(this));
     world.addSystem(new TerrainBackgroundSystem(this));
     world.addSystem(new InputSystem(keyboard.createCursorKeys(), keyboard.addKeys("W,A,S,D") as Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>));
+    world.addSystem(new ActionInputSystem(keyboard));
+    world.addSystem(new ActionSystem());
     world.addSystem(new EnergySystem());
     world.addSystem(new FacingDirectionSystem());
     world.addSystem(new MovementSystem());
