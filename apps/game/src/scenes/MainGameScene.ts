@@ -3,6 +3,8 @@ import grassAtlasUrl from "../../../../packages/assets/generated/autotiles/vibra
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/autotile/BlobAutotile";
 import { AutotileLayer } from "../game/components/AutotileLayer";
+import { Energy } from "../game/components/Energy";
+import { EnergyBar } from "../game/components/EnergyBar";
 import { FacingDirection } from "../game/components/FacingDirection";
 import { GridTargetHighlight } from "../game/components/GridTargetHighlight";
 import { InputState } from "../game/components/InputState";
@@ -15,6 +17,8 @@ import { TerrainGrid } from "../game/components/TerrainGrid";
 import { Velocity } from "../game/components/Velocity";
 import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
 import { BoundsSystem } from "../game/systems/BoundsSystem";
+import { EnergyBarSystem } from "../game/systems/EnergyBarSystem";
+import { EnergySystem } from "../game/systems/EnergySystem";
 import { FacingDirectionSystem } from "../game/systems/FacingDirectionSystem";
 import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
 import { InputSystem } from "../game/systems/InputSystem";
@@ -52,6 +56,7 @@ export class MainGameScene extends Phaser.Scene {
     const spawnX = worldWidth / 2;
     const spawnY = worldHeight / 2;
     const playerSprite = this.add.circle(spawnX, spawnY, 34, 0xf2c15f).setDepth(10);
+    const energyBar = this.createEnergyBar();
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
@@ -81,6 +86,8 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
     world.addComponent(player, Position, new Position(spawnX, spawnY));
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
+    world.addComponent(player, Energy, new Energy(100, 100, 8, 14));
+    world.addComponent(player, EnergyBar, energyBar);
     world.addComponent(player, Renderable, new Renderable(playerSprite));
     world.addComponent(player, GridTargetHighlight, new GridTargetHighlight(this.add.graphics().setDepth(9)));
 
@@ -94,16 +101,38 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new AutotileRenderSystem(this));
     world.addSystem(new TerrainBackgroundSystem(this));
     world.addSystem(new InputSystem(keyboard.createCursorKeys(), keyboard.addKeys("W,A,S,D") as Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>));
+    world.addSystem(new EnergySystem());
     world.addSystem(new FacingDirectionSystem());
     world.addSystem(new MovementSystem());
     world.addSystem(new BoundsSystem(new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68)));
     world.addSystem(new GridTargetHighlightSystem());
     world.addSystem(new RenderSystem());
+    world.addSystem(new EnergyBarSystem());
 
     this.world = world;
   }
 
   update(_time: number, delta: number): void {
     this.world?.update(delta / 1000);
+  }
+
+  private createEnergyBar(): EnergyBar {
+    const width = 360;
+    const height = 24;
+    const x = 18;
+    const y = 18;
+    const background = this.add.rectangle(x, y, width, height, 0x17222a, 0.92).setOrigin(0).setDepth(100);
+    const fill = this.add.rectangle(x, y, width, height, 0x66d685, 1).setOrigin(0).setDepth(101);
+    const label = this.add
+      .text(x, y + height + 6, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "18px",
+      })
+      .setDepth(101);
+
+    background.setStrokeStyle(2, 0xe8f0e8, 0.55);
+
+    return new EnergyBar(background, fill, label, width, height, x, y);
   }
 }
