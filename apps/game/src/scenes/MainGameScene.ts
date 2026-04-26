@@ -19,6 +19,7 @@ import { Position } from "../game/components/Position";
 import { Renderable } from "../game/components/Renderable";
 import { SleepProgressBar } from "../game/components/SleepProgressBar";
 import { SleepState } from "../game/components/SleepState";
+import { SleepVisual } from "../game/components/SleepVisual";
 import { TerrainBackground } from "../game/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/components/TerrainBaseLayer";
 import { TerrainGrid } from "../game/components/TerrainGrid";
@@ -39,6 +40,7 @@ import { MovementSystem } from "../game/systems/MovementSystem";
 import { RenderSystem } from "../game/systems/RenderSystem";
 import { SleepProgressBarSystem } from "../game/systems/SleepProgressBarSystem";
 import { SleepSystem } from "../game/systems/SleepSystem";
+import { SleepVisualSystem } from "../game/systems/SleepVisualSystem";
 import { TerrainBackgroundSystem } from "../game/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../game/systems/TerrainBaseRenderSystem";
 
@@ -83,6 +85,7 @@ export class MainGameScene extends Phaser.Scene {
     const energyBar = this.createEnergyBar();
     const dayNightOverlay = this.createDayNightOverlay();
     const sleepProgressBar = this.createSleepProgressBar();
+    const sleepVisual = this.createSleepVisual();
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
@@ -163,6 +166,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, ActionLog, new ActionLog());
     world.addComponent(player, EnergyBar, energyBar);
     world.addComponent(player, Renderable, new Renderable(playerSprite));
+    world.addComponent(player, SleepVisual, sleepVisual);
     world.addComponent(
       player,
       GridTargetHighlight,
@@ -201,6 +205,7 @@ export class MainGameScene extends Phaser.Scene {
     );
     world.addSystem(new GridTargetHighlightSystem());
     world.addSystem(new RenderSystem());
+    world.addSystem(new SleepVisualSystem());
     world.addSystem(new DayNightRenderSystem());
     world.addSystem(new SleepProgressBarSystem());
     world.addSystem(new EnergyBarSystem());
@@ -291,5 +296,31 @@ export class MainGameScene extends Phaser.Scene {
     label.setVisible(false);
 
     return new SleepProgressBar(background, fill, label, width, height, x, y);
+  }
+
+  private createSleepVisual(): SleepVisual {
+    const shadow = this.add
+      .ellipse(0, 0, 96, 28, 0x101018, 0.42)
+      .setDepth(9)
+      .setVisible(false);
+    const marker = this.add
+      .text(0, 0, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "24px",
+        fontStyle: "700",
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(0.5)
+      .setDepth(12)
+      .setVisible(false);
+
+    return new SleepVisual(shadow, marker);
   }
 }
