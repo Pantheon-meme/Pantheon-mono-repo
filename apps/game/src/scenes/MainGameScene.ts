@@ -13,6 +13,8 @@ import { EnergyBar } from "../game/components/EnergyBar";
 import { FacingDirection } from "../game/components/FacingDirection";
 import { FocusTarget } from "../game/components/FocusTarget";
 import { GameClock } from "../game/components/GameClock";
+import { HandHud } from "../game/components/HandHud";
+import { Hands } from "../game/components/Hands";
 import { IdeaState } from "../game/components/IdeaState";
 import { GridTargetHighlight } from "../game/components/GridTargetHighlight";
 import { InputState } from "../game/components/InputState";
@@ -45,6 +47,8 @@ import { FocusInputSystem } from "../game/systems/FocusInputSystem";
 import { FocusTargetSystem } from "../game/systems/FocusTargetSystem";
 import { GameClockSystem } from "../game/systems/GameClockSystem";
 import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
+import { HandHudSystem } from "../game/systems/HandHudSystem";
+import { HeldItemPositionSystem } from "../game/systems/HeldItemPositionSystem";
 import { InputSystem } from "../game/systems/InputSystem";
 import { JournalSystem } from "../game/systems/JournalSystem";
 import { MovementSystem } from "../game/systems/MovementSystem";
@@ -91,6 +95,7 @@ export class MainGameScene extends Phaser.Scene {
     const sleepHud = world.createEntity();
     const journal = world.createEntity();
     const seedHud = world.createEntity();
+    const handHud = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -106,6 +111,7 @@ export class MainGameScene extends Phaser.Scene {
     const sleepVisual = this.createSleepVisual();
     const journalPanel = this.createJournalPanel();
     const seedHudDisplay = this.createSeedHud();
+    const handHudDisplay = this.createHandHud();
     const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
 
@@ -177,6 +183,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
     world.addComponent(journal, JournalPanel, journalPanel);
     world.addComponent(seedHud, SeedHud, seedHudDisplay);
+    world.addComponent(handHud, HandHud, handHudDisplay);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -185,6 +192,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, Position, new Position(spawnX, spawnY));
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
+    world.addComponent(player, Hands, new Hands());
     world.addComponent(player, SeedPouch, new SeedPouch());
     world.addComponent(player, NeedState, needs);
     world.addComponent(player, IdeaState, new IdeaState());
@@ -211,7 +219,10 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
         [Phaser.Input.Keyboard.KeyCodes.R]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
-        [Phaser.Input.Keyboard.KeyCodes.E]: "pickup-seed",
+        [Phaser.Input.Keyboard.KeyCodes.ONE]: "left-hand-toggle",
+        [Phaser.Input.Keyboard.KeyCodes.TWO]: "left-hand-use",
+        [Phaser.Input.Keyboard.KeyCodes.THREE]: "right-hand-toggle",
+        [Phaser.Input.Keyboard.KeyCodes.FOUR]: "right-hand-use",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
@@ -250,6 +261,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new PlantGrowthSystem());
     world.addSystem(new FacingDirectionSystem());
     world.addSystem(new MovementSystem());
+    world.addSystem(new HeldItemPositionSystem());
     world.addSystem(new FocusTargetSystem());
     world.addSystem(new ActionSystem());
     world.addSystem(new SleepSystem());
@@ -266,6 +278,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new DayNightRenderSystem());
     world.addSystem(new SleepProgressBarSystem());
     world.addSystem(new SeedHudSystem());
+    world.addSystem(new HandHudSystem());
     world.addSystem(new EnergyBarSystem());
     world.addSystem(new WeightDisplaySystem(weightLabel));
 
@@ -375,6 +388,26 @@ export class MainGameScene extends Phaser.Scene {
       .setDepth(101);
 
     return new SeedHud(label, 18, 128);
+  }
+
+  private createHandHud(): HandHud {
+    const label = this.add
+      .text(18, 180, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+        lineSpacing: 4,
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setDepth(101);
+
+    return new HandHud(label, 18, 180);
   }
 
   private createWeightLabel(): Phaser.GameObjects.Text {

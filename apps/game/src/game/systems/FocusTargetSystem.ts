@@ -4,6 +4,7 @@ import type { World } from "../../ecs/World";
 import { FacingDirection } from "../components/FacingDirection";
 import { FocusTarget } from "../components/FocusTarget";
 import { Footprint } from "../components/Footprint";
+import { HeldItem } from "../components/HeldItem";
 import { PlayerControlled } from "../components/PlayerControlled";
 import { Position } from "../components/Position";
 import { TerrainGrid } from "../components/TerrainGrid";
@@ -84,8 +85,10 @@ export class FocusTargetSystem implements System {
 
     return world
       .query(Position, Footprint, WeightInspectable)
-      .filter(([, position, footprint]) =>
-        overlapsCell(position, footprint, left, top, right, bottom),
+      .filter(
+        ([entity, position, footprint]) =>
+          !world.getComponent(entity, HeldItem) &&
+          overlapsCell(position, footprint, left, top, right, bottom),
       )
       .map(([entity, position, footprint, inspectable]) => ({
         entity,

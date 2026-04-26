@@ -4,6 +4,8 @@ import { Energy } from "../components/Energy";
 import { FacingDirection } from "../components/FacingDirection";
 import { FocusTarget } from "../components/FocusTarget";
 import { Footprint } from "../components/Footprint";
+import { Hands, type HandId } from "../components/Hands";
+import { HeldItem } from "../components/HeldItem";
 import { IdeaState } from "../components/IdeaState";
 import { KnowledgeState } from "../components/KnowledgeState";
 import { NeedState } from "../components/NeedState";
@@ -98,11 +100,29 @@ export const actionDefinitions: Record<string, ActionDefinition> = {
     energyDelta: 0,
     apply: cycleSeed,
   },
-  "pickup-seed": {
-    id: "pickup-seed",
-    label: "Pick up seed",
+  "left-hand-toggle": {
+    id: "left-hand-toggle",
+    label: "Left hand",
     energyDelta: 0,
-    apply: pickupSeed,
+    apply: (world, actor) => toggleHand(world, actor, "left"),
+  },
+  "left-hand-use": {
+    id: "left-hand-use",
+    label: "Use left hand",
+    energyDelta: 0,
+    apply: (world, actor) => useHand(world, actor, "left"),
+  },
+  "right-hand-toggle": {
+    id: "right-hand-toggle",
+    label: "Right hand",
+    energyDelta: 0,
+    apply: (world, actor) => toggleHand(world, actor, "right"),
+  },
+  "right-hand-use": {
+    id: "right-hand-use",
+    label: "Use right hand",
+    energyDelta: 0,
+    apply: (world, actor) => useHand(world, actor, "right"),
   },
   rest: {
     id: "rest",
@@ -334,31 +354,134 @@ function cycleSeed(world: World, actor: Entity): ActionEffectResult {
   return { message: `Selected ${seedLabel(pouch.activeSeedId)}` };
 }
 
-function pickupSeed(world: World, actor: Entity): ActionEffectResult {
-  const pouch = world.getComponent(actor, SeedPouch);
-  const position = world.getComponent(actor, Position);
+function toggleHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
+  const slot = hands?.get(hand);
+
+  if (!hands || !slot) {
+    return { message: `${handLabel(hand)} hand: unavailable`, applied: false };
+  }
+
+  if (slot.held) {
+    return dropFromHand(world, actor, hand);
+  }
+
+  return grabIntoHand(world, actor, hand);
+}
+
+function grabIntoHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
   const focus = world.getComponent(actor, FocusTarget);
+  const slot = hands?.get(hand);
 
-  if (!pouch || !position) {
-    return { message: "Pick up: no hands for seeds", applied: false };
+  if (!hands || !slot || !focus || focus.kind !== "object" || !focus.object) {
+    return {
+      message: `${handLabel(hand)} hand: no object focused`,
+      applied: false,
+    };
   }
 
-  const drop =
-    focus?.kind === "object" && focus.object
-      ? findSeedDropByEntity(world, focus.object)
-      : findNearbySeedDrop(world, position);
-
-  if (!drop) {
-    return { message: "Pick up: no seed nearby", applied: false };
+  if (world.getComponent(focus.object, HeldItem)) {
+    return { message: `${focus.objectLabel} is already held`, applied: false };
   }
 
-  drop.drop.collected = true;
-  drop.position.x = -999999;
-  drop.position.y = -999999;
-  pouch.add(drop.drop.seedId, drop.drop.amount);
+  const weight = world.getComponent(focus.object, WeightedObject);
+
+  if (!weight) {
+    return { message: `${focus.objectLabel} cannot be held`, applied: false };
+  }
+
+  if (weight.weight > hands.maxHandWeight) {
+    return {
+      message: `${focus.objectLabel} is too heavy for one hand`,
+      applied: false,
+    };
+  }
+
+  slot.held = focus.object;
+  world.addComponent(focus.object, HeldItem, new HeldItem(actor, hand));
+
+  return { message: `${handLabel(hand)} hand grabbed ${focus.objectLabel}` };
+}
+
+function dropFromHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
+  const position = world.getComponent(actor, Position);
+  const facing = world.getComponent(actor, FacingDirection);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+  const slot = hands?.get(hand);
+  const held = slot?.held;
+
+  if (!hands || !slot || !held) {
+    return { message: `${handLabel(hand)} hand is empty`, applied: false };
+  }
+
+  const heldPosition = world.getComponent(held, Position);
+  const label = world.getComponent(held, WeightInspectable)?.label ?? "object";
+
+  if (heldPosition && position && facing && grid) {
+    const target = getFacingTargetCell(grid, position, facing);
+    heldPosition.x = target.x * grid.tileSize + grid.tileSize / 2;
+    heldPosition.y = target.y * grid.tileSize + grid.tileSize / 2;
+  }
+
+  world.removeComponent(held, HeldItem);
+  slot.held = undefined;
+
+  return { message: `${handLabel(hand)} hand dropped ${label}` };
+}
+
+function useHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
+  const pouch = world.getComponent(actor, SeedPouch);
+  const slot = hands?.get(hand);
+  const held = slot?.held;
+
+  if (!hands || !slot || !held) {
+    return { message: `${handLabel(hand)} hand is empty`, applied: false };
+  }
+
+  const seedDrop = world.getComponent(held, SeedDrop);
+
+  if (seedDrop && !seedDrop.collected && pouch) {
+    seedDrop.collected = true;
+    pouch.add(seedDrop.seedId, seedDrop.amount);
+    world.removeComponent(held, HeldItem);
+    slot.held = undefined;
+
+    const heldPosition = world.getComponent(held, Position);
+
+    if (heldPosition) {
+      heldPosition.x = -999999;
+      heldPosition.y = -999999;
+    }
+
+    return {
+      message: `${handLabel(hand)} hand stored ${seedDrop.amount} ${seedLabel(seedDrop.seedId)}`,
+    };
+  }
+
+  const label = world.getComponent(held, WeightInspectable)?.label ?? "object";
 
   return {
-    message: `Picked up ${drop.drop.amount} ${seedLabel(drop.drop.seedId)}`,
+    message: `${handLabel(hand)} hand: ${label} has no use yet`,
+    applied: false,
   };
 }
 
@@ -544,20 +667,6 @@ function findPlantByEntity(
   return { entity, plant };
 }
 
-function findSeedDropByEntity(
-  world: World,
-  entity: Entity,
-): { position: Position; drop: SeedDrop } | undefined {
-  const position = world.getComponent(entity, Position);
-  const drop = world.getComponent(entity, SeedDrop);
-
-  if (!position || !drop || drop.collected) {
-    return undefined;
-  }
-
-  return { position, drop };
-}
-
 function pickForagedSeed(activeLayer: string): string {
   const roll = Math.random();
 
@@ -594,6 +703,10 @@ function seedLabel(seedId: string): string {
       (definition) => definition.seedId === seedId,
     )?.seedLabel ?? seedId
   );
+}
+
+function handLabel(hand: HandId): string {
+  return hand === "left" ? "Left" : "Right";
 }
 
 function scatterSeedDrops(
@@ -635,30 +748,6 @@ function scatterSeedDrops(
       new WeightInspectable(seedLabel(seedId)),
     );
   }
-}
-
-function findNearbySeedDrop(
-  world: World,
-  playerPosition: Position,
-): { position: Position; drop: SeedDrop } | undefined {
-  const pickupRadius = 70;
-
-  for (const [, position, drop] of world.query(Position, SeedDrop)) {
-    if (drop.collected) {
-      continue;
-    }
-
-    if (
-      Math.hypot(
-        position.x - playerPosition.x,
-        position.y - playerPosition.y,
-      ) <= pickupRadius
-    ) {
-      return { position, drop };
-    }
-  }
-
-  return undefined;
 }
 
 function clamp(value: number, min: number, max: number): number {
