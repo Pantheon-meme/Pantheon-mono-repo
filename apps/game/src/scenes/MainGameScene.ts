@@ -12,11 +12,16 @@ import { Energy } from "../game/components/Energy";
 import { EnergyBar } from "../game/components/EnergyBar";
 import { FacingDirection } from "../game/components/FacingDirection";
 import { GameClock } from "../game/components/GameClock";
+import { IdeaState } from "../game/components/IdeaState";
 import { GridTargetHighlight } from "../game/components/GridTargetHighlight";
 import { InputState } from "../game/components/InputState";
+import { JournalPanel } from "../game/components/JournalPanel";
+import { KnowledgeState } from "../game/components/KnowledgeState";
+import { NeedState } from "../game/components/NeedState";
 import { PlayerControlled } from "../game/components/PlayerControlled";
 import { Position } from "../game/components/Position";
 import { Renderable } from "../game/components/Renderable";
+import { SkillSet } from "../game/components/SkillSet";
 import { SleepProgressBar } from "../game/components/SleepProgressBar";
 import { SleepState } from "../game/components/SleepState";
 import { SleepVisual } from "../game/components/SleepVisual";
@@ -36,6 +41,7 @@ import { FacingDirectionSystem } from "../game/systems/FacingDirectionSystem";
 import { GameClockSystem } from "../game/systems/GameClockSystem";
 import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
 import { InputSystem } from "../game/systems/InputSystem";
+import { JournalSystem } from "../game/systems/JournalSystem";
 import { MovementSystem } from "../game/systems/MovementSystem";
 import { RenderSystem } from "../game/systems/RenderSystem";
 import { SleepProgressBarSystem } from "../game/systems/SleepProgressBarSystem";
@@ -73,6 +79,7 @@ export class MainGameScene extends Phaser.Scene {
     const time = world.createEntity();
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
+    const journal = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -86,6 +93,17 @@ export class MainGameScene extends Phaser.Scene {
     const dayNightOverlay = this.createDayNightOverlay();
     const sleepProgressBar = this.createSleepProgressBar();
     const sleepVisual = this.createSleepVisual();
+    const journalPanel = this.createJournalPanel();
+    const needs = new NeedState();
+
+    needs.addNeed({
+      id: "carry_more",
+      label: "Carry more things",
+      description:
+        "Two hands are not enough. Something wearable or tied together might help.",
+      urgency: 65,
+      active: true,
+    });
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
@@ -144,6 +162,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
+    world.addComponent(journal, JournalPanel, journalPanel);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -151,6 +170,14 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, Position, new Position(spawnX, spawnY));
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
+    world.addComponent(player, NeedState, needs);
+    world.addComponent(player, IdeaState, new IdeaState());
+    world.addComponent(
+      player,
+      KnowledgeState,
+      new KnowledgeState(["fiber", "stick"]),
+    );
+    world.addComponent(player, SkillSet, new SkillSet({ reflection: 1 }));
     world.addComponent(player, SleepState, new SleepState());
     world.addComponent(player, ActionQueue, new ActionQueue());
     world.addComponent(
@@ -160,6 +187,7 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.SPACE]: "gather",
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
         [Phaser.Input.Keyboard.KeyCodes.R]: "sleep",
+        [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
         [Phaser.Input.Keyboard.KeyCodes.E]: "inspect",
       }),
     );
@@ -182,6 +210,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new TerrainBaseRenderSystem());
     world.addSystem(new AutotileRenderSystem(this));
     world.addSystem(new TerrainBackgroundSystem(this));
+    world.addSystem(new JournalSystem(this));
     world.addSystem(
       new InputSystem(
         keyboard.createCursorKeys(),
@@ -322,5 +351,90 @@ export class MainGameScene extends Phaser.Scene {
       .setVisible(false);
 
     return new SleepVisual(shadow, marker);
+  }
+
+  private createJournalPanel(): JournalPanel {
+    const width = 520;
+    const height = 440;
+    const x = 18;
+    const y = 150;
+    const background = this.add
+      .rectangle(x, y, width, height, 0x111821, 0.92)
+      .setOrigin(0)
+      .setDepth(110)
+      .setVisible(false);
+    const title = this.add
+      .text(x + 20, y + 18, "", {
+        color: "#f6efd7",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "22px",
+        fontStyle: "700",
+      })
+      .setDepth(111)
+      .setVisible(false);
+    const tabs = [
+      this.createJournalTab("needs", "Needs"),
+      this.createJournalTab("ideas", "Ideas"),
+      this.createJournalTab("skills", "Skills"),
+      this.createJournalTab("checks", "Checks"),
+    ];
+    const body = this.add
+      .text(x + 20, y + 112, "", {
+        color: "#dce8e2",
+        fixedWidth: width - 40,
+        fixedHeight: height - 130,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "16px",
+        lineSpacing: 6,
+        wordWrap: { width: width - 40 },
+      })
+      .setDepth(111)
+      .setVisible(false);
+
+    background.setStrokeStyle(2, 0xe8f0e8, 0.5);
+
+    const panel = new JournalPanel(
+      background,
+      title,
+      tabs,
+      body,
+      x,
+      y,
+      width,
+      height,
+    );
+
+    for (const tab of tabs) {
+      tab.background.on("pointerdown", () => {
+        panel.setSection(tab.section);
+      });
+    }
+
+    return panel;
+  }
+
+  private createJournalTab(
+    section: "needs" | "ideas" | "skills" | "checks",
+    label: string,
+  ) {
+    const background = this.add
+      .rectangle(0, 0, 112, 34, 0x1b2a32, 0.9)
+      .setOrigin(0)
+      .setDepth(111)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+    const text = this.add
+      .text(0, 0, label, {
+        align: "center",
+        color: "#dce8e2",
+        fixedWidth: 112,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+      })
+      .setOrigin(0.5)
+      .setDepth(112)
+      .setVisible(false);
+
+    return { section, background, label: text };
   }
 }
