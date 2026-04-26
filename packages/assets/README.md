@@ -27,6 +27,8 @@ OPENROUTER_APP_NAME=Pantheon
 
 ## Run
 
+World asset smoke test:
+
 ```sh
 pnpm --filter @pantheon/assets generate -- \
   --world "A volcanic forge realm ruled by a solar smith deity" \
@@ -41,3 +43,53 @@ The command writes:
 - Image files decoded from OpenRouter data URLs when the image model returns them.
 
 Use OpenRouter models with image output modalities for `--image-model`.
+
+## Generate 47 Dual-Grid Autotiles From Masks
+
+Provide a texture reference image. The workflow uses the PNG masks in `packages/assets/masks`, sends the texture plus one mask to the OpenRouter image model for each request, and generates the full 47-tile set as mask sheets.
+
+```sh
+pnpm --filter @pantheon/assets generate-autotiles -- \
+  --texture "/absolute/path/to/grass-texture.png" \
+  --material "leafy grass with small purple flowers" \
+  --image-model "openai/gpt-5.4-image-2" \
+  --reasoning-effort high \
+  --concurrency 4 \
+  --out "generated/autotiles/grass"
+```
+
+The command writes:
+
+- `autotile-manifest.json` with the prompt, mask path, model id, and output image path for each generated sheet.
+- Generated mask-sheet images corresponding to:
+  - `Land Grid Map_Left Top.png`
+  - `Land Grid Map_Right Top A.png`
+  - `Land Grid Map_Right Top B.png`
+  - `Land Grid Map_Left Bottom.png`
+  - `Land Grid Map_Right Bottom.png`
+
+The prompt for each mask asks the image model to replace the red mask regions with the provided texture, preserve the macro silhouette, and make only small texture-aware edge deviations so the border blends naturally.
+
+To test one mask without regenerating every sheet:
+
+```sh
+pnpm --filter @pantheon/assets generate-autotiles -- \
+  --texture "/absolute/path/to/grass-texture.png" \
+  --material "leafy grass with small purple flowers" \
+  --image-model "openai/gpt-5.4-image-2" \
+  --reasoning-effort high \
+  --mask left-bottom \
+  --concurrency 1 \
+  --out "generated/autotiles/grass-left-bottom-test"
+```
+
+Valid mask IDs are `left-top`, `right-top-a`, `right-top-b`, `left-bottom`, and `right-bottom`.
+
+Environment defaults:
+
+```sh
+PANTHEON_AUTOTILE_MATERIAL="leafy grass"
+PANTHEON_AUTOTILE_MASK_DIR=masks
+PANTHEON_AUTOTILE_CONCURRENCY=4
+OPENROUTER_REASONING_EFFORT=high
+```

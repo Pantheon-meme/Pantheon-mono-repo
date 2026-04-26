@@ -14,6 +14,8 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli.ts",
     "generate": "tsx src/cli.ts",
+    "generate-autotiles": "tsx src/autotile-cli.ts",
+    "combine-autotile-atlas": "tsx src/combine-autotile-atlas.ts",
     "lint": "tsc --noEmit -p tsconfig.json",
     "test": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -22,6 +24,7 @@
     "@mastra/core": "^0.16.0",
     "@openrouter/ai-sdk-provider": "^1.2.0",
     "ai": "^5.0.0",
+    "sharp": "^0.33.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

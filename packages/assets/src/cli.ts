@@ -88,7 +88,7 @@ function readValue(flag: string, value: string | undefined): string {
     throw new Error(`Missing value for ${flag}.`);
   }
 
-  return value;
+  return value.trim();
 }
 
 function printHelp(): void {

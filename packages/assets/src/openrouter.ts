@@ -79,9 +79,14 @@ export async function generateOpenRouterImage(args: {
   title: string;
   prompt: string;
   imageModel: string;
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+  referenceImageDataUrl?: string;
+  referenceImageDataUrls?: string[];
   config?: OpenRouterConfig;
 }): Promise<GeneratedImage> {
   const config = { ...readOpenRouterConfig(), ...args.config };
+  const referenceImageDataUrls = args.referenceImageDataUrls ?? (args.referenceImageDataUrl ? [args.referenceImageDataUrl] : []);
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -92,10 +97,29 @@ export async function generateOpenRouterImage(args: {
     },
     body: JSON.stringify({
       model: args.imageModel,
+      reasoning: args.reasoningEffort
+        ? {
+            effort: args.reasoningEffort,
+            exclude: true,
+          }
+        : undefined,
       messages: [
         {
           role: "user",
-          content: args.prompt,
+          content: referenceImageDataUrls.length > 0
+            ? [
+                {
+                  type: "text",
+                  text: args.prompt,
+                },
+                ...referenceImageDataUrls.map((url) => ({
+                  type: "image_url",
+                  image_url: {
+                    url,
+                  },
+                })),
+              ]
+            : args.prompt,
         },
       ],
       modalities: ["image", "text"],

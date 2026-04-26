@@ -1,5 +1,5 @@
 import Phaser from "phaser";
 
 export class Renderable {
-  constructor(public readonly sprite: Phaser.GameObjects.Rectangle) {}
+  constructor(public readonly sprite: Phaser.GameObjects.Components.Transform) {}
 }

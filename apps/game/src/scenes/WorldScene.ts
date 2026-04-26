@@ -1,14 +1,18 @@
 import Phaser from "phaser";
 import { World } from "../ecs/World";
+import { Footprint } from "../game/components/Footprint";
 import { InputState } from "../game/components/InputState";
 import { PlayerControlled } from "../game/components/PlayerControlled";
 import { Position } from "../game/components/Position";
 import { Renderable } from "../game/components/Renderable";
 import { Velocity } from "../game/components/Velocity";
+import { WeightInspectable } from "../game/components/WeightInspectable";
+import { WeightedObject } from "../game/components/WeightedObject";
 import { BoundsSystem } from "../game/systems/BoundsSystem";
 import { InputSystem } from "../game/systems/InputSystem";
 import { MovementSystem } from "../game/systems/MovementSystem";
 import { RenderSystem } from "../game/systems/RenderSystem";
+import { WeightDisplaySystem } from "../game/systems/WeightDisplaySystem";
 
 export class WorldScene extends Phaser.Scene {
   private world?: World;
@@ -32,7 +36,9 @@ export class WorldScene extends Phaser.Scene {
     >;
 
     this.createArena();
+    this.createStones(world);
     this.createPlayer(world);
+    const weightLabel = this.createWeightLabel();
 
     world.addSystem(new InputSystem(cursors, wasd));
     world.addSystem(new MovementSystem());
@@ -46,6 +52,7 @@ export class WorldScene extends Phaser.Scene {
         ),
       ),
     );
+    world.addSystem(new WeightDisplaySystem(weightLabel));
     world.addSystem(new RenderSystem());
 
     this.world = world;
@@ -69,16 +76,58 @@ export class WorldScene extends Phaser.Scene {
       .setAlpha(0.9);
   }
 
+  private createStones(world: World): void {
+    this.createStone(world, "River stone", 18, 260, 180, 54, 38, 0x6c7a89);
+    this.createStone(world, "Granite stone", 45, 700, 170, 76, 48, 0x88929b);
+    this.createStone(world, "Obsidian stone", 82, 580, 380, 92, 58, 0x2f3944);
+  }
+
+  private createStone(
+    world: World,
+    name: string,
+    weight: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: number,
+  ): void {
+    const stone = world.createEntity();
+    const stoneSprite = this.add.rectangle(x, y, width, height, color);
+
+    stoneSprite.setStrokeStyle(2, 0xd7dee8, 0.45);
+
+    world.addComponent(stone, Position, new Position(x, y));
+    world.addComponent(stone, Footprint, new Footprint(width, height));
+    world.addComponent(stone, WeightInspectable, new WeightInspectable(name));
+    world.addComponent(stone, WeightedObject, new WeightedObject(weight));
+    world.addComponent(stone, Renderable, new Renderable(stoneSprite));
+  }
+
   private createPlayer(world: World): void {
     const player = world.createEntity();
     const playerSprite = this.add.rectangle(480, 270, 28, 28, 0xe4b44c);
 
     playerSprite.setStrokeStyle(2, 0xffefd1, 0.95);
+    playerSprite.setDepth(1);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
     world.addComponent(player, Position, new Position(480, 270));
     world.addComponent(player, Velocity, new Velocity());
     world.addComponent(player, Renderable, new Renderable(playerSprite));
+  }
+
+  private createWeightLabel(): Phaser.GameObjects.Text {
+    return this.add
+      .text(24, 492, "Stand on a stone to read its weight", {
+        backgroundColor: "#1f2935",
+        color: "#eef2f6",
+        fixedWidth: 320,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "16px",
+        padding: { x: 12, y: 8 },
+      })
+      .setDepth(2);
   }
 }
