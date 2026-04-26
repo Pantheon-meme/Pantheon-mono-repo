@@ -11,6 +11,7 @@ import { DayNightOverlay } from "../game/components/DayNightOverlay";
 import { Energy } from "../game/components/Energy";
 import { EnergyBar } from "../game/components/EnergyBar";
 import { FacingDirection } from "../game/components/FacingDirection";
+import { FocusTarget } from "../game/components/FocusTarget";
 import { GameClock } from "../game/components/GameClock";
 import { IdeaState } from "../game/components/IdeaState";
 import { GridTargetHighlight } from "../game/components/GridTargetHighlight";
@@ -21,6 +22,8 @@ import { NeedState } from "../game/components/NeedState";
 import { PlayerControlled } from "../game/components/PlayerControlled";
 import { Position } from "../game/components/Position";
 import { Renderable } from "../game/components/Renderable";
+import { SeedHud } from "../game/components/SeedHud";
+import { SeedPouch } from "../game/components/SeedPouch";
 import { SkillSet } from "../game/components/SkillSet";
 import { SleepProgressBar } from "../game/components/SleepProgressBar";
 import { SleepState } from "../game/components/SleepState";
@@ -38,17 +41,24 @@ import { DayNightRenderSystem } from "../game/systems/DayNightRenderSystem";
 import { EnergyBarSystem } from "../game/systems/EnergyBarSystem";
 import { EnergySystem } from "../game/systems/EnergySystem";
 import { FacingDirectionSystem } from "../game/systems/FacingDirectionSystem";
+import { FocusInputSystem } from "../game/systems/FocusInputSystem";
+import { FocusTargetSystem } from "../game/systems/FocusTargetSystem";
 import { GameClockSystem } from "../game/systems/GameClockSystem";
 import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
 import { InputSystem } from "../game/systems/InputSystem";
 import { JournalSystem } from "../game/systems/JournalSystem";
 import { MovementSystem } from "../game/systems/MovementSystem";
+import { PlantGrowthSystem } from "../game/systems/PlantGrowthSystem";
+import { PlantRenderSystem } from "../game/systems/PlantRenderSystem";
 import { RenderSystem } from "../game/systems/RenderSystem";
+import { SeedDropRenderSystem } from "../game/systems/SeedDropRenderSystem";
+import { SeedHudSystem } from "../game/systems/SeedHudSystem";
 import { SleepProgressBarSystem } from "../game/systems/SleepProgressBarSystem";
 import { SleepSystem } from "../game/systems/SleepSystem";
 import { SleepVisualSystem } from "../game/systems/SleepVisualSystem";
 import { TerrainBackgroundSystem } from "../game/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../game/systems/TerrainBaseRenderSystem";
+import { WeightDisplaySystem } from "../game/systems/WeightDisplaySystem";
 
 const grassAtlasKey = "main-vibrant-grass-blob-7x7";
 const dirtAtlasKey = "main-dirt-blob-7x7";
@@ -80,6 +90,7 @@ export class MainGameScene extends Phaser.Scene {
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
     const journal = world.createEntity();
+    const seedHud = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -94,6 +105,8 @@ export class MainGameScene extends Phaser.Scene {
     const sleepProgressBar = this.createSleepProgressBar();
     const sleepVisual = this.createSleepVisual();
     const journalPanel = this.createJournalPanel();
+    const seedHudDisplay = this.createSeedHud();
+    const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
 
     needs.addNeed({
@@ -163,13 +176,16 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
     world.addComponent(journal, JournalPanel, journalPanel);
+    world.addComponent(seedHud, SeedHud, seedHudDisplay);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
+    world.addComponent(player, FocusTarget, new FocusTarget());
     world.addComponent(player, Position, new Position(spawnX, spawnY));
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
+    world.addComponent(player, SeedPouch, new SeedPouch());
     world.addComponent(player, NeedState, needs);
     world.addComponent(player, IdeaState, new IdeaState());
     world.addComponent(
@@ -177,18 +193,25 @@ export class MainGameScene extends Phaser.Scene {
       KnowledgeState,
       new KnowledgeState(["fiber", "stick"]),
     );
-    world.addComponent(player, SkillSet, new SkillSet({ reflection: 1 }));
+    world.addComponent(
+      player,
+      SkillSet,
+      new SkillSet({ foraging: 1, reflection: 1 }),
+    );
     world.addComponent(player, SleepState, new SleepState());
     world.addComponent(player, ActionQueue, new ActionQueue());
     world.addComponent(
       player,
       ActionBindings,
       new ActionBindings({
-        [Phaser.Input.Keyboard.KeyCodes.SPACE]: "gather",
+        [Phaser.Input.Keyboard.KeyCodes.SPACE]: "forage",
+        [Phaser.Input.Keyboard.KeyCodes.P]: "plant",
+        [Phaser.Input.Keyboard.KeyCodes.H]: "fetch",
+        [Phaser.Input.Keyboard.KeyCodes.C]: "cycle-seed",
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
         [Phaser.Input.Keyboard.KeyCodes.R]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
-        [Phaser.Input.Keyboard.KeyCodes.E]: "inspect",
+        [Phaser.Input.Keyboard.KeyCodes.E]: "pickup-seed",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
@@ -211,6 +234,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new AutotileRenderSystem(this));
     world.addSystem(new TerrainBackgroundSystem(this));
     world.addSystem(new JournalSystem(this));
+    world.addSystem(new FocusInputSystem(keyboard));
     world.addSystem(
       new InputSystem(
         keyboard.createCursorKeys(),
@@ -221,12 +245,14 @@ export class MainGameScene extends Phaser.Scene {
       ),
     );
     world.addSystem(new ActionInputSystem(keyboard));
-    world.addSystem(new ActionSystem());
-    world.addSystem(new SleepSystem());
     world.addSystem(new GameClockSystem());
     world.addSystem(new EnergySystem());
+    world.addSystem(new PlantGrowthSystem());
     world.addSystem(new FacingDirectionSystem());
     world.addSystem(new MovementSystem());
+    world.addSystem(new FocusTargetSystem());
+    world.addSystem(new ActionSystem());
+    world.addSystem(new SleepSystem());
     world.addSystem(
       new BoundsSystem(
         new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
@@ -234,10 +260,14 @@ export class MainGameScene extends Phaser.Scene {
     );
     world.addSystem(new GridTargetHighlightSystem());
     world.addSystem(new RenderSystem());
+    world.addSystem(new PlantRenderSystem(this));
+    world.addSystem(new SeedDropRenderSystem(this));
     world.addSystem(new SleepVisualSystem());
     world.addSystem(new DayNightRenderSystem());
     world.addSystem(new SleepProgressBarSystem());
+    world.addSystem(new SeedHudSystem());
     world.addSystem(new EnergyBarSystem());
+    world.addSystem(new WeightDisplaySystem(weightLabel));
 
     this.world = world;
   }
@@ -325,6 +355,44 @@ export class MainGameScene extends Phaser.Scene {
     label.setVisible(false);
 
     return new SleepProgressBar(background, fill, label, width, height, x, y);
+  }
+
+  private createSeedHud(): SeedHud {
+    const label = this.add
+      .text(18, 128, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+        lineSpacing: 4,
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setDepth(101);
+
+    return new SeedHud(label, 18, 128);
+  }
+
+  private createWeightLabel(): Phaser.GameObjects.Text {
+    return this.add
+      .text(18, this.scale.height - 54, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "16px",
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setScrollFactor(0)
+      .setDepth(101);
   }
 
   private createSleepVisual(): SleepVisual {
