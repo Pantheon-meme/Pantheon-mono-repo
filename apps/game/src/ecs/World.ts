@@ -29,6 +29,13 @@ export class World {
     return this.getStore(componentClass).get(entity);
   }
 
+  removeComponent<TComponent>(
+    entity: Entity,
+    componentClass: ComponentClass<TComponent>,
+  ): void {
+    this.getStore(componentClass).delete(entity);
+  }
+
   query<TA>(a: ComponentClass<TA>): Array<[Entity, TA]>;
   query<TA, TB>(
     a: ComponentClass<TA>,

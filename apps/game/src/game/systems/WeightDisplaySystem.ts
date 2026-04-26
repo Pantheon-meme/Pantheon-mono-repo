@@ -1,6 +1,7 @@
 import type Phaser from "phaser";
 import type { System } from "../../ecs/System";
 import type { World } from "../../ecs/World";
+import { FocusTarget } from "../components/FocusTarget";
 import { Footprint } from "../components/Footprint";
 import { PlayerControlled } from "../components/PlayerControlled";
 import { Position } from "../components/Position";
@@ -19,6 +20,18 @@ export class WeightDisplaySystem implements System {
     }
 
     const [, , playerPosition] = player;
+    const focus = world.query(FocusTarget)[0]?.[1];
+
+    if (focus?.kind === "object" && focus.object) {
+      const weight = world.getComponent(focus.object, WeightedObject);
+      const inspectable = world.getComponent(focus.object, WeightInspectable);
+
+      if (weight && inspectable) {
+        this.label.setText(`Focus: ${inspectable.label}: ${weight.weight} kg`);
+        return;
+      }
+    }
+
     const weightedObject = world
       .query(Position, WeightedObject, Footprint, WeightInspectable)
       .find(([, objectPosition, , footprint]) =>
@@ -26,7 +39,7 @@ export class WeightDisplaySystem implements System {
       );
 
     if (!weightedObject) {
-      this.label.setText("Stand on a stone to read its weight");
+      this.label.setText("Stand on an object to read its weight");
       return;
     }
 
