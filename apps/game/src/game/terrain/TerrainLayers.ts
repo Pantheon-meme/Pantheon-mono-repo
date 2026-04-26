@@ -11,10 +11,22 @@ export function getTerrainLayer(
   world: World,
   id: string,
 ): TerrainLayerEntry | undefined {
-  const terrainLayers = world
+  return getTerrainLayers(world).find((entry) => entry.layer.id === id);
+}
+
+export function getTopTerrainLayerAtCell(
+  world: World,
+  x: number,
+  y: number,
+): TerrainLayerEntry | undefined {
+  return getTerrainLayers(world)
+    .reverse()
+    .find((entry) => entry.grid.has(x, y));
+}
+
+function getTerrainLayers(world: World): TerrainLayerEntry[] {
+  return world
     .query(TerrainGrid, TerrainLayer)
     .map(([, grid, layer]) => ({ grid, layer }))
     .sort((a, b) => a.layer.stackOrder - b.layer.stackOrder);
-
-  return terrainLayers.find((entry) => entry.layer.id === id);
 }

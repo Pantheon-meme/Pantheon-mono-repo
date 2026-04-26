@@ -17,6 +17,8 @@ import { InputState } from "../game/components/InputState";
 import { PlayerControlled } from "../game/components/PlayerControlled";
 import { Position } from "../game/components/Position";
 import { Renderable } from "../game/components/Renderable";
+import { SleepProgressBar } from "../game/components/SleepProgressBar";
+import { SleepState } from "../game/components/SleepState";
 import { TerrainBackground } from "../game/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/components/TerrainBaseLayer";
 import { TerrainGrid } from "../game/components/TerrainGrid";
@@ -35,6 +37,8 @@ import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSy
 import { InputSystem } from "../game/systems/InputSystem";
 import { MovementSystem } from "../game/systems/MovementSystem";
 import { RenderSystem } from "../game/systems/RenderSystem";
+import { SleepProgressBarSystem } from "../game/systems/SleepProgressBarSystem";
+import { SleepSystem } from "../game/systems/SleepSystem";
 import { TerrainBackgroundSystem } from "../game/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../game/systems/TerrainBaseRenderSystem";
 
@@ -66,6 +70,7 @@ export class MainGameScene extends Phaser.Scene {
     const dirtTerrain = world.createEntity();
     const time = world.createEntity();
     const dayNight = world.createEntity();
+    const sleepHud = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -77,6 +82,7 @@ export class MainGameScene extends Phaser.Scene {
       .setDepth(10);
     const energyBar = this.createEnergyBar();
     const dayNightOverlay = this.createDayNightOverlay();
+    const sleepProgressBar = this.createSleepProgressBar();
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
@@ -134,6 +140,7 @@ export class MainGameScene extends Phaser.Scene {
 
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
+    world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -141,6 +148,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, Position, new Position(spawnX, spawnY));
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
+    world.addComponent(player, SleepState, new SleepState());
     world.addComponent(player, ActionQueue, new ActionQueue());
     world.addComponent(
       player,
@@ -148,7 +156,7 @@ export class MainGameScene extends Phaser.Scene {
       new ActionBindings({
         [Phaser.Input.Keyboard.KeyCodes.SPACE]: "gather",
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
-        [Phaser.Input.Keyboard.KeyCodes.R]: "rest",
+        [Phaser.Input.Keyboard.KeyCodes.R]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.E]: "inspect",
       }),
     );
@@ -181,6 +189,7 @@ export class MainGameScene extends Phaser.Scene {
     );
     world.addSystem(new ActionInputSystem(keyboard));
     world.addSystem(new ActionSystem());
+    world.addSystem(new SleepSystem());
     world.addSystem(new GameClockSystem());
     world.addSystem(new EnergySystem());
     world.addSystem(new FacingDirectionSystem());
@@ -193,6 +202,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addSystem(new GridTargetHighlightSystem());
     world.addSystem(new RenderSystem());
     world.addSystem(new DayNightRenderSystem());
+    world.addSystem(new SleepProgressBarSystem());
     world.addSystem(new EnergyBarSystem());
 
     this.world = world;
@@ -252,5 +262,34 @@ export class MainGameScene extends Phaser.Scene {
       .setDepth(101);
 
     return new DayNightOverlay(shade, label, 18, 18);
+  }
+
+  private createSleepProgressBar(): SleepProgressBar {
+    const width = 360;
+    const height = 18;
+    const x = 18;
+    const y = 96;
+    const background = this.add
+      .rectangle(x, y, width, height, 0x111821, 0.9)
+      .setOrigin(0)
+      .setDepth(101);
+    const fill = this.add
+      .rectangle(x, y, width, height, 0x7bd7ff, 1)
+      .setOrigin(0)
+      .setDepth(102);
+    const label = this.add
+      .text(x, y + height + 6, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "16px",
+      })
+      .setDepth(102);
+
+    background.setStrokeStyle(2, 0xe8f0e8, 0.45);
+    background.setVisible(false);
+    fill.setVisible(false);
+    label.setVisible(false);
+
+    return new SleepProgressBar(background, fill, label, width, height, x, y);
   }
 }

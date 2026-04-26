@@ -5,6 +5,7 @@ import { actionDefinitions } from "../actions/ActionDefinition";
 import { ActionLog } from "../components/ActionLog";
 import { ActionQueue } from "../components/ActionQueue";
 import { Energy } from "../components/Energy";
+import { SleepState } from "../components/SleepState";
 
 export class ActionSystem implements System {
   update(world: World): void {
@@ -16,6 +17,14 @@ export class ActionSystem implements System {
       let actionId = queue.shift();
 
       while (actionId) {
+        const sleep = world.getComponent(entity, SleepState);
+
+        if (sleep?.active) {
+          log.lastMessage = "Sleeping...";
+          actionId = queue.shift();
+          continue;
+        }
+
         const action = actionDefinitions[actionId];
 
         if (!action) {
