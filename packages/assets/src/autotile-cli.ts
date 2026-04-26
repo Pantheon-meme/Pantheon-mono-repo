@@ -3,14 +3,15 @@ import { existsSync } from "node:fs";
 import { dirname, join, parse } from "node:path";
 import { loadEnvFile } from "node:process";
 
-import { runWorldAssetWorkflow } from "./workflow.js";
+import { runAutotileWorkflow } from "./autotile-workflow.js";
 
 type CliOptions = {
-  world?: string;
+  texture?: string;
+  material?: string;
   textModel?: string;
   imageModel?: string;
-  assetCount?: number;
-  styleGuide?: string;
+  tileSize?: number;
+  concurrency?: number;
   out?: string;
   help?: boolean;
 };
@@ -19,18 +20,23 @@ loadNearestEnvFile();
 
 const options = parseArgs(process.argv.slice(2));
 
-if (options.help || !options.world) {
+if (options.help || !options.texture) {
   printHelp();
   process.exit(options.help ? 0 : 1);
 }
 
-const manifest = await runWorldAssetWorkflow({
-  worldPrompt: options.world,
+if (!existsSync(options.texture)) {
+  throw new Error(`Texture image not found: ${options.texture}`);
+}
+
+const manifest = await runAutotileWorkflow({
+  texturePath: options.texture,
+  material: options.material ?? process.env.PANTHEON_AUTOTILE_MATERIAL ?? "provided texture material",
   textModel: options.textModel ?? process.env.OPENROUTER_TEXT_MODEL ?? "openai/gpt-4o-mini",
   imageModel: options.imageModel ?? process.env.OPENROUTER_IMAGE_MODEL ?? "google/gemini-2.5-flash-image",
-  assetCount: options.assetCount ?? 3,
-  styleGuide: options.styleGuide,
-  outputDir: options.out ?? "generated/world-assets",
+  tileSize: options.tileSize ?? Number.parseInt(process.env.PANTHEON_AUTOTILE_TILE_SIZE ?? "128", 10),
+  concurrency: options.concurrency ?? Number.parseInt(process.env.PANTHEON_AUTOTILE_CONCURRENCY ?? "10", 10),
+  outputDir: options.out ?? "generated/autotiles",
 });
 
 console.log(JSON.stringify(manifest, null, 2));
@@ -45,9 +51,14 @@ function parseArgs(args: string[]): CliOptions {
     switch (arg) {
       case "--":
         break;
-      case "--world":
-      case "-w":
-        parsed.world = readValue(arg, next);
+      case "--texture":
+      case "-t":
+        parsed.texture = readValue(arg, next);
+        index += 1;
+        break;
+      case "--material":
+      case "-m":
+        parsed.material = readValue(arg, next);
         index += 1;
         break;
       case "--text-model":
@@ -58,12 +69,12 @@ function parseArgs(args: string[]): CliOptions {
         parsed.imageModel = readValue(arg, next);
         index += 1;
         break;
-      case "--count":
-        parsed.assetCount = Number.parseInt(readValue(arg, next), 10);
+      case "--tile-size":
+        parsed.tileSize = Number.parseInt(readValue(arg, next), 10);
         index += 1;
         break;
-      case "--style":
-        parsed.styleGuide = readValue(arg, next);
+      case "--concurrency":
+        parsed.concurrency = Number.parseInt(readValue(arg, next), 10);
         index += 1;
         break;
       case "--out":
@@ -92,18 +103,19 @@ function readValue(flag: string, value: string | undefined): string {
 }
 
 function printHelp(): void {
-  console.log(`Generate Pantheon world assets with Mastra and OpenRouter.
+  console.log(`Generate a 47-tile dual-grid autotile set with OpenRouter.
 
 Usage:
-  pnpm --filter @pantheon/assets generate -- --world "<brief>" [options]
+  pnpm --filter @pantheon/assets generate-autotiles -- --texture "<image-path>" [options]
 
 Options:
-  -w, --world <brief>       World brief to generate assets for.
-      --text-model <model>  OpenRouter text model id.
-      --image-model <model> OpenRouter image-capable model id.
-      --count <number>      Number of image prompts to create, 1-6. Default: 3.
-      --style <guide>       Optional visual/style guide.
-  -o, --out <dir>           Output directory. Default: generated/world-assets.
+  -t, --texture <path>      Square reference texture image to use as the material.
+  -m, --material <name>     Material or biome name, e.g. grass, dirt, snow.
+      --text-model <model>  OpenRouter text model id for the style plan.
+      --image-model <model> OpenRouter image-capable model id for segment sheets.
+      --tile-size <number>  Intended square tile size in pixels. Default: 128.
+      --concurrency <n>     Parallel image segment requests, 1-10. Default: 10.
+  -o, --out <dir>           Output directory. Default: generated/autotiles.
   -h, --help                Show this help.`);
 }
 

@@ -1,7 +1,7 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { GeneratedImage, WorldAssetManifest } from "./schemas.js";
+import type { AutotileManifest, GeneratedImage, WorldAssetManifest } from "./schemas.js";
 
 const extensionByContentType: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -12,6 +12,13 @@ const extensionByContentType: Record<string, string> = {
 export async function writeManifest(outputDir: string, manifest: WorldAssetManifest): Promise<string> {
   await mkdir(outputDir, { recursive: true });
   const manifestPath = path.join(outputDir, "manifest.json");
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  return manifestPath;
+}
+
+export async function writeAutotileManifest(outputDir: string, manifest: AutotileManifest): Promise<string> {
+  await mkdir(outputDir, { recursive: true });
+  const manifestPath = path.join(outputDir, "autotile-manifest.json");
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return manifestPath;
 }
@@ -41,6 +48,27 @@ export async function writeGeneratedImage(outputDir: string, image: GeneratedIma
     filePath,
     dataUrl: undefined,
   };
+}
+
+export async function readImageAsDataUrl(filePath: string): Promise<string> {
+  const contentType = contentTypeFromExtension(path.extname(filePath));
+  const data = await readFile(filePath);
+
+  return `data:${contentType};base64,${data.toString("base64")}`;
+}
+
+function contentTypeFromExtension(extension: string): string {
+  switch (extension.toLowerCase()) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    default:
+      return "application/octet-stream";
+  }
 }
 
 function slugify(value: string): string {
