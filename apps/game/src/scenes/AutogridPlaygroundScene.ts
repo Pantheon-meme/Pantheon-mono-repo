@@ -1,9 +1,5 @@
 import Phaser from "phaser";
-import dirtLeftBottomUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-left-bottom.png?url";
-import dirtLeftTopUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-left-top.png?url";
-import dirtRightBottomUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-right-bottom.png?url";
-import dirtRightTopAUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-right-top-a.png?url";
-import dirtRightTopBUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-right-top-b.png?url";
+import dirtAtlasUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-blob-7x7.png?url";
 
 const TILE_SIZE = 40;
 const SOURCE_TILE_SIZE = 256;
@@ -12,12 +8,16 @@ const GRID_HEIGHT = 120;
 const WORLD_WIDTH = GRID_WIDTH * TILE_SIZE;
 const WORLD_HEIGHT = GRID_HEIGHT * TILE_SIZE;
 
-const DIRT_SHEETS = [
-  { key: "dirt-left-top", url: dirtLeftTopUrl },
-  { key: "dirt-right-top-a", url: dirtRightTopAUrl },
-  { key: "dirt-right-top-b", url: dirtRightTopBUrl },
-  { key: "dirt-left-bottom", url: dirtLeftBottomUrl },
-  { key: "dirt-right-bottom", url: dirtRightBottomUrl },
+const DIRT_ATLAS_KEY = "dirt-blob-7x7";
+
+const BLOB_7X7_MASK_LAYOUT = [
+  [11, 31, 22, 2, 254, 251, 123],
+  [107, 255, 214, 66, 223, 127, 95],
+  [104, 248, 208, 64, 94, 122, 222],
+  [8, 24, 16, 0, 218, 91, 250],
+  [106, 210, 30, 27, 10, 26, 18],
+  [75, 86, 216, 120, 74, 90, 82],
+  [0, 0, 219, 126, 72, 88, 80],
 ] as const;
 
 type GridPoint = {
@@ -27,7 +27,7 @@ type GridPoint = {
 
 export class AutogridPlaygroundScene extends Phaser.Scene {
   private readonly dirtCells = new Set<string>();
-  private readonly blobLookup = buildBlob47Lookup();
+  private readonly blobAtlasSlots = buildBlobAtlasSlotLookup();
   private baseLayer?: Phaser.GameObjects.Graphics;
   private dirtLayer?: Phaser.GameObjects.Container;
   private cursorLayer?: Phaser.GameObjects.Graphics;
@@ -43,9 +43,7 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
   }
 
   preload(): void {
-    for (const sheet of DIRT_SHEETS) {
-      this.load.image(sheet.key, sheet.url);
-    }
+    this.load.image(DIRT_ATLAS_KEY, dirtAtlasUrl);
   }
 
   create(): void {
@@ -251,8 +249,7 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
     const left = x * TILE_SIZE;
     const top = y * TILE_SIZE;
     const neighbors = this.getNeighbors(x, y);
-    const tileIndex = this.blobLookup.get(neighbors.mask) ?? 0;
-    const sprite = this.add.image(left, top, dirtTextureKey(tileIndex)).setOrigin(0).setDisplaySize(TILE_SIZE, TILE_SIZE);
+    const sprite = this.add.image(left, top, dirtTextureKey(neighbors.mask)).setOrigin(0).setDisplaySize(TILE_SIZE, TILE_SIZE);
 
     sprite.setName(`dirt-${x}-${y}-${neighbors.mask}`);
     this.dirtLayer.add(sprite);
@@ -303,13 +300,14 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
 
     const cell = this.pointerToCell(this.input.activePointer);
     const mask = cell && this.hasDirt(cell.x, cell.y) ? this.getNeighbors(cell.x, cell.y).mask : 0;
-    const tileIndex = this.blobLookup.get(mask) ?? 0;
+    const slot = this.blobAtlasSlots.get(mask);
+    const position = slot ? `${slot.column + 1},${slot.row + 1}` : "missing";
 
     this.label.setText(
       [
         "Autogrid playground",
         `Tool: ${this.activeTool}  |  Dirt cells: ${this.dirtCells.size}`,
-        `Hover mask: ${mask.toString(2).padStart(8, "0")}  |  47-tile slot: ${tileIndex}`,
+        `Hover mask: ${mask.toString(2).padStart(8, "0")} (${mask})  |  atlas cell: ${position}`,
         "Left drag paints, Shift/right-click erases, middle drag pans, wheel zooms, 1/2 swaps tools, C clears.",
       ].join("\n"),
     );
@@ -336,13 +334,13 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
     const nw = n && w && this.hasDirt(x - 1, y - 1);
 
     let mask = 0;
-    mask |= n ? 1 << 0 : 0;
-    mask |= ne ? 1 << 1 : 0;
-    mask |= e ? 1 << 2 : 0;
-    mask |= se ? 1 << 3 : 0;
-    mask |= s ? 1 << 4 : 0;
-    mask |= sw ? 1 << 5 : 0;
-    mask |= w ? 1 << 6 : 0;
+    mask |= se ? 1 << 0 : 0;
+    mask |= s ? 1 << 1 : 0;
+    mask |= sw ? 1 << 2 : 0;
+    mask |= e ? 1 << 3 : 0;
+    mask |= w ? 1 << 4 : 0;
+    mask |= ne ? 1 << 5 : 0;
+    mask |= n ? 1 << 6 : 0;
     mask |= nw ? 1 << 7 : 0;
 
     return { n, ne, e, se, s, sw, w, nw, mask };
@@ -357,10 +355,8 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
   }
 
   private createDirtTileTextures(): void {
-    const slots = buildDirtAtlasSlots();
-
-    slots.forEach((slot, index) => {
-      const source = this.textures.get(slot.sheetKey).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    this.blobAtlasSlots.forEach((slot, mask) => {
+      const source = this.textures.get(DIRT_ATLAS_KEY).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -373,8 +369,8 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
 
       context.drawImage(
         source,
-        slot.x * SOURCE_TILE_SIZE,
-        slot.y * SOURCE_TILE_SIZE,
+        slot.column * SOURCE_TILE_SIZE,
+        slot.row * SOURCE_TILE_SIZE,
         SOURCE_TILE_SIZE,
         SOURCE_TILE_SIZE,
         0,
@@ -393,23 +389,13 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
       }
 
       context.putImageData(imageData, 0, 0);
-      this.textures.addCanvas(dirtTextureKey(index), canvas);
+      this.textures.addCanvas(dirtTextureKey(mask), canvas);
     });
   }
 }
 
-function buildDirtAtlasSlots(): { sheetKey: string; x: number; y: number }[] {
-  return DIRT_SHEETS.flatMap((sheet) =>
-    Array.from({ length: 16 }, (_, index) => ({
-      sheetKey: sheet.key,
-      x: index % 4,
-      y: Math.floor(index / 4),
-    })),
-  ).slice(0, 47);
-}
-
-function dirtTextureKey(index: number): string {
-  return `dirt-autotile-${index}`;
+function dirtTextureKey(mask: number): string {
+  return `dirt-autotile-mask-${mask}`;
 }
 
 function isSheetBackground(red: number, green: number, blue: number): boolean {
@@ -419,37 +405,18 @@ function isSheetBackground(red: number, green: number, blue: number): boolean {
   return max - min < 18 && red > 90 && green > 90 && blue > 90;
 }
 
-function buildBlob47Lookup(): Map<number, number> {
-  const masks = new Set<number>();
+function buildBlobAtlasSlotLookup(): Map<number, { column: number; row: number }> {
+  const slots = new Map<number, { column: number; row: number }>();
 
-  for (let mask = 0; mask < 256; mask += 1) {
-    masks.add(normalizeBlobMask(mask));
-  }
+  BLOB_7X7_MASK_LAYOUT.forEach((rowMasks, row) => {
+    rowMasks.forEach((mask, column) => {
+      if (!slots.has(mask)) {
+        slots.set(mask, { column, row });
+      }
+    });
+  });
 
-  return new Map([...masks].sort((a, b) => a - b).map((mask, index) => [mask, index]));
-}
-
-function normalizeBlobMask(mask: number): number {
-  const n = Boolean(mask & (1 << 0));
-  const e = Boolean(mask & (1 << 2));
-  const s = Boolean(mask & (1 << 4));
-  const w = Boolean(mask & (1 << 6));
-  let normalized = mask;
-
-  if (!(n && e)) {
-    normalized &= ~(1 << 1);
-  }
-  if (!(s && e)) {
-    normalized &= ~(1 << 3);
-  }
-  if (!(s && w)) {
-    normalized &= ~(1 << 5);
-  }
-  if (!(n && w)) {
-    normalized &= ~(1 << 7);
-  }
-
-  return normalized;
+  return slots;
 }
 
 function cellKey(x: number, y: number): string {
