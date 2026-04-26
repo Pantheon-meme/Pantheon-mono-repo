@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import dirtAtlasUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-blob-7x7.png?url";
 
-const TILE_SIZE = 40;
+const TILE_SIZE = 256;
 const SOURCE_TILE_SIZE = 256;
 const GRID_WIDTH = 120;
 const GRID_HEIGHT = 120;
@@ -49,7 +49,7 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.centerOn(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
-    this.cameras.main.setZoom(0.8);
+    this.cameras.main.setZoom(0.25);
 
     this.baseLayer = this.add.graphics();
     this.dirtLayer = this.add.container(0, 0);
@@ -105,7 +105,7 @@ export class AutogridPlaygroundScene extends Phaser.Scene {
       ) => {
         const camera = this.cameras.main;
         const oldZoom = camera.zoom;
-        const nextZoom = Phaser.Math.Clamp(oldZoom * (deltaY > 0 ? 0.9 : 1.1), 0.35, 2.8);
+        const nextZoom = Phaser.Math.Clamp(oldZoom * (deltaY > 0 ? 0.9 : 1.1), 0.08, 2.8);
         const worldPoint = camera.getWorldPoint(pointer.x, pointer.y);
 
         camera.setZoom(nextZoom);
