@@ -11,7 +11,7 @@ import {
   plantSpriteTextureKey,
 } from "../PlantSpriteAssets";
 
-const spriteTileVisualYOffsetRatio = 0.48;
+const spriteGroundContactOriginY = 0.50;
 
 export class PlantRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
@@ -100,12 +100,8 @@ function renderSpriteStage(
   visual.renderedFrame = frame;
   visual.sprite
     .setVisible(true)
-    .setPosition(
-      0,
-      spriteAsset.manifest.cellSize *
-        definition.visualScale *
-        spriteTileVisualYOffsetRatio,
-    )
+    .setPosition(0, 0)
+    .setOrigin(0.5, spriteGroundContactOriginY)
     .setFrame(frameIndex)
     .setDisplaySize(
       spriteAsset.manifest.cellSize * definition.visualScale,
