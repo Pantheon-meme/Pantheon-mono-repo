@@ -5,6 +5,11 @@ import { Position } from "../../shared/components/Position";
 import { SeedDrop } from "../components/SeedDrop";
 import { SeedDropVisual } from "../components/SeedDropVisual";
 import { plantDefinitions } from "../PlantDefinitions";
+import {
+  getPlantSpriteAssetBySeed,
+  getSeedItemSpriteFrameIndex,
+  plantSpriteTextureKeyBySeed,
+} from "../PlantSpriteAssets";
 
 export class SeedDropRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
@@ -27,7 +32,13 @@ export class SeedDropRenderSystem implements System {
     const definition = Object.values(plantDefinitions).find(
       (plant) => plant.seedId === seedId,
     );
+    const spriteAsset = getPlantSpriteAssetBySeed(seedId);
+    const textureKey = plantSpriteTextureKeyBySeed(seedId);
     const container = this.scene.add.container(0, 0).setDepth(7);
+    const sprite =
+      spriteAsset && textureKey
+        ? this.scene.add.sprite(0, 0, textureKey).setOrigin(0.5)
+        : undefined;
     const body = this.scene.add.ellipse(
       0,
       0,
@@ -47,8 +58,22 @@ export class SeedDropRenderSystem implements System {
       .setOrigin(0.5);
 
     body.setStrokeStyle(2, 0xfff3a1, 0.75);
-    container.add([body, label]);
+    if (sprite && spriteAsset) {
+      const frameIndex = getSeedItemSpriteFrameIndex(spriteAsset);
 
-    return new SeedDropVisual(container, body, label);
+      if (frameIndex !== undefined) {
+        sprite
+          .setFrame(frameIndex)
+          .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
+        body.setVisible(false);
+        label.setVisible(false);
+      } else {
+        sprite.setVisible(false);
+      }
+    }
+
+    container.add([...(sprite ? [sprite] : []), body, label]);
+
+    return new SeedDropVisual(container, sprite, body, label);
   }
 }

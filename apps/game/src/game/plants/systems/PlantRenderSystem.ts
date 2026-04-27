@@ -11,12 +11,10 @@ import {
   plantSpriteTextureKey,
 } from "../PlantSpriteAssets";
 
-const plantAnimationFramesPerSecond = 2;
-
 export class PlantRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
 
-  update(world: World, deltaSeconds: number): void {
+  update(world: World): void {
     for (const [entity, plant, position] of world.query(PlantState, Position)) {
       const definition = plantDefinitions[plant.plantId];
 
@@ -35,7 +33,7 @@ export class PlantRenderSystem implements System {
       visual.container.setPosition(position.x, position.y);
 
       if (spriteAsset) {
-        renderSpriteStage(visual, spriteAsset, plant.stage, deltaSeconds);
+        renderSpriteStage(visual, spriteAsset, plant, definition.growthSeconds);
       } else if (visual.renderedStage !== plant.stage) {
         renderStage(visual, plant.stage, definition.colors[plant.stage]);
       }
@@ -45,7 +43,7 @@ export class PlantRenderSystem implements System {
   private createVisual(plantId: string, useSprite: boolean): PlantVisual {
     const container = this.scene.add.container(0, 0).setDepth(8);
     const sprite = useSprite
-      ? this.scene.add.sprite(0, 0, plantSpriteTextureKey(plantId)).setOrigin(0.5)
+      ? this.scene.add.sprite(0, 0, plantSpriteTextureKey(plantId)).setOrigin(0.5, 0.6)
       : undefined;
     const stem = this.scene.add.rectangle(0, 0, 14, 46, 0x7dbd47, 1);
     const body = this.scene.add.ellipse(0, 0, 52, 52, 0xd8a541, 1);
@@ -71,30 +69,67 @@ export class PlantRenderSystem implements System {
 function renderSpriteStage(
   visual: PlantVisual,
   spriteAsset: NonNullable<ReturnType<typeof getPlantSpriteAsset>>,
-  stage: PlantStage,
-  deltaSeconds: number,
+  plant: PlantState,
+  growthSeconds: number,
 ): void {
   if (!visual.sprite) {
     return;
   }
 
-  visual.animationSeconds += deltaSeconds;
-  const frame =
-    Math.floor(visual.animationSeconds * plantAnimationFramesPerSecond) %
-    spriteAsset.manifest.columns;
-  const frameIndex = getPlantSpriteFrameIndex(spriteAsset, stage, frame);
+  const frame = getStageFrame(plant, growthSeconds, spriteAsset.manifest.columns, visual.grownVariantFrame);
+  const frameIndex = getPlantSpriteFrameIndex(spriteAsset, plant.stage, frame);
 
   if (frameIndex === undefined) {
     return;
   }
 
-  visual.renderedStage = stage;
+  if (visual.renderedStage === plant.stage && visual.renderedFrame === frame) {
+    return;
+  }
+
+  visual.renderedStage = plant.stage;
   visual.renderedFrame = frame;
   visual.sprite
     .setVisible(true)
     .setFrame(frameIndex)
     .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize)
-    .setAlpha(stage === "fetched" ? 0.82 : 1);
+    .setAlpha(plant.stage === "fetched" ? 0.82 : 1);
+}
+
+function getStageFrame(
+  plant: PlantState,
+  growthSeconds: number,
+  columns: number,
+  grownVariantFrame: number,
+): number {
+  if (plant.stage === "grown") {
+    return grownVariantFrame % columns;
+  }
+
+  if (plant.stage === "fetched") {
+    return 0;
+  }
+
+  if (plant.stage === "seed") {
+    const plantedColumns = Math.max(1, columns - 1);
+    const stageProgress = Phaser.Math.Clamp(
+      plant.elapsedSeconds / Math.max(growthSeconds * 0.25, 0.001),
+      0,
+      0.999,
+    );
+
+    return Math.min(columns - 1, 1 + Math.floor(stageProgress * plantedColumns));
+  }
+
+  const stageStart = plant.stage === "growing" ? growthSeconds * 0.25 : 0;
+  const stageEnd = plant.stage === "growing" ? growthSeconds : growthSeconds * 0.25;
+  const stageProgress = Phaser.Math.Clamp(
+    (plant.elapsedSeconds - stageStart) / Math.max(stageEnd - stageStart, 0.001),
+    0,
+    0.999,
+  );
+
+  return Math.min(columns - 1, Math.floor(stageProgress * columns));
 }
 
 function renderStage(

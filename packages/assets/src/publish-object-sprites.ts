@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
@@ -12,6 +14,9 @@ const repoRoot = path.resolve(packageRoot, "../..");
 const generatedObjectSpriteRoot = path.join(packageRoot, "generated/object-sprites");
 const gameObjectSpriteRoot = path.join(repoRoot, "apps/game/src/assets/object-sprites");
 const generatedRegistryPath = path.join(gameObjectSpriteRoot, "ObjectSpriteAssets.ts");
+const photoroomSegmentEndpoint = "https://sdk.photoroom.com/v1/segment";
+
+loadNearestEnvFile();
 
 type PublishedObjectSprite = {
   id: string;
@@ -27,6 +32,7 @@ async function publishObjectSprites(): Promise<void> {
     withFileTypes: true,
   });
   const publishedSprites: PublishedObjectSprite[] = [];
+  const publishedObjectIds = new Set<string>();
 
   for (const entry of generatedEntries) {
     if (!entry.isDirectory()) {
@@ -44,6 +50,14 @@ async function publishObjectSprites(): Promise<void> {
     }
 
     const objectId = manifest.request.objectId;
+
+    if (publishedObjectIds.has(objectId)) {
+      console.warn(
+        `[publish-object-sprites] Skipping duplicate object id "${objectId}" from ${path.relative(repoRoot, sourceDir)}.`,
+      );
+      continue;
+    }
+
     const imageFileName = path.basename(manifest.image.filePath);
     const destinationDir = path.join(gameObjectSpriteRoot, objectId);
     const destinationImagePath = path.join(destinationDir, imageFileName);
@@ -63,6 +77,7 @@ async function publishObjectSprites(): Promise<void> {
       imageFileName,
       manifest: runtimeManifest,
     });
+    publishedObjectIds.add(objectId);
   }
 
   if (publishedSprites.length === 0) {
@@ -102,35 +117,47 @@ async function writeRuntimeSpriteSheet(
   destinationPath: string,
   manifest: ObjectSpriteManifest,
 ): Promise<ObjectSpriteAssetManifest> {
-  const { data, info } = await sharp(sourcePath)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const runtimeManifest = toRuntimeManifest(manifest, info.width, info.height);
+  const source = await fs.readFile(sourcePath);
+  const output = await removeBackgroundWithPhotoroom(source, path.basename(sourcePath));
+  const metadata = await sharp(output).metadata();
 
-  for (let index = 0; index < data.length; index += info.channels) {
-    const red = data[index] ?? 0;
-    const green = data[index + 1] ?? 0;
-    const blue = data[index + 2] ?? 0;
-    const average = (red + green + blue) / 3;
-    const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
-
-    if (average >= 170 && chroma <= 18) {
-      data[index + 3] = 0;
-    }
+  if (!metadata.width || !metadata.height) {
+    throw new Error(`Could not read background-removed image dimensions for ${sourcePath}.`);
   }
 
-  await sharp(data, {
-    raw: {
-      width: info.width,
-      height: info.height,
-      channels: info.channels,
-    },
-  })
-    .png()
-    .toFile(destinationPath);
+  await fs.writeFile(destinationPath, output);
 
-  return runtimeManifest;
+  return toRuntimeManifest(manifest, metadata.width, metadata.height);
+}
+
+async function removeBackgroundWithPhotoroom(image: Buffer, fileName: string): Promise<Buffer> {
+  const apiKey = process.env.PHOTOROOM_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing PHOTOROOM_API_KEY. Add it to .env or export it before publishing object sprites.");
+  }
+
+  const form = new FormData();
+  const imageBytes = new Uint8Array(image);
+  form.append("image_file", new Blob([imageBytes], { type: "image/png" }), fileName);
+  form.append("format", "png");
+  form.append("channels", "rgba");
+  form.append("size", "full");
+
+  const response = await fetch(photoroomSegmentEndpoint, {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+    },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`PhotoRoom background removal failed (${response.status}): ${body}`);
+  }
+
+  return Buffer.from(await response.arrayBuffer());
 }
 
 function buildRegistryModule(sprites: PublishedObjectSprite[]): string {
@@ -238,6 +265,33 @@ function toImportName(value: string): string {
     .join("");
 
   return `${name || "objectSprite"}Sprite`;
+}
+
+function loadNearestEnvFile(): void {
+  const envPath = findNearestFile(".env", process.cwd());
+
+  if (envPath) {
+    loadEnvFile(envPath);
+  }
+}
+
+function findNearestFile(fileName: string, startDir: string): string | undefined {
+  let currentDir = startDir;
+  const rootDir = path.parse(startDir).root;
+
+  while (true) {
+    const candidate = path.join(currentDir, fileName);
+
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+
+    if (currentDir === rootDir) {
+      return undefined;
+    }
+
+    currentDir = path.dirname(currentDir);
+  }
 }
 
 publishObjectSprites().catch((error: unknown) => {

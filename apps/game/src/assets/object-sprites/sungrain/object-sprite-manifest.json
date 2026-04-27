@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-27T11:53:27.317Z",
+  "generatedAt": "2026-04-27T12:54:35.036Z",
   "request": {
     "objectId": "sungrain",
     "objectName": "Sungrain",
@@ -17,30 +17,30 @@
       {
         "id": "seed",
         "title": "Seed",
-        "prompt": "small amber seed or first tiny sprout, low to the soil"
+        "prompt": "column 1 is an isolated collectible amber Sungrain seed pickup with no soil; columns 2-4 are planted early growth steps from seed in soil to tiny sprout"
       },
       {
         "id": "growing",
         "title": "Growing",
-        "prompt": "young green shoots with a few forming golden blades"
+        "prompt": "four gradual growth steps from young green shoots to almost mature golden blades"
       },
       {
         "id": "grown",
         "title": "Grown",
-        "prompt": "full harvest-ready golden grain heads, healthiest and tallest row"
+        "prompt": "four different stable harvest-ready variants with full golden grain heads"
       },
       {
         "id": "harvested",
         "title": "Harvested",
-        "prompt": "short cut stalks or bundled remnant after harvest"
+        "prompt": "columns 1-2 are short cut stalk remnants left in the ground; columns 3-4 are isolated harvested Sungrain crop resource pickups, small bundles of golden grain heads"
       }
     ],
     "columns": 4,
     "columnLabels": [
-      "idle 1",
-      "idle 2",
-      "transition 1",
-      "transition 2"
+      "step 1",
+      "step 2",
+      "step 3",
+      "step 4"
     ],
     "cellSize": 128,
     "background": "transparent",
@@ -55,7 +55,7 @@
   "image": {
     "id": "sungrain-sprite-sheet",
     "title": "Sungrain sprite sheet",
-    "prompt": "Create a game object sprite sheet for Sungrain.\nObject brief: a warm golden grain plant grown from a tiny amber seed, with sunlit wheat heads and soft green leaves; readable as a small top-down farming game crop.\n\nReference image 1 is a checkerboard layout guide. Use it as the exact composition template.\nPreserve its 4:4 sheet ratio and its 4 columns by 4 rows of equal square cells.\nThe exact guide has also been saved locally at generated/object-sprites/sungrain/object-sprite-layout-guide.png for verification.\nPlace exactly one frame in the center of each checkerboard cell.\nAlign the center of each object frame to the center of its cell.\nKeep every frame fully inside its own cell, with consistent margins and no overlap into neighboring cells.\nKeep the checkerboard grid visible in the final image so the generated frames can be verified against the grid.\nPreserve the alternating white and gray cell backgrounds and visible grid lines from the guide.\nDraw the object frames on top of the provided checkerboard cells.\n\nTarget runtime atlas metadata: 512x512 logical units, arranged as 4 rows by 4 columns.\nEach logical grid cell is 128x128 units. The generated image may be higher resolution, but it must keep the same 4:4 grid ratio.\nKeep the object scale, anchor point, perspective, and lighting consistent across cells.\nDo not crop any object. Leave enough breathing room inside each cell for animation motion.\nDo not draw labels, text, numbers, watermarks, decorative borders, or UI.\nUse a transparent background for every cell.\n\nRows, top to bottom:\nRow 0: Seed (seed) - small amber seed or first tiny sprout, low to the soil\nRow 1: Growing (growing) - young green shoots with a few forming golden blades\nRow 2: Grown (grown) - full harvest-ready golden grain heads, healthiest and tallest row\nRow 3: Harvested (harvested) - short cut stalks or bundled remnant after harvest\n\nColumns, left to right:\nColumn 0: idle 1.\nColumn 1: idle 2.\nColumn 2: transition 1.\nColumn 3: transition 2.\n\nAnimation/transition behavior:\nWithin each row, columns should be coherent animation or transition frames for that same state, not different unrelated designs.\nFrame-to-frame changes should be readable but modest, suitable for looping or stepping through in a 2D game.\nPreserve the same silhouette language and materials across all states so the object clearly evolves from row to row.\n\nStyle direction:\ncozy hand-painted 2D game sprite, three-quarter top-down view, crisp readable silhouette, soft natural edges, warm highlights, no outlines heavier than the terrain art, transparent background\nReference image 2 is a style reference. Use it for palette, rendering texture, edge softness, contrast, and game-art finish. Do not copy its subject unless it matches the object brief.\n\nReturn one PNG containing the full sprite sheet only.",
+    "prompt": "Create a game object sprite sheet for Sungrain.\nObject brief: a warm golden grain plant grown from a tiny amber seed, with sunlit wheat heads and soft green leaves; readable as a small top-down farming game crop.\n\nReference image 1 is a checkerboard layout guide. Use it as the exact composition template.\nPreserve its 4:4 sheet ratio and its 4 columns by 4 rows of equal square cells.\nThe exact guide has also been saved locally at generated/object-sprites/sungrain/object-sprite-layout-guide.png for verification.\nPlace exactly one frame in the center of each checkerboard cell.\nAlign the center of each object frame to the center of its cell.\nKeep every frame fully inside its own cell, with consistent margins and no overlap into neighboring cells.\nKeep the checkerboard grid visible in the final image so the generated frames can be verified against the grid.\nPreserve the alternating white and gray cell backgrounds from the guide.\nDraw the object frames on top of the provided checkerboard cells.\n\nTarget runtime atlas metadata: 512x512 logical units, arranged as 4 rows by 4 columns.\nEach logical grid cell is 128x128 units. The generated image may be higher resolution, but it must keep the same 4:4 grid ratio.\nKeep the object scale, anchor point, perspective, and lighting consistent across cells.\nDo not crop any object. Leave enough breathing room inside each cell for animation motion.\nDo not draw labels, text, numbers, watermarks, decorative borders, or UI.\nUse a transparent background for every cell.\n\nRows, top to bottom:\nRow 0: Seed (seed) - column 1 is an isolated collectible amber Sungrain seed pickup with no soil; columns 2-4 are planted early growth steps from seed in soil to tiny sprout\nRow 1: Growing (growing) - four gradual growth steps from young green shoots to almost mature golden blades\nRow 2: Grown (grown) - four different stable harvest-ready variants with full golden grain heads\nRow 3: Harvested (harvested) - columns 1-2 are short cut stalk remnants left in the ground; columns 3-4 are isolated harvested Sungrain crop resource pickups, small bundles of golden grain heads\n\nColumns, left to right:\nColumn 0: step 1.\nColumn 1: step 2.\nColumn 2: step 3.\nColumn 3: step 4.\n\nColumn behavior:\nFor seed rows, column 1 is an isolated collectible seed item with no dirt below it. Columns 2 through the end are planted seed growth steps from left to right.\nFor grown or harvest-ready rows, columns are different stable variants of the same mature state, not a transformation sequence.\nFor harvested rows, the first half of columns are post-harvest plant remnants left in the ground, and the second half are isolated harvested crop/resource pickups.\nKeep all columns in a row coherent for that row's state, not different unrelated designs.\nPreserve the same silhouette language and materials across all states so the object clearly evolves from row to row.\n\nStyle direction:\ncozy hand-painted 2D game sprite, three-quarter top-down view, crisp readable silhouette, soft natural edges, warm highlights, no outlines heavier than the terrain art, transparent background\nReference image 2 is a style reference. Use it for palette, rendering texture, edge softness, contrast, and game-art finish. Do not copy its subject unless it matches the object brief.\n\nReturn one PNG containing the full sprite sheet only.",
     "model": "openai/gpt-5.4-image-2",
     "contentType": "image/png",
     "filePath": "generated/object-sprites/sungrain/sungrain-sprite-sheet.png"
@@ -64,7 +64,7 @@
     {
       "stateId": "seed",
       "stateTitle": "Seed",
-      "columnLabel": "idle 1",
+      "columnLabel": "step 1",
       "row": 0,
       "column": 0,
       "x": 0,
@@ -75,7 +75,7 @@
     {
       "stateId": "seed",
       "stateTitle": "Seed",
-      "columnLabel": "idle 2",
+      "columnLabel": "step 2",
       "row": 0,
       "column": 1,
       "x": 128,
@@ -86,7 +86,7 @@
     {
       "stateId": "seed",
       "stateTitle": "Seed",
-      "columnLabel": "transition 1",
+      "columnLabel": "step 3",
       "row": 0,
       "column": 2,
       "x": 256,
@@ -97,7 +97,7 @@
     {
       "stateId": "seed",
       "stateTitle": "Seed",
-      "columnLabel": "transition 2",
+      "columnLabel": "step 4",
       "row": 0,
       "column": 3,
       "x": 384,
@@ -108,7 +108,7 @@
     {
       "stateId": "growing",
       "stateTitle": "Growing",
-      "columnLabel": "idle 1",
+      "columnLabel": "step 1",
       "row": 1,
       "column": 0,
       "x": 0,
@@ -119,7 +119,7 @@
     {
       "stateId": "growing",
       "stateTitle": "Growing",
-      "columnLabel": "idle 2",
+      "columnLabel": "step 2",
       "row": 1,
       "column": 1,
       "x": 128,
@@ -130,7 +130,7 @@
     {
       "stateId": "growing",
       "stateTitle": "Growing",
-      "columnLabel": "transition 1",
+      "columnLabel": "step 3",
       "row": 1,
       "column": 2,
       "x": 256,
@@ -141,7 +141,7 @@
     {
       "stateId": "growing",
       "stateTitle": "Growing",
-      "columnLabel": "transition 2",
+      "columnLabel": "step 4",
       "row": 1,
       "column": 3,
       "x": 384,
@@ -152,7 +152,7 @@
     {
       "stateId": "grown",
       "stateTitle": "Grown",
-      "columnLabel": "idle 1",
+      "columnLabel": "step 1",
       "row": 2,
       "column": 0,
       "x": 0,
@@ -163,7 +163,7 @@
     {
       "stateId": "grown",
       "stateTitle": "Grown",
-      "columnLabel": "idle 2",
+      "columnLabel": "step 2",
       "row": 2,
       "column": 1,
       "x": 128,
@@ -174,7 +174,7 @@
     {
       "stateId": "grown",
       "stateTitle": "Grown",
-      "columnLabel": "transition 1",
+      "columnLabel": "step 3",
       "row": 2,
       "column": 2,
       "x": 256,
@@ -185,7 +185,7 @@
     {
       "stateId": "grown",
       "stateTitle": "Grown",
-      "columnLabel": "transition 2",
+      "columnLabel": "step 4",
       "row": 2,
       "column": 3,
       "x": 384,
@@ -196,7 +196,7 @@
     {
       "stateId": "harvested",
       "stateTitle": "Harvested",
-      "columnLabel": "idle 1",
+      "columnLabel": "step 1",
       "row": 3,
       "column": 0,
       "x": 0,
@@ -207,7 +207,7 @@
     {
       "stateId": "harvested",
       "stateTitle": "Harvested",
-      "columnLabel": "idle 2",
+      "columnLabel": "step 2",
       "row": 3,
       "column": 1,
       "x": 128,
@@ -218,7 +218,7 @@
     {
       "stateId": "harvested",
       "stateTitle": "Harvested",
-      "columnLabel": "transition 1",
+      "columnLabel": "step 3",
       "row": 3,
       "column": 2,
       "x": 256,
@@ -229,7 +229,7 @@
     {
       "stateId": "harvested",
       "stateTitle": "Harvested",
-      "columnLabel": "transition 2",
+      "columnLabel": "step 4",
       "row": 3,
       "column": 3,
       "x": 384,

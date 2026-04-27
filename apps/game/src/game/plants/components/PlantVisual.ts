@@ -4,6 +4,7 @@ export class PlantVisual {
   renderedStage = "";
   renderedFrame = -1;
   animationSeconds = 0;
+  readonly grownVariantFrame: number;
 
   constructor(
     public readonly container: Phaser.GameObjects.Container,
@@ -11,5 +12,7 @@ export class PlantVisual {
     public readonly body: Phaser.GameObjects.Ellipse,
     public readonly stem: Phaser.GameObjects.Rectangle,
     public readonly marker: Phaser.GameObjects.Text,
-  ) {}
+  ) {
+    this.grownVariantFrame = Math.floor(Math.random() * 4);
+  }
 }

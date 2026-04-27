@@ -6,8 +6,8 @@ import { HarvestedPlant } from "../components/HarvestedPlant";
 import { HarvestedPlantVisual } from "../components/HarvestedPlantVisual";
 import { plantDefinitions } from "../PlantDefinitions";
 import {
+  getHarvestItemSpriteFrameIndex,
   getPlantSpriteAsset,
-  getPlantSpriteFrameIndex,
   plantSpriteTextureKey,
 } from "../PlantSpriteAssets";
 
@@ -91,7 +91,7 @@ function renderHarvestedSprite(
   const frame =
     Math.floor(visual.animationSeconds * harvestedAnimationFramesPerSecond) %
     spriteAsset.manifest.columns;
-  const frameIndex = getPlantSpriteFrameIndex(spriteAsset, "harvested", frame);
+  const frameIndex = getHarvestItemSpriteFrameIndex(spriteAsset, frame);
 
   if (frameIndex === undefined || visual.renderedFrame === frame) {
     return;

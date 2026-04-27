@@ -179,22 +179,22 @@ function defaultPlantStates(): ObjectSpriteState[] {
     {
       id: "seed",
       title: "Seed",
-      prompt: "small planted seed or first sprout, low to the ground",
+      prompt: "column 1 is an isolated collectible seed item with no dirt; columns 2-4 are planted seed growth steps with soil and a tiny sprout",
     },
     {
       id: "growing",
       title: "Growing",
-      prompt: "young plant with clear leaves and early structure",
+      prompt: "progressive growth steps from young sprout to nearly mature plant",
     },
     {
       id: "grown",
       title: "Grown",
-      prompt: "mature harvest-ready plant with the strongest identifying features",
+      prompt: "different stable variants of the mature harvest-ready plant, not animation frames",
     },
     {
       id: "harvested",
       title: "Harvested",
-      prompt: "post-harvest remnant, cut stem, root, or gathered bundle state",
+      prompt: "columns 1-2 are post-harvest plant remnants left in the ground; columns 3-4 are isolated harvested crop resource pickups",
     },
   ];
 }
