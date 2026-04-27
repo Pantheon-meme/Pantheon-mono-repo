@@ -119,10 +119,42 @@ function pickForagedSeed(activeLayer: string): string {
   const roll = Math.random();
 
   if (activeLayer === "dirt") {
-    return roll < 0.68 ? "moonroot_seed" : "sungrain_seed";
+    if (roll < 0.26) {
+      return "frostbarley_seed";
+    }
+    if (roll < 0.48) {
+      return "duskmillet_seed";
+    }
+    if (roll < 0.66) {
+      return "silveroat_seed";
+    }
+    if (roll < 0.78) {
+      return "emberwheat_seed";
+    }
+    if (roll < 0.88) {
+      return "starrye_seed";
+    }
+
+    return "sungrain_seed";
   }
 
-  return roll < 0.72 ? "sungrain_seed" : "moonroot_seed";
+  if (roll < 0.3) {
+    return "sungrain_seed";
+  }
+  if (roll < 0.5) {
+    return "emberwheat_seed";
+  }
+  if (roll < 0.68) {
+    return "starrye_seed";
+  }
+  if (roll < 0.84) {
+    return "silveroat_seed";
+  }
+  if (roll < 0.92) {
+    return "frostbarley_seed";
+  }
+
+  return "duskmillet_seed";
 }
 
 function getForageAmount(quality: CheckQuality): number {

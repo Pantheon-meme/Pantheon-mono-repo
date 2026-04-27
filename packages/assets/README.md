@@ -101,6 +101,17 @@ Use this for flexible object atlases such as plants, tools, resources, pickups, 
 
 The workflow automatically writes and sends the image model a checkerboard layout guide matching your requested rows and columns. The guide uses equal square cells and center marks so the model has a visible composition template instead of only text instructions. The raw generated sprite sheet is prompted to keep that checkerboard visible for verification; the game publisher can strip the neutral grid/background for runtime use. You can also provide either a detailed text style guide, a style reference image, or one cropped tile from an existing atlas. The game autotile atlases use `256` pixel cells, so `--style-reference-cell 1,1,256` uses the center-ish grass tile from a 7x7 atlas as inspiration.
 
+For plants, use the shortcut form when the current defaults are enough:
+
+```sh
+pnpm --filter @pantheon/assets generate-object-sprites -- \
+  --plant-id "sungrain" \
+  --plant-name "Sungrain" \
+  --plant "a warm golden grain plant grown from a tiny amber seed, with sunlit wheat heads and soft green leaves"
+```
+
+That expands to the current plant grid, state rows, column labels, style guide, vibrant-grass style reference tile, cell size, and `generated/object-sprites/<plant-id>` output path. Use the full object form below when you need to override individual rows or style.
+
 ```sh
 pnpm --filter @pantheon/assets generate-object-sprites -- \
   --object-id "sungrain" \
@@ -117,24 +128,6 @@ pnpm --filter @pantheon/assets generate-object-sprites -- \
   --column-labels "step 1,step 2,step 3,step 4" \
   --cell-size 128 \
   --out "generated/object-sprites/sungrain"
-```
-
-```sh
-pnpm --filter @pantheon/assets generate-object-sprites -- \
-  --object-id "moonroot" \
-  --object-name "Moonroot" \
-  --object "a cool pale-blue root crop with moonlit leaves, silver-white bulb/root forms, and gentle nocturnal glow; readable as a small top-down farming game crop" \
-  --style "cozy hand-painted 2D game sprite, three-quarter top-down view, crisp readable silhouette, soft natural edges, cool blue highlights, subtle magical sheen, transparent background" \
-  --style-reference "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png" \
-  --style-reference-cell "1,1,256" \
-  --state "seed:Seed:column 1 is an isolated collectible pale blue Moonroot seed pickup with no soil; columns 2-4 are planted early growth steps from seed in soil to tiny sprout" \
-  --state "growing:Growing:four gradual growth steps from young teal leaves to almost mature moonroot" \
-  --state "grown:Grown:four different stable harvest-ready variants with pale moon root and cool-toned leaves" \
-  --state "harvested:Harvested:columns 1-2 are dug-up plant remnants or cut leaves left after harvest; columns 3-4 are isolated harvested Moonroot crop resource pickups, small pale root bundles" \
-  --columns 4 \
-  --column-labels "step 1,step 2,step 3,step 4" \
-  --cell-size 128 \
-  --out "generated/object-sprites/moonroot"
 ```
 
 The command writes:

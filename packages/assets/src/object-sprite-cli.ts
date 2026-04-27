@@ -9,6 +9,9 @@ import type { ObjectSpriteState } from "./schemas.js";
 type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
 type CliOptions = {
+  plantId?: string;
+  plantName?: string;
+  plantPrompt?: string;
   objectId?: string;
   objectName?: string;
   objectPrompt?: string;
@@ -33,40 +36,41 @@ type CliOptions = {
 loadNearestEnvFile();
 
 const options = parseArgs(process.argv.slice(2));
+const requestOptions = applyPlantDefaults(options);
 
-if (options.help || !options.objectId || !options.objectName || !options.objectPrompt || !options.stylePrompt) {
+if (requestOptions.help || !requestOptions.objectId || !requestOptions.objectName || !requestOptions.objectPrompt || !requestOptions.stylePrompt) {
   printHelp();
-  process.exit(options.help ? 0 : 1);
+  process.exit(requestOptions.help ? 0 : 1);
 }
 
-const styleReferencePath = options.styleReference ? resolveInputPath(options.styleReference) : undefined;
+const styleReferencePath = requestOptions.styleReference ? resolveInputPath(requestOptions.styleReference) : undefined;
 
-if (options.styleReferenceCell && !options.styleReference) {
+if (requestOptions.styleReferenceCell && !requestOptions.styleReference) {
   throw new Error("--style-reference-cell requires --style-reference.");
 }
 
-const columns = options.columns ?? Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_COLUMNS ?? "4", 10);
-const columnLabels = options.columnLabels ?? parseList(process.env.PANTHEON_OBJECT_SPRITE_COLUMN_LABELS);
+const columns = requestOptions.columns ?? Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_COLUMNS ?? "4", 10);
+const columnLabels = requestOptions.columnLabels ?? parseList(process.env.PANTHEON_OBJECT_SPRITE_COLUMN_LABELS);
 
 if (columnLabels && columnLabels.length > columns) {
   throw new Error(`Received ${columnLabels.length} column labels for only ${columns} columns.`);
 }
 
 const manifest = await runObjectSpriteWorkflow({
-  objectId: options.objectId,
-  objectName: options.objectName,
-  objectPrompt: options.objectPrompt,
-  stylePrompt: options.stylePrompt,
+  objectId: requestOptions.objectId,
+  objectName: requestOptions.objectName,
+  objectPrompt: requestOptions.objectPrompt,
+  stylePrompt: requestOptions.stylePrompt,
   styleReferencePath,
-  styleReferenceCell: options.styleReferenceCell,
-  imageModel: options.imageModel ?? process.env.OPENROUTER_IMAGE_MODEL ?? "google/gemini-2.5-flash-image",
-  reasoningEffort: options.reasoningEffort ?? parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high"),
-  states: options.states && options.states.length > 0 ? options.states : defaultPlantStates(),
+  styleReferenceCell: requestOptions.styleReferenceCell,
+  imageModel: requestOptions.imageModel ?? process.env.OPENROUTER_IMAGE_MODEL ?? "google/gemini-2.5-flash-image",
+  reasoningEffort: requestOptions.reasoningEffort ?? parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high"),
+  states: requestOptions.states && requestOptions.states.length > 0 ? requestOptions.states : defaultPlantStates(),
   columns,
   columnLabels,
-  cellSize: options.cellSize ?? Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_CELL_SIZE ?? "128", 10),
-  background: options.background ?? parseBackground(process.env.PANTHEON_OBJECT_SPRITE_BACKGROUND ?? "transparent"),
-  outputDir: options.out ?? "generated/object-sprites",
+  cellSize: requestOptions.cellSize ?? Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_CELL_SIZE ?? "128", 10),
+  background: requestOptions.background ?? parseBackground(process.env.PANTHEON_OBJECT_SPRITE_BACKGROUND ?? "transparent"),
+  outputDir: requestOptions.out ?? "generated/object-sprites",
 });
 
 console.log(JSON.stringify(manifest, null, 2));
@@ -80,6 +84,18 @@ function parseArgs(args: string[]): CliOptions {
 
     switch (arg) {
       case "--":
+        break;
+      case "--plant-id":
+        parsed.plantId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--plant-name":
+        parsed.plantName = readValue(arg, next);
+        index += 1;
+        break;
+      case "--plant":
+        parsed.plantPrompt = readValue(arg, next);
+        index += 1;
         break;
       case "--object-id":
         parsed.objectId = readValue(arg, next);
@@ -150,6 +166,36 @@ function parseArgs(args: string[]): CliOptions {
   return parsed;
 }
 
+function applyPlantDefaults(options: CliOptions): CliOptions {
+  if (!options.plantId && !options.plantName && !options.plantPrompt) {
+    return options;
+  }
+
+  const plantName = options.plantName ?? options.objectName ?? titleCase(options.plantId ?? "plant");
+  const plantId = options.plantId ?? options.objectId ?? slugify(plantName);
+  const plantPrompt = options.plantPrompt ?? options.objectPrompt;
+
+  if (!plantPrompt) {
+    throw new Error("--plant requires a plant description.");
+  }
+
+  return {
+    ...options,
+    objectId: options.objectId ?? plantId,
+    objectName: options.objectName ?? plantName,
+    objectPrompt: options.objectPrompt ?? `${plantPrompt}; readable as a small top-down farming game crop`,
+    stylePrompt: options.stylePrompt ?? defaultPlantStylePrompt(),
+    styleReference: options.styleReference ?? "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
+    styleReferenceCell: options.styleReferenceCell ?? { row: 1, column: 1, cellSize: 256 },
+    states: options.states ?? defaultPlantStates(),
+    columns: options.columns ?? 4,
+    columnLabels: options.columnLabels ?? ["step 1", "step 2", "step 3", "step 4"],
+    cellSize: options.cellSize ?? 128,
+    background: options.background ?? "transparent",
+    out: options.out ?? `generated/object-sprites/${plantId}`,
+  };
+}
+
 function parseState(value: string): ObjectSpriteState {
   const [id, title, ...promptParts] = value.split(":");
 
@@ -197,6 +243,18 @@ function defaultPlantStates(): ObjectSpriteState[] {
       prompt: "columns 1-2 are post-harvest plant remnants left in the ground; columns 3-4 are isolated harvested crop resource pickups",
     },
   ];
+}
+
+function defaultPlantStylePrompt(): string {
+  return [
+    "cozy hand-painted 2D game sprite",
+    "three-quarter top-down view",
+    "crisp readable silhouette",
+    "soft natural edges",
+    "warm but balanced highlights",
+    "no outlines heavier than the terrain art",
+    "transparent background",
+  ].join(", ");
 }
 
 function readValue(flag: string, value: string | undefined): string {
@@ -269,10 +327,30 @@ function parseReasoningEffort(value: string): ReasoningEffort {
   }
 }
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(" ");
+}
+
 function printHelp(): void {
   console.log(`Generate a flexible object sprite sheet with OpenRouter.
 
 Usage:
+  pnpm --filter @pantheon/assets generate-object-sprites -- \\
+    --plant-id sungrain \\
+    --plant-name "Sungrain" \\
+    --plant "warm golden grain plant with sunlit wheat heads"
+
   pnpm --filter @pantheon/assets generate-object-sprites -- \\
     --object-id sungrain \\
     --object-name "Sungrain" \\
@@ -280,6 +358,9 @@ Usage:
     --style "cozy top-down pixel-inspired hand-painted game sprite..." [options]
 
 Options:
+      --plant-id <id>          Plant shortcut id. Fills object id and output path.
+      --plant-name <name>      Plant shortcut display name.
+      --plant <brief>          Plant shortcut description; uses current plant sprite defaults.
       --object-id <id>          Stable asset id, e.g. sungrain.
       --object-name <name>      Display name for prompt/manifest.
       --object <brief>          Object description and distinguishing details.
