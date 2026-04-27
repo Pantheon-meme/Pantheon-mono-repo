@@ -31,6 +31,7 @@ import { SkillSet } from "../game/ideas/components/SkillSet";
 import { SleepProgressBar } from "../game/ui/components/SleepProgressBar";
 import { SleepState } from "../game/sleep/components/SleepState";
 import { SleepVisual } from "../game/ui/components/SleepVisual";
+import { TargetActionMenu } from "../game/ui/components/TargetActionMenu";
 import { TerrainBackground } from "../game/terrain/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/terrain/components/TerrainBaseLayer";
 import { TerrainGrid } from "../game/terrain/components/TerrainGrid";
@@ -69,6 +70,7 @@ export class MainGameScene extends Phaser.Scene {
     const journal = world.createEntity();
     const seedHud = world.createEntity();
     const handHud = world.createEntity();
+    const targetActionMenu = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -85,6 +87,7 @@ export class MainGameScene extends Phaser.Scene {
     const journalPanel = this.createJournalPanel();
     const seedHudDisplay = this.createSeedHud();
     const handHudDisplay = this.createHandHud();
+    const targetActionMenuDisplay = this.createTargetActionMenu();
     const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
 
@@ -157,6 +160,11 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(journal, JournalPanel, journalPanel);
     world.addComponent(seedHud, SeedHud, seedHudDisplay);
     world.addComponent(handHud, HandHud, handHudDisplay);
+    world.addComponent(
+      targetActionMenu,
+      TargetActionMenu,
+      targetActionMenuDisplay,
+    );
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -366,6 +374,28 @@ export class MainGameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(101);
+  }
+
+  private createTargetActionMenu(): TargetActionMenu {
+    const container = this.add.container(0, 0).setDepth(104).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, 440, 112, 0x101821, 0.9)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0xf1d38b, 0.72);
+    const title = this.add
+      .text(0, -38, "", {
+        align: "center",
+        color: "#f6efd7",
+        fixedWidth: 400,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+        fontStyle: "700",
+      })
+      .setOrigin(0.5);
+
+    container.add([background, title]);
+
+    return new TargetActionMenu(container, background, title, 440, 38);
   }
 
   private createSleepVisual(): SleepVisual {

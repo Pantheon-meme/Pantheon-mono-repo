@@ -25,6 +25,7 @@ import { SeedHudSystem } from "../ui/systems/SeedHudSystem";
 import { SleepProgressBarSystem } from "../ui/systems/SleepProgressBarSystem";
 import { SleepSystem } from "../sleep/systems/SleepSystem";
 import { SleepVisualSystem } from "../ui/systems/SleepVisualSystem";
+import { TargetActionMenuSystem } from "../ui/systems/TargetActionMenuSystem";
 import { TerrainBackgroundSystem } from "../terrain/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../terrain/systems/TerrainBaseRenderSystem";
 import { WeightDisplaySystem } from "../ui/systems/WeightDisplaySystem";
@@ -67,6 +68,7 @@ export function registerSystems(
   world.addSystem(new SeedDropRenderSystem(scene));
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
+  world.addSystem(new TargetActionMenuSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new SeedHudSystem());
   world.addSystem(new HandHudSystem());
