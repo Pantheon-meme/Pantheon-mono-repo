@@ -1,0 +1,47 @@
+import type { Entity } from "../../ecs/World";
+import type { World } from "../../ecs/World";
+import { FacingDirection } from "../components/FacingDirection";
+import { FocusTarget } from "../components/FocusTarget";
+import { Position } from "../components/Position";
+import { getFacingTargetCell } from "../terrain/GridTargeting";
+import { getTerrainLayer } from "../terrain/TerrainLayers";
+import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
+
+export const terrainActionDefinitions: Record<string, ActionDefinition> = {
+  dig: {
+    id: "dig",
+    label: "Dig",
+    energyDelta: -12,
+    apply: dig,
+  },
+};
+
+function dig(world: World, actor: Entity): ActionEffectResult {
+  const position = world.getComponent(actor, Position);
+  const facing = world.getComponent(actor, FacingDirection);
+  const focus = world.getComponent(actor, FocusTarget);
+  const dirtLayer = getTerrainLayer(world, "dirt");
+
+  if (!position || !facing || !dirtLayer) {
+    return { message: "Dig: no target", applied: false };
+  }
+
+  if (focus?.kind === "object") {
+    return {
+      message: `Dig: ${focus.objectLabel} is in focus`,
+      applied: false,
+    };
+  }
+
+  const targetCell = focus
+    ? { x: focus.tileX, y: focus.tileY }
+    : getFacingTargetCell(dirtLayer.grid, position, facing);
+
+  if (dirtLayer.grid.has(targetCell.x, targetCell.y)) {
+    return { message: "Dig: already dirt", applied: false };
+  }
+
+  dirtLayer.grid.set(targetCell.x, targetCell.y, true);
+
+  return { message: `Dig: loosened soil at ${targetCell.x},${targetCell.y}` };
+}

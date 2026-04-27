@@ -8,6 +8,16 @@ Phaser 3 + TypeScript client for the playable side of Pantheon.
 pnpm --filter @pantheon/game dev
 ```
 
+The game uses checked-in runtime assets from `src/assets`, so new devs do not need to run the asset generator before starting the client.
+
+## Refresh Assets
+
+After regenerating autotiles in `packages/assets/generated`, publish the atlases used by the game:
+
+```sh
+pnpm publish:game-assets
+```
+
 ## Controls
 
 - Arrow keys or WASD move the single player.

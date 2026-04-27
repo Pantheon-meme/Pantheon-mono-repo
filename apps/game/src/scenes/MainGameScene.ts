@@ -1,8 +1,9 @@
 import Phaser from "phaser";
-import dirtAtlasUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-blob-7x7.png?url";
-import grassAtlasUrl from "../../../../packages/assets/generated/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import dirtAtlasUrl from "../assets/autotiles/dirt/autotile-blob-7x7.png?url";
+import grassAtlasUrl from "../assets/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/autotile/BlobAutotile";
+import { registerSystems } from "../game/bootstrap/registerSystems";
 import { ActionBindings } from "../game/components/ActionBindings";
 import { ActionLog } from "../game/components/ActionLog";
 import { ActionQueue } from "../game/components/ActionQueue";
@@ -35,34 +36,6 @@ import { TerrainBaseLayer } from "../game/components/TerrainBaseLayer";
 import { TerrainGrid } from "../game/components/TerrainGrid";
 import { TerrainLayer } from "../game/components/TerrainLayer";
 import { Velocity } from "../game/components/Velocity";
-import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
-import { ActionInputSystem } from "../game/systems/ActionInputSystem";
-import { ActionSystem } from "../game/systems/ActionSystem";
-import { BoundsSystem } from "../game/systems/BoundsSystem";
-import { DayNightRenderSystem } from "../game/systems/DayNightRenderSystem";
-import { EnergyBarSystem } from "../game/systems/EnergyBarSystem";
-import { EnergySystem } from "../game/systems/EnergySystem";
-import { FacingDirectionSystem } from "../game/systems/FacingDirectionSystem";
-import { FocusInputSystem } from "../game/systems/FocusInputSystem";
-import { FocusTargetSystem } from "../game/systems/FocusTargetSystem";
-import { GameClockSystem } from "../game/systems/GameClockSystem";
-import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
-import { HandHudSystem } from "../game/systems/HandHudSystem";
-import { HeldItemPositionSystem } from "../game/systems/HeldItemPositionSystem";
-import { InputSystem } from "../game/systems/InputSystem";
-import { JournalSystem } from "../game/systems/JournalSystem";
-import { MovementSystem } from "../game/systems/MovementSystem";
-import { PlantGrowthSystem } from "../game/systems/PlantGrowthSystem";
-import { PlantRenderSystem } from "../game/systems/PlantRenderSystem";
-import { RenderSystem } from "../game/systems/RenderSystem";
-import { SeedDropRenderSystem } from "../game/systems/SeedDropRenderSystem";
-import { SeedHudSystem } from "../game/systems/SeedHudSystem";
-import { SleepProgressBarSystem } from "../game/systems/SleepProgressBarSystem";
-import { SleepSystem } from "../game/systems/SleepSystem";
-import { SleepVisualSystem } from "../game/systems/SleepVisualSystem";
-import { TerrainBackgroundSystem } from "../game/systems/TerrainBackgroundSystem";
-import { TerrainBaseRenderSystem } from "../game/systems/TerrainBaseRenderSystem";
-import { WeightDisplaySystem } from "../game/systems/WeightDisplaySystem";
 
 const grassAtlasKey = "main-vibrant-grass-blob-7x7";
 const dirtAtlasKey = "main-dirt-blob-7x7";
@@ -241,46 +214,13 @@ export class MainGameScene extends Phaser.Scene {
       throw new Error("Keyboard input is unavailable.");
     }
 
-    world.addSystem(new TerrainBaseRenderSystem());
-    world.addSystem(new AutotileRenderSystem(this));
-    world.addSystem(new TerrainBackgroundSystem(this));
-    world.addSystem(new JournalSystem(this));
-    world.addSystem(new FocusInputSystem(keyboard));
-    world.addSystem(
-      new InputSystem(
-        keyboard.createCursorKeys(),
-        keyboard.addKeys("W,A,S,D") as Record<
-          "W" | "A" | "S" | "D",
-          Phaser.Input.Keyboard.Key
-        >,
-      ),
+    registerSystems(
+      world,
+      this,
+      keyboard,
+      new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
+      weightLabel,
     );
-    world.addSystem(new ActionInputSystem(keyboard));
-    world.addSystem(new GameClockSystem());
-    world.addSystem(new EnergySystem());
-    world.addSystem(new PlantGrowthSystem());
-    world.addSystem(new FacingDirectionSystem());
-    world.addSystem(new MovementSystem());
-    world.addSystem(new HeldItemPositionSystem());
-    world.addSystem(new FocusTargetSystem());
-    world.addSystem(new ActionSystem());
-    world.addSystem(new SleepSystem());
-    world.addSystem(
-      new BoundsSystem(
-        new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
-      ),
-    );
-    world.addSystem(new GridTargetHighlightSystem());
-    world.addSystem(new RenderSystem());
-    world.addSystem(new PlantRenderSystem(this));
-    world.addSystem(new SeedDropRenderSystem(this));
-    world.addSystem(new SleepVisualSystem());
-    world.addSystem(new DayNightRenderSystem());
-    world.addSystem(new SleepProgressBarSystem());
-    world.addSystem(new SeedHudSystem());
-    world.addSystem(new HandHudSystem());
-    world.addSystem(new EnergyBarSystem());
-    world.addSystem(new WeightDisplaySystem(weightLabel));
 
     this.world = world;
   }

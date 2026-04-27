@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import dirtAtlasUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-blob-7x7.png?url";
-import vibrantGrassAtlasUrl from "../../../../packages/assets/generated/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
-import waterAtlasUrl from "../../../../packages/assets/generated/autotiles/water/autotile-blob-7x7.png?url";
+import dirtAtlasUrl from "../assets/autotiles/dirt/autotile-blob-7x7.png?url";
+import vibrantGrassAtlasUrl from "../assets/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import waterAtlasUrl from "../assets/autotiles/water/autotile-blob-7x7.png?url";
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/autotile/BlobAutotile";
 import { AutotileLayer } from "../game/components/AutotileLayer";
