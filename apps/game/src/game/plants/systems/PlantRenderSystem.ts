@@ -5,11 +5,18 @@ import { PlantState, type PlantStage } from "../components/PlantState";
 import { PlantVisual } from "../components/PlantVisual";
 import { Position } from "../../shared/components/Position";
 import { plantDefinitions } from "../PlantDefinitions";
+import {
+  getPlantSpriteAsset,
+  getPlantSpriteFrameIndex,
+  plantSpriteTextureKey,
+} from "../PlantSpriteAssets";
+
+const plantAnimationFramesPerSecond = 2;
 
 export class PlantRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
 
-  update(world: World): void {
+  update(world: World, deltaSeconds: number): void {
     for (const [entity, plant, position] of world.query(PlantState, Position)) {
       const definition = plantDefinitions[plant.plantId];
 
@@ -18,22 +25,28 @@ export class PlantRenderSystem implements System {
       }
 
       let visual = world.getComponent(entity, PlantVisual);
+      const spriteAsset = getPlantSpriteAsset(plant.plantId);
 
       if (!visual) {
-        visual = this.createVisual();
+        visual = this.createVisual(plant.plantId, Boolean(spriteAsset));
         world.addComponent(entity, PlantVisual, visual);
       }
 
       visual.container.setPosition(position.x, position.y);
 
-      if (visual.renderedStage !== plant.stage) {
+      if (spriteAsset) {
+        renderSpriteStage(visual, spriteAsset, plant.stage, deltaSeconds);
+      } else if (visual.renderedStage !== plant.stage) {
         renderStage(visual, plant.stage, definition.colors[plant.stage]);
       }
     }
   }
 
-  private createVisual(): PlantVisual {
+  private createVisual(plantId: string, useSprite: boolean): PlantVisual {
     const container = this.scene.add.container(0, 0).setDepth(8);
+    const sprite = useSprite
+      ? this.scene.add.sprite(0, 0, plantSpriteTextureKey(plantId)).setOrigin(0.5)
+      : undefined;
     const stem = this.scene.add.rectangle(0, 0, 14, 46, 0x7dbd47, 1);
     const body = this.scene.add.ellipse(0, 0, 52, 52, 0xd8a541, 1);
     const marker = this.scene.add
@@ -46,10 +59,42 @@ export class PlantRenderSystem implements System {
       })
       .setOrigin(0.5);
 
-    container.add([stem, body, marker]);
+    stem.setVisible(!useSprite);
+    body.setVisible(!useSprite);
+    marker.setVisible(!useSprite);
+    container.add([...(sprite ? [sprite] : []), stem, body, marker]);
 
-    return new PlantVisual(container, body, stem, marker);
+    return new PlantVisual(container, sprite, body, stem, marker);
   }
+}
+
+function renderSpriteStage(
+  visual: PlantVisual,
+  spriteAsset: NonNullable<ReturnType<typeof getPlantSpriteAsset>>,
+  stage: PlantStage,
+  deltaSeconds: number,
+): void {
+  if (!visual.sprite) {
+    return;
+  }
+
+  visual.animationSeconds += deltaSeconds;
+  const frame =
+    Math.floor(visual.animationSeconds * plantAnimationFramesPerSecond) %
+    spriteAsset.manifest.columns;
+  const frameIndex = getPlantSpriteFrameIndex(spriteAsset, stage, frame);
+
+  if (frameIndex === undefined) {
+    return;
+  }
+
+  visual.renderedStage = stage;
+  visual.renderedFrame = frame;
+  visual.sprite
+    .setVisible(true)
+    .setFrame(frameIndex)
+    .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize)
+    .setAlpha(stage === "fetched" ? 0.82 : 1);
 }
 
 function renderStage(

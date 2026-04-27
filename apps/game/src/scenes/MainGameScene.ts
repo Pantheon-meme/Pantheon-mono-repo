@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import dirtAtlasUrl from "../assets/autotiles/dirt/autotile-blob-7x7.png?url";
 import grassAtlasUrl from "../assets/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import { objectSpriteAssets } from "../assets/object-sprites/ObjectSpriteAssets";
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
@@ -42,6 +43,7 @@ import { TerrainGrid } from "../game/terrain/components/TerrainGrid";
 import { TerrainHardness } from "../game/terrain/components/TerrainHardness";
 import { TerrainLayer } from "../game/terrain/components/TerrainLayer";
 import { Velocity } from "../game/shared/components/Velocity";
+import { plantSpriteTextureKey } from "../game/plants/PlantSpriteAssets";
 
 const grassAtlasKey = "main-vibrant-grass-blob-7x7";
 const dirtAtlasKey = "main-dirt-blob-7x7";
@@ -61,6 +63,13 @@ export class MainGameScene extends Phaser.Scene {
   preload(): void {
     this.load.image(grassAtlasKey, grassAtlasUrl);
     this.load.image(dirtAtlasKey, dirtAtlasUrl);
+
+    for (const [plantId, asset] of Object.entries(objectSpriteAssets)) {
+      this.load.spritesheet(plantSpriteTextureKey(plantId), asset.imageUrl, {
+        frameWidth: asset.manifest.cellSize,
+        frameHeight: asset.manifest.cellSize,
+      });
+    }
   }
 
   create(): void {

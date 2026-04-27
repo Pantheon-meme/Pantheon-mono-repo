@@ -94,6 +94,62 @@ PANTHEON_AUTOTILE_CONCURRENCY=4
 OPENROUTER_REASONING_EFFORT=high
 ```
 
+## Generate Object Sprite Sheets
+
+Use this for flexible object atlases such as plants, tools, resources, pickups, or world props. Each state is one row. Columns are frames in that row, so the same command can make growth stages, idle loops, transition frames, or simple variants.
+
+The workflow automatically writes and sends the image model a checkerboard layout guide matching your requested rows and columns. The guide uses equal square cells and center marks so the model has a visible composition template instead of only text instructions. The raw generated sprite sheet is prompted to keep that checkerboard visible for verification; the game publisher can strip the neutral grid/background for runtime use. You can also provide either a detailed text style guide, a style reference image, or one cropped tile from an existing atlas. The game autotile atlases use `256` pixel cells, so `--style-reference-cell 1,1,256` uses the center-ish grass tile from a 7x7 atlas as inspiration.
+
+```sh
+pnpm --filter @pantheon/assets generate-object-sprites -- \
+  --object-id "sungrain" \
+  --object-name "Sungrain" \
+  --object "a warm golden grain plant grown from a tiny amber seed, with sunlit wheat heads and soft green leaves; readable as a small top-down farming game crop" \
+  --style "cozy hand-painted 2D game sprite, three-quarter top-down view, crisp readable silhouette, soft natural edges, warm highlights, no outlines heavier than the terrain art, transparent background" \
+  --style-reference "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png" \
+  --style-reference-cell "1,1,256" \
+  --state "seed:Seed:small amber seed or first tiny sprout, low to the soil" \
+  --state "growing:Growing:young green shoots with a few forming golden blades" \
+  --state "grown:Grown:full harvest-ready golden grain heads, healthiest and tallest row" \
+  --state "harvested:Harvested:short cut stalks or bundled remnant after harvest" \
+  --columns 4 \
+  --column-labels "idle 1,idle 2,transition 1,transition 2" \
+  --cell-size 128 \
+  --out "generated/object-sprites/sungrain"
+```
+
+```sh
+pnpm --filter @pantheon/assets generate-object-sprites -- \
+  --object-id "moonroot" \
+  --object-name "Moonroot" \
+  --object "a cool pale-blue root crop with moonlit leaves, silver-white bulb/root forms, and gentle nocturnal glow; readable as a small top-down farming game crop" \
+  --style "cozy hand-painted 2D game sprite, three-quarter top-down view, crisp readable silhouette, soft natural edges, cool blue highlights, subtle magical sheen, transparent background" \
+  --style-reference "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png" \
+  --style-reference-cell "1,1,256" \
+  --state "seed:Seed:pale blue seed or tiny moonlit sprout close to the soil" \
+  --state "growing:Growing:young teal leaves with the root just beginning to show" \
+  --state "grown:Grown:full harvest-ready pale moon root with broad cool-toned leaves" \
+  --state "harvested:Harvested:dug-up remnant, cut leaves, or small gathered root bundle" \
+  --columns 4 \
+  --column-labels "idle 1,idle 2,transition 1,transition 2" \
+  --cell-size 128 \
+  --out "generated/object-sprites/moonroot"
+```
+
+The command writes:
+
+- `object-sprite-layout-guide.png` with the raw checkerboard grid sent to the image generator.
+- `object-sprite-manifest.json` with the atlas dimensions, row/column labels, prompts, model id, and per-cell coordinates.
+- A generated sprite sheet PNG decoded from the OpenRouter image response.
+
+Publish generated object sprites into the game after reviewing the image:
+
+```sh
+pnpm publish:object-sprites
+```
+
+This copies every generated object sprite sheet into `apps/game/src/assets/object-sprites` and regenerates `ObjectSpriteAssets.ts`, which the game uses to preload and crop sprite frames.
+
 ## Publish Game Assets
 
 Generated assets stay ignored under `packages/assets/generated`. To update the checked-in copies consumed by the game, publish the required autotile atlases after generation:
