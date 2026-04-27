@@ -1,8 +1,8 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { FacingDirection } from "../components/FacingDirection";
-import { FocusTarget } from "../components/FocusTarget";
-import { Position } from "../components/Position";
+import { FacingDirection } from "../player/components/FacingDirection";
+import { FocusTarget } from "../player/components/FocusTarget";
+import { Position } from "../shared/components/Position";
 import { getFacingTargetCell } from "../terrain/GridTargeting";
 import { getTerrainLayer } from "../terrain/TerrainLayers";
 import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";

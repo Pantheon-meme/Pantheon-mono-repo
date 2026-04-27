@@ -1,10 +1,10 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { FacingDirection } from "../components/FacingDirection";
-import { FocusTarget } from "../components/FocusTarget";
-import { Position } from "../components/Position";
-import { SeedPouch } from "../components/SeedPouch";
-import { TerrainGrid } from "../components/TerrainGrid";
+import { FacingDirection } from "../player/components/FacingDirection";
+import { FocusTarget } from "../player/components/FocusTarget";
+import { Position } from "../shared/components/Position";
+import { SeedPouch } from "../plants/components/SeedPouch";
+import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { getPlantBySeed, plantDefinitions } from "../plants/PlantDefinitions";
 import { getFacingTargetCell } from "../terrain/GridTargeting";
 import {

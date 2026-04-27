@@ -1,16 +1,16 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { FocusTarget } from "../components/FocusTarget";
-import { Footprint } from "../components/Footprint";
-import { Grabbable } from "../components/Grabbable";
-import { IdeaState } from "../components/IdeaState";
-import { ItemUseConstraints } from "../components/ItemUseConstraints";
-import { Position } from "../components/Position";
-import { SeedDrop } from "../components/SeedDrop";
-import { SkillSet } from "../components/SkillSet";
-import { TerrainGrid } from "../components/TerrainGrid";
-import { WeightInspectable } from "../components/WeightInspectable";
-import { WeightedObject } from "../components/WeightedObject";
+import { FocusTarget } from "../player/components/FocusTarget";
+import { Footprint } from "../shared/components/Footprint";
+import { Grabbable } from "../shared/components/Grabbable";
+import { IdeaState } from "../ideas/components/IdeaState";
+import { ItemUseConstraints } from "../shared/components/ItemUseConstraints";
+import { Position } from "../shared/components/Position";
+import { SeedDrop } from "../plants/components/SeedDrop";
+import { SkillSet } from "../ideas/components/SkillSet";
+import { TerrainGrid } from "../terrain/components/TerrainGrid";
+import { WeightInspectable } from "../shared/components/WeightInspectable";
+import { WeightedObject } from "../shared/components/WeightedObject";
 import {
   checkQualityLabel,
   type CheckQuality,

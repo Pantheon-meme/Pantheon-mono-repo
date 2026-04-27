@@ -1,11 +1,11 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { Footprint } from "../components/Footprint";
-import type { HandId } from "../components/Hands";
-import { PlantState } from "../components/PlantState";
-import { Position } from "../components/Position";
-import { WeightInspectable } from "../components/WeightInspectable";
-import { WeightedObject } from "../components/WeightedObject";
+import { Footprint } from "../shared/components/Footprint";
+import type { HandId } from "../player/components/Hands";
+import { PlantState } from "../plants/components/PlantState";
+import { Position } from "../shared/components/Position";
+import { WeightInspectable } from "../shared/components/WeightInspectable";
+import { WeightedObject } from "../shared/components/WeightedObject";
 import { plantDefinitions } from "../plants/PlantDefinitions";
 
 export function formatLayerName(layerId: string): string {

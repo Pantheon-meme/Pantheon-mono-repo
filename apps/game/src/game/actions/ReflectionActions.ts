@@ -1,12 +1,12 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { Energy } from "../components/Energy";
-import { IdeaState } from "../components/IdeaState";
-import { KnowledgeState } from "../components/KnowledgeState";
-import { NeedState } from "../components/NeedState";
-import { Position } from "../components/Position";
-import { SkillSet } from "../components/SkillSet";
-import { TerrainGrid } from "../components/TerrainGrid";
+import { Energy } from "../energy/components/Energy";
+import { IdeaState } from "../ideas/components/IdeaState";
+import { KnowledgeState } from "../ideas/components/KnowledgeState";
+import { NeedState } from "../needs/components/NeedState";
+import { Position } from "../shared/components/Position";
+import { SkillSet } from "../ideas/components/SkillSet";
+import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { getIdeasForNeed } from "../ideas/IdeaDefinitions";
 import {
   checkQualityLabel,

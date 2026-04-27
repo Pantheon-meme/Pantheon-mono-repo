@@ -1,9 +1,9 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { Energy } from "../components/Energy";
-import { Position } from "../components/Position";
-import { SleepState } from "../components/SleepState";
-import { TerrainGrid } from "../components/TerrainGrid";
+import { Energy } from "../energy/components/Energy";
+import { Position } from "../shared/components/Position";
+import { SleepState } from "../sleep/components/SleepState";
+import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { getTopTerrainLayerAtCell } from "../terrain/TerrainLayers";
 import { formatLayerName } from "./ActionHelpers";
 import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
