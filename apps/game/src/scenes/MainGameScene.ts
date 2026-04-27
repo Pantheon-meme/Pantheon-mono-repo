@@ -10,6 +10,7 @@ import { ActionProgress } from "../game/actions/components/ActionProgress";
 import { ActionQueue } from "../game/actions/components/ActionQueue";
 import { AutotileLayer } from "../game/terrain/components/AutotileLayer";
 import { DayNightOverlay } from "../game/ui/components/DayNightOverlay";
+import { DiggingCapability } from "../game/player/components/DiggingCapability";
 import { Energy } from "../game/energy/components/Energy";
 import { EnergyBar } from "../game/ui/components/EnergyBar";
 import { FacingDirection } from "../game/player/components/FacingDirection";
@@ -36,7 +37,9 @@ import { SleepVisual } from "../game/ui/components/SleepVisual";
 import { TargetActionMenu } from "../game/ui/components/TargetActionMenu";
 import { TerrainBackground } from "../game/terrain/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/terrain/components/TerrainBaseLayer";
+import { TerrainDigDepth } from "../game/terrain/components/TerrainDigDepth";
 import { TerrainGrid } from "../game/terrain/components/TerrainGrid";
+import { TerrainHardness } from "../game/terrain/components/TerrainHardness";
 import { TerrainLayer } from "../game/terrain/components/TerrainLayer";
 import { Velocity } from "../game/shared/components/Velocity";
 
@@ -66,6 +69,7 @@ export class MainGameScene extends Phaser.Scene {
     const backgroundTerrain = world.createEntity();
     const atlasWarmupTerrain = world.createEntity();
     const dirtTerrain = world.createEntity();
+    const diggingTerrain = world.createEntity();
     const time = world.createEntity();
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
@@ -156,6 +160,8 @@ export class MainGameScene extends Phaser.Scene {
         blobAtlasCellSize,
       ),
     );
+    world.addComponent(diggingTerrain, TerrainHardness, new TerrainHardness());
+    world.addComponent(diggingTerrain, TerrainDigDepth, new TerrainDigDepth());
 
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
@@ -177,6 +183,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
     world.addComponent(player, Hands, new Hands());
+    world.addComponent(player, DiggingCapability, new DiggingCapability());
     world.addComponent(player, SeedPouch, new SeedPouch());
     world.addComponent(player, NeedState, needs);
     world.addComponent(player, IdeaState, new IdeaState());

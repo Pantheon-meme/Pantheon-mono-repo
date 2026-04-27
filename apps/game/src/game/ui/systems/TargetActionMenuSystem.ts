@@ -162,6 +162,7 @@ function formatKeyHint(keyCode: number): string {
     [Phaser.Input.Keyboard.KeyCodes.TWO]: "2",
     [Phaser.Input.Keyboard.KeyCodes.THREE]: "3",
     [Phaser.Input.Keyboard.KeyCodes.FOUR]: "4",
+    [Phaser.Input.Keyboard.KeyCodes.FIVE]: "5",
   };
 
   return keyNames[keyCode] ?? String.fromCharCode(keyCode);

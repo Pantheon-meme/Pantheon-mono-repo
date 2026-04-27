@@ -114,13 +114,11 @@ function getTileActions(
     });
   }
 
-  if (canDig(world, focus)) {
-    actions.push({
-      id: "dig",
-      label: "Dig",
-      detail: "Loosen soil",
-    });
-  }
+  actions.push({
+    id: "dig",
+    label: "Dig",
+    detail: getDigDetail(world, focus),
+  });
 
   actions.push({
     id: "forage",
@@ -192,10 +190,12 @@ function canPlantFromPouch(
   );
 }
 
-function canDig(world: World, focus: FocusTarget): boolean {
+function getDigDetail(world: World, focus: FocusTarget): string {
   const dirtLayer = getTerrainLayer(world, "dirt");
 
-  return Boolean(dirtLayer && !dirtLayer.grid.has(focus.tileX, focus.tileY));
+  return dirtLayer?.grid.has(focus.tileX, focus.tileY)
+    ? "Break tougher ground"
+    : "Loosen soil";
 }
 
 function canUseHandOnTile(
