@@ -6,6 +6,7 @@ import { Grabbable } from "../shared/components/Grabbable";
 import { Hands, type HandId } from "../player/components/Hands";
 import { HeldItem } from "../player/components/HeldItem";
 import { ItemUseConstraints } from "../shared/components/ItemUseConstraints";
+import { NeedState } from "../needs/components/NeedState";
 import { Position } from "../shared/components/Position";
 import { SeedDrop } from "../plants/components/SeedDrop";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
@@ -55,6 +56,14 @@ export const handActionDefinitions: Record<string, ActionDefinition> = {
     durationSeconds: 0.8,
     canStart: (world, actor) => canUseHand(world, actor, "right"),
     apply: (world, actor) => useHand(world, actor, "right"),
+  },
+  "carry-more-need": {
+    id: "carry-more-need",
+    label: "Stow item",
+    energyDelta: 0,
+    durationSeconds: 0.2,
+    canStart: canNeedCarryMore,
+    apply: needCarryMore,
   },
 };
 
@@ -363,4 +372,58 @@ function validateUseConstraints(
   }
 
   return undefined;
+}
+
+function canNeedCarryMore(world: World, actor: Entity): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
+  const focus = world.getComponent(actor, FocusTarget);
+
+  if (!hands || !hands.left.held || !hands.right.held) {
+    return { message: "Carry: a hand is still free", applied: false };
+  }
+
+  if (!focus || focus.kind !== "object" || !focus.object) {
+    return { message: "Carry: no object focused", applied: false };
+  }
+
+  if (!world.getComponent(focus.object, Grabbable)) {
+    return {
+      message: `${focus.objectLabel} cannot be carried`,
+      applied: false,
+    };
+  }
+
+  if (world.getComponent(focus.object, HeldItem)) {
+    return { message: `${focus.objectLabel} is already held`, applied: false };
+  }
+
+  return {};
+}
+
+function needCarryMore(world: World, actor: Entity): ActionEffectResult {
+  const startResult = canNeedCarryMore(world, actor);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const needs = world.getComponent(actor, NeedState);
+
+  if (!needs) {
+    return {
+      message: "Carry: nowhere to remember the problem",
+      applied: false,
+    };
+  }
+
+  needs.addNeed({
+    id: "carry_more",
+    label: "Carry more things",
+    description:
+      "Two hands are not enough. Something wearable or tied together might help.",
+    urgency: 65,
+    active: true,
+  });
+
+  return { message: "Need discovered: carry more things" };
 }

@@ -73,6 +73,14 @@ function getObjectActions(
     }
   }
 
+  if (canNoticeCarryLimit(world, actor, target)) {
+    actions.push({
+      id: "carry-more-need",
+      label: "Stow item",
+      detail: "Hands full",
+    });
+  }
+
   return actions;
 }
 
@@ -151,6 +159,22 @@ function canGrabWithHand(
     world.getComponent(target, Grabbable) &&
     weight &&
     weight.weight <= hands.maxHandWeight,
+  );
+}
+
+function canNoticeCarryLimit(
+  world: World,
+  actor: Entity,
+  target: Entity,
+): boolean {
+  const hands = world.getComponent(actor, Hands);
+
+  return Boolean(
+    hands &&
+    hands.left.held &&
+    hands.right.held &&
+    !world.getComponent(target, HeldItem) &&
+    world.getComponent(target, Grabbable),
   );
 }
 

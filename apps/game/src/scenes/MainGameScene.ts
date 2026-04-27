@@ -100,7 +100,7 @@ export class MainGameScene extends Phaser.Scene {
       description:
         "Two hands are not enough. Something wearable or tied together might help.",
       urgency: 65,
-      active: true,
+      active: false,
     });
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
@@ -209,6 +209,7 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.TWO]: "left-hand-use",
         [Phaser.Input.Keyboard.KeyCodes.THREE]: "right-hand-toggle",
         [Phaser.Input.Keyboard.KeyCodes.FOUR]: "right-hand-use",
+        [Phaser.Input.Keyboard.KeyCodes.FIVE]: "carry-more-need",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
