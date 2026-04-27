@@ -28,24 +28,28 @@ export const handActionDefinitions: Record<string, ActionDefinition> = {
     id: "left-hand-toggle",
     label: "Left hand",
     energyDelta: 0,
+    durationSeconds: 0.45,
     apply: (world, actor) => toggleHand(world, actor, "left"),
   },
   "left-hand-use": {
     id: "left-hand-use",
     label: "Use left hand",
     energyDelta: 0,
+    durationSeconds: 0.8,
     apply: (world, actor) => useHand(world, actor, "left"),
   },
   "right-hand-toggle": {
     id: "right-hand-toggle",
     label: "Right hand",
     energyDelta: 0,
+    durationSeconds: 0.45,
     apply: (world, actor) => toggleHand(world, actor, "right"),
   },
   "right-hand-use": {
     id: "right-hand-use",
     label: "Use right hand",
     energyDelta: 0,
+    durationSeconds: 0.8,
     apply: (world, actor) => useHand(world, actor, "right"),
   },
 };

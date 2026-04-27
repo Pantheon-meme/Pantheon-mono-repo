@@ -28,11 +28,13 @@ export const forageActionDefinitions: Record<string, ActionDefinition> = {
     id: "gather",
     label: "Gather",
     energyDelta: -18,
+    durationSeconds: 1.5,
   },
   forage: {
     id: "forage",
     label: "Forage",
     energyDelta: -forageEnergyCost,
+    durationSeconds: 2.4,
     apply: forage,
   },
 };

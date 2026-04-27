@@ -38,11 +38,13 @@ export const reflectionActionDefinitions: Record<string, ActionDefinition> = {
     id: "inspect",
     label: "Inspect",
     energyDelta: 0,
+    durationSeconds: 0.8,
   },
   reflect: {
     id: "reflect",
     label: "Reflect",
     energyDelta: -reflectionEnergyCost,
+    durationSeconds: 3.2,
     apply: reflect,
   },
 };

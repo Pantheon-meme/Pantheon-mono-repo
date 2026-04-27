@@ -12,6 +12,7 @@ export const terrainActionDefinitions: Record<string, ActionDefinition> = {
     id: "dig",
     label: "Dig",
     energyDelta: -12,
+    durationSeconds: 2,
     apply: dig,
   },
 };

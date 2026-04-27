@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { World } from "../../ecs/World";
 import { ActionInputSystem } from "../actions/systems/ActionInputSystem";
+import { ActionProgressBarSystem } from "../ui/systems/ActionProgressBarSystem";
 import { ActionSystem } from "../actions/systems/ActionSystem";
 import { AutotileRenderSystem } from "../terrain/systems/AutotileRenderSystem";
 import { BoundsSystem } from "../shared/systems/BoundsSystem";
@@ -71,6 +72,7 @@ export function registerSystems(
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new ActionProgressBarSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new SeedHudSystem());
   world.addSystem(new HandHudSystem());

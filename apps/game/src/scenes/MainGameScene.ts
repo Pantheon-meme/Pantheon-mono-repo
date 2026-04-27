@@ -6,6 +6,7 @@ import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
 import { ActionBindings } from "../game/actions/components/ActionBindings";
 import { ActionLog } from "../game/actions/components/ActionLog";
+import { ActionProgress } from "../game/actions/components/ActionProgress";
 import { ActionQueue } from "../game/actions/components/ActionQueue";
 import { AutotileLayer } from "../game/terrain/components/AutotileLayer";
 import { DayNightOverlay } from "../game/ui/components/DayNightOverlay";
@@ -25,6 +26,7 @@ import { NeedState } from "../game/needs/components/NeedState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { Position } from "../game/shared/components/Position";
 import { Renderable } from "../game/shared/components/Renderable";
+import { ActionProgressBar } from "../game/ui/components/ActionProgressBar";
 import { SeedHud } from "../game/ui/components/SeedHud";
 import { SeedPouch } from "../game/plants/components/SeedPouch";
 import { SkillSet } from "../game/ideas/components/SkillSet";
@@ -80,6 +82,7 @@ export class MainGameScene extends Phaser.Scene {
     const playerSprite = this.add
       .circle(spawnX, spawnY, 34, 0xf2c15f)
       .setDepth(10);
+    const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
     const dayNightOverlay = this.createDayNightOverlay();
     const sleepProgressBar = this.createSleepProgressBar();
@@ -188,6 +191,8 @@ export class MainGameScene extends Phaser.Scene {
       new SkillSet({ foraging: 1, reflection: 1 }),
     );
     world.addComponent(player, SleepState, new SleepState());
+    world.addComponent(player, ActionProgress, new ActionProgress());
+    world.addComponent(player, ActionProgressBar, actionProgressBar);
     world.addComponent(player, ActionQueue, new ActionQueue());
     world.addComponent(
       player,
@@ -261,6 +266,48 @@ export class MainGameScene extends Phaser.Scene {
     background.setStrokeStyle(2, 0xe8f0e8, 0.55);
 
     return new EnergyBar(background, fill, label, width, height, x, y);
+  }
+
+  private createActionProgressBar(): ActionProgressBar {
+    const width = 156;
+    const height = 12;
+    const container = this.add.container(0, 0).setDepth(106).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, width, height, 0x101821, 0.9)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0xf6efd7, 0.8);
+    const fill = this.add
+      .rectangle(-width / 2, -height / 2, 0, height, 0xf0c85a, 1)
+      .setOrigin(0);
+    const label = this.add
+      .text(0, -24, "", {
+        align: "center",
+        color: "#f6efd7",
+        fixedWidth: 220,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "14px",
+        fontStyle: "700",
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(0.5);
+
+    container.add([background, fill, label]);
+
+    return new ActionProgressBar(
+      container,
+      background,
+      fill,
+      label,
+      width,
+      height,
+      -78,
+    );
   }
 
   private createDayNightOverlay(): DayNightOverlay {

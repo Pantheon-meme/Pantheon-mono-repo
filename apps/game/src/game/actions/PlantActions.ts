@@ -30,18 +30,21 @@ export const plantActionDefinitions: Record<string, ActionDefinition> = {
     id: "plant",
     label: "Plant",
     energyDelta: -plantEnergyCost,
+    durationSeconds: 1.6,
     apply: plantSeed,
   },
   fetch: {
     id: "fetch",
     label: "Fetch",
     energyDelta: -fetchEnergyCost,
+    durationSeconds: 1.4,
     apply: fetchPlant,
   },
   "cycle-seed": {
     id: "cycle-seed",
     label: "Cycle seed",
     energyDelta: 0,
+    durationSeconds: 0.2,
     apply: cycleSeed,
   },
 };

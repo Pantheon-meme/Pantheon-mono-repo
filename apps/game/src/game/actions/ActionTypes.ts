@@ -10,5 +10,6 @@ export type ActionDefinition = {
   id: string;
   label: string;
   energyDelta: number;
+  durationSeconds: number;
   apply?: (world: World, actor: Entity) => ActionEffectResult;
 };

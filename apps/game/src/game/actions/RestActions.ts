@@ -21,11 +21,13 @@ export const restActionDefinitions: Record<string, ActionDefinition> = {
     id: "rest",
     label: "Rest",
     energyDelta: 24,
+    durationSeconds: 3,
   },
   sleep: {
     id: "sleep",
     label: "Sleep",
     energyDelta: 0,
+    durationSeconds: 1.2,
     apply: sleep,
   },
 };
