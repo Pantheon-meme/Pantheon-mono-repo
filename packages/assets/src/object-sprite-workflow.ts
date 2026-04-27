@@ -4,7 +4,12 @@ import path from "node:path";
 import sharp from "sharp";
 import { z } from "zod";
 
-import { readImageAsDataUrl, readImageCellAsDataUrl, writeGeneratedImage, writeObjectSpriteManifest } from "./files.js";
+import {
+  readImageAsDataUrl,
+  readImageCellAsDataUrl,
+  writeGeneratedImage,
+  writeObjectSpriteManifest,
+} from "./files.js";
 import { generateOpenRouterImage } from "./openrouter.js";
 import {
   objectSpriteManifestSchema,
@@ -54,7 +59,9 @@ const loadObjectSpriteInputsStep = createStep({
       const cell = inputData.styleReferenceCell
         ? ` cell row ${inputData.styleReferenceCell.row}, column ${inputData.styleReferenceCell.column}`
         : "";
-      logProgress(`Loaded style reference${cell}: ${inputData.styleReferencePath}`);
+      logProgress(
+        `Loaded style reference${cell}: ${inputData.styleReferencePath}`,
+      );
     }
 
     return {
@@ -89,12 +96,19 @@ const generateObjectSpriteSheetStep = createStep({
       reasoningEffort: inputData.request.reasoningEffort,
       referenceImageDataUrls: [
         inputData.layoutGuideDataUrl,
-        ...(inputData.styleReferenceDataUrl ? [inputData.styleReferenceDataUrl] : []),
+        ...(inputData.styleReferenceDataUrl
+          ? [inputData.styleReferenceDataUrl]
+          : []),
       ],
     });
 
-    const writtenImage = await writeGeneratedImage(inputData.request.outputDir, image);
-    logProgress(`Wrote sprite sheet: ${writtenImage.filePath ?? writtenImage.title}`);
+    const writtenImage = await writeGeneratedImage(
+      inputData.request.outputDir,
+      image,
+    );
+    logProgress(
+      `Wrote sprite sheet: ${writtenImage.filePath ?? writtenImage.title}`,
+    );
 
     return {
       request: inputData.request,
@@ -125,7 +139,9 @@ const writeObjectSpriteManifestStep = createStep({
       cells: buildObjectSpriteCells(inputData.request),
     };
 
-    logProgress(`Writing object sprite manifest to ${inputData.request.outputDir}/object-sprite-manifest.json.`);
+    logProgress(
+      `Writing object sprite manifest to ${inputData.request.outputDir}/object-sprite-manifest.json.`,
+    );
     await writeObjectSpriteManifest(inputData.request.outputDir, manifest);
 
     return manifest;
@@ -142,7 +158,9 @@ export const objectSpriteWorkflow = createWorkflow({
   .then(writeObjectSpriteManifestStep)
   .commit();
 
-export async function runObjectSpriteWorkflow(request: ObjectSpriteRequest): Promise<ObjectSpriteManifest> {
+export async function runObjectSpriteWorkflow(
+  request: ObjectSpriteRequest,
+): Promise<ObjectSpriteManifest> {
   const parsedRequest = objectSpriteRequestSchema.parse(request);
 
   const run = await objectSpriteWorkflow.createRun();
@@ -151,7 +169,9 @@ export async function runObjectSpriteWorkflow(request: ObjectSpriteRequest): Pro
   });
 
   if (result.status !== "success") {
-    throw result.status === "failed" ? result.error : new Error("Object sprite workflow suspended.");
+    throw result.status === "failed"
+      ? result.error
+      : new Error("Object sprite workflow suspended.");
   }
 
   return objectSpriteManifestSchema.parse(result.result);
@@ -192,8 +212,9 @@ function buildObjectSpritePrompt(
       : "Use one flat solid background color consistently across the entire sheet.",
     "",
     "Rows, top to bottom:",
-    ...request.states.map((state, row) =>
-      `Row ${row}: ${state.title} (${state.id})${state.prompt ? ` - ${state.prompt}` : ""}`,
+    ...request.states.map(
+      (state, row) =>
+        `Row ${row}: ${state.title} (${state.id})${state.prompt ? ` - ${state.prompt}` : ""}`,
     ),
     "",
     "Columns, left to right:",
@@ -213,13 +234,29 @@ function buildObjectSpritePrompt(
 }
 
 function buildColumnBehaviorPrompt(request: ObjectSpriteRequest): string[] {
-  if (request.spriteKind === "plant") {
+  if (request.spriteKind === "plant" || request.spriteKind === "tree") {
+    const growthSubject = request.spriteKind === "tree" ? "tree" : "plant";
+    const harvestedSubject =
+      request.spriteKind === "tree"
+        ? "tree trunk, stump, or canopy remnants"
+        : "plant remnants";
+    const pickupSubject =
+      request.spriteKind === "tree"
+        ? "fruit, cone, branch, seed pod, resin, leaf bundle, or magical tree resource pickups"
+        : "crop/resource pickups";
+
     return [
       "For seed rows, column 1 is an isolated collectible seed item with no dirt below it. Columns 2 through the end are planted seed growth steps from left to right.",
       "For grown or harvest-ready rows, columns are different stable variants of the same mature state, not a transformation sequence.",
-      "For harvested rows, the first half of columns are post-harvest plant remnants left in the ground, and the second half are isolated harvested crop/resource pickups.",
+      `For harvested rows, the first half of columns are post-harvest ${harvestedSubject} left in the ground, and the second half are isolated ${pickupSubject}.`,
       "Keep all columns in a row coherent for that row's state, not different unrelated designs.",
-      "Preserve the same silhouette language and materials across all states so the object clearly evolves from row to row.",
+      `Preserve the same silhouette language and materials across all states so the ${growthSubject} clearly evolves from row to row.`,
+      ...(request.spriteKind === "tree"
+        ? [
+            "Tree frames should be rooted at the bottom center of each cell, with trunks growing upward from a stable ground contact point.",
+            "Keep canopies readable from a three-quarter top-down view without covering neighboring cells.",
+          ]
+        : []),
     ];
   }
 
@@ -290,7 +327,9 @@ ${background}
   };
 }
 
-function buildObjectSpriteCells(request: ObjectSpriteRequest): ObjectSpriteManifest["cells"] {
+function buildObjectSpriteCells(
+  request: ObjectSpriteRequest,
+): ObjectSpriteManifest["cells"] {
   const columnLabels = getColumnLabels(request);
 
   return request.states.flatMap((state, row) =>
@@ -308,7 +347,9 @@ function buildObjectSpriteCells(request: ObjectSpriteRequest): ObjectSpriteManif
   );
 }
 
-function normalizeColumnLabels(request: ObjectSpriteRequest): ObjectSpriteRequest {
+function normalizeColumnLabels(
+  request: ObjectSpriteRequest,
+): ObjectSpriteRequest {
   return {
     ...request,
     columnLabels: getColumnLabels(request),
@@ -317,10 +358,16 @@ function normalizeColumnLabels(request: ObjectSpriteRequest): ObjectSpriteReques
 
 function getColumnLabels(request: ObjectSpriteRequest): string[] {
   if (request.columnLabels && request.columnLabels.length > 0) {
-    return Array.from({ length: request.columns }, (_, index) => request.columnLabels?.[index] ?? `frame ${index + 1}`);
+    return Array.from(
+      { length: request.columns },
+      (_, index) => request.columnLabels?.[index] ?? `frame ${index + 1}`,
+    );
   }
 
-  return Array.from({ length: request.columns }, (_, index) => `frame ${index + 1}`);
+  return Array.from(
+    { length: request.columns },
+    (_, index) => `frame ${index + 1}`,
+  );
 }
 
 function logProgress(message: string): void {

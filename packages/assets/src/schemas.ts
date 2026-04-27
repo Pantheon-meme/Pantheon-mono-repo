@@ -66,9 +66,21 @@ export const autotileRequestSchema = z.object({
   texturePath: z.string().min(1),
   material: z.string().min(1).default("provided texture material"),
   imageModel: z.string().min(1),
-  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).default("high"),
+  reasoningEffort: z
+    .enum(["none", "minimal", "low", "medium", "high", "xhigh"])
+    .default("high"),
   maskDir: z.string().default("masks"),
-  maskIds: z.array(z.enum(["left-top", "right-top-a", "right-top-b", "left-bottom", "right-bottom"])).optional(),
+  maskIds: z
+    .array(
+      z.enum([
+        "left-top",
+        "right-top-a",
+        "right-top-b",
+        "left-bottom",
+        "right-bottom",
+      ]),
+    )
+    .optional(),
   outputDir: z.string().default("generated/autotiles"),
   concurrency: z.number().int().min(1).max(4).default(4),
 });
@@ -97,7 +109,7 @@ export const objectSpriteStateSchema = z.object({
 });
 
 export const objectSpriteRequestSchema = z.object({
-  spriteKind: z.enum(["object", "plant", "player"]).default("object"),
+  spriteKind: z.enum(["object", "plant", "tree", "player"]).default("object"),
   objectId: z.string().min(1),
   objectName: z.string().min(1),
   objectPrompt: z.string().min(1),
@@ -111,7 +123,9 @@ export const objectSpriteRequestSchema = z.object({
     })
     .optional(),
   imageModel: z.string().min(1),
-  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).default("high"),
+  reasoningEffort: z
+    .enum(["none", "minimal", "low", "medium", "high", "xhigh"])
+    .default("high"),
   states: z.array(objectSpriteStateSchema).min(1),
   columns: z.number().int().min(1).max(12).default(4),
   columnLabels: z.array(z.string().min(1)).optional(),

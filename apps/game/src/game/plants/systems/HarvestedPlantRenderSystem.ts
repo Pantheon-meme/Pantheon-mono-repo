@@ -42,7 +42,12 @@ export class HarvestedPlantRenderSystem implements System {
       visual.container.setPosition(position.x, position.y);
 
       if (spriteAsset) {
-        renderHarvestedSprite(visual, spriteAsset, deltaSeconds);
+        renderHarvestedSprite(
+          visual,
+          spriteAsset,
+          definition.visualScale,
+          deltaSeconds,
+        );
       }
     }
   }
@@ -54,7 +59,9 @@ export class HarvestedPlantRenderSystem implements System {
   ): HarvestedPlantVisual {
     const container = this.scene.add.container(0, 0).setDepth(7);
     const sprite = useSprite
-      ? this.scene.add.sprite(0, 0, plantSpriteTextureKey(plantId)).setOrigin(0.5)
+      ? this.scene.add
+          .sprite(0, 0, plantSpriteTextureKey(plantId))
+          .setOrigin(0.5)
       : undefined;
     const stem = this.scene.add.rectangle(0, 8, 12, 36, 0x5f8f45, 1);
     const body = this.scene.add.ellipse(0, -12, 48, 36, color, 1);
@@ -81,6 +88,7 @@ export class HarvestedPlantRenderSystem implements System {
 function renderHarvestedSprite(
   visual: HarvestedPlantVisual,
   spriteAsset: NonNullable<ReturnType<typeof getPlantSpriteAsset>>,
+  visualScale: number,
   deltaSeconds: number,
 ): void {
   if (!visual.sprite) {
@@ -101,5 +109,8 @@ function renderHarvestedSprite(
   visual.sprite
     .setVisible(true)
     .setFrame(frameIndex)
-    .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
+    .setDisplaySize(
+      spriteAsset.manifest.cellSize * visualScale,
+      spriteAsset.manifest.cellSize * visualScale,
+    );
 }

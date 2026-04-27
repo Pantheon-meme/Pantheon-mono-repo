@@ -23,8 +23,6 @@ import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 
 const plantEnergyCost = 8;
 const fetchEnergyCost = 6;
-const harvestDropWeight = 0.35;
-
 export const plantActionDefinitions: Record<string, ActionDefinition> = {
   plant: {
     id: "plant",
@@ -126,7 +124,10 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
     definition,
   );
 
-  return { message: `Plant: ${definition.label} seed tucked into soil` };
+  const noun =
+    definition.kind === "tree" ? "seed planted" : "seed tucked into soil";
+
+  return { message: `Plant: ${definition.label} ${noun}` };
 }
 
 function canFetchPlant(world: World, actor: Entity): ActionEffectResult {
@@ -205,13 +206,14 @@ function fetchPlant(world: World, actor: Entity): ActionEffectResult {
     world,
     grid,
     definition.id,
-    definition.label,
+    definition.harvestLabel,
+    definition.harvestWeight,
     plant.plant.tileX,
     plant.plant.tileY,
   );
 
   return {
-    message: `Fetch: ${definition.label} dropped nearby`,
+    message: `Fetch: ${definition.harvestLabel} dropped nearby`,
   };
 }
 
@@ -248,6 +250,7 @@ function dropHarvestedPlant(
   grid: TerrainGrid,
   plantId: string,
   label: string,
+  weight: number,
   tileX: number,
   tileY: number,
 ): void {
@@ -270,11 +273,7 @@ function dropHarvestedPlant(
   world.addComponent(drop, Position, new Position(x, y));
   world.addComponent(drop, HarvestedPlant, new HarvestedPlant(plantId));
   world.addComponent(drop, Grabbable, new Grabbable());
-  world.addComponent(
-    drop,
-    WeightedObject,
-    new WeightedObject(harvestDropWeight),
-  );
+  world.addComponent(drop, WeightedObject, new WeightedObject(weight));
   world.addComponent(drop, Footprint, new Footprint(70, 70));
   world.addComponent(drop, WeightInspectable, new WeightInspectable(label));
 }

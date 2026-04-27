@@ -138,6 +138,10 @@ function pickForagedSeed(activeLayer: string): string {
     return "sungrain_seed";
   }
 
+  if (roll > 0.92) {
+    return pickForagedTreeSeed((roll - 0.92) / 0.08);
+  }
+
   if (roll < 0.3) {
     return "sungrain_seed";
   }
@@ -155,6 +159,38 @@ function pickForagedSeed(activeLayer: string): string {
   }
 
   return "duskmillet_seed";
+}
+
+function pickForagedTreeSeed(roll: number): string {
+  if (roll < 0.18) {
+    return "applewood_seed";
+  }
+  if (roll < 0.32) {
+    return "pinecrest_seed";
+  }
+  if (roll < 0.45) {
+    return "mapleflare_seed";
+  }
+  if (roll < 0.56) {
+    return "willowshade_seed";
+  }
+  if (roll < 0.66) {
+    return "ironbark_seed";
+  }
+  if (roll < 0.75) {
+    return "honeyfig_seed";
+  }
+  if (roll < 0.83) {
+    return "frostpine_seed";
+  }
+  if (roll < 0.9) {
+    return "emberoak_seed";
+  }
+  if (roll < 0.96) {
+    return "moonwillow_seed";
+  }
+
+  return "starblossom_seed";
 }
 
 function getForageAmount(quality: CheckQuality): number {

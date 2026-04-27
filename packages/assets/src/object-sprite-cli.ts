@@ -12,10 +12,13 @@ type CliOptions = {
   plantId?: string;
   plantName?: string;
   plantPrompt?: string;
+  treeId?: string;
+  treeName?: string;
+  treePrompt?: string;
   playerId?: string;
   playerName?: string;
   playerPrompt?: string;
-  spriteKind?: "object" | "plant" | "player";
+  spriteKind?: "object" | "plant" | "tree" | "player";
   objectId?: string;
   objectName?: string;
   objectPrompt?: string;
@@ -40,24 +43,40 @@ type CliOptions = {
 loadNearestEnvFile();
 
 const options = parseArgs(process.argv.slice(2));
-const requestOptions = applyPlayerDefaults(applyPlantDefaults(options));
+const requestOptions = applyPlayerDefaults(
+  applyTreeDefaults(applyPlantDefaults(options)),
+);
 
-if (requestOptions.help || !requestOptions.objectId || !requestOptions.objectName || !requestOptions.objectPrompt || !requestOptions.stylePrompt) {
+if (
+  requestOptions.help ||
+  !requestOptions.objectId ||
+  !requestOptions.objectName ||
+  !requestOptions.objectPrompt ||
+  !requestOptions.stylePrompt
+) {
   printHelp();
   process.exit(requestOptions.help ? 0 : 1);
 }
 
-const styleReferencePath = requestOptions.styleReference ? resolveInputPath(requestOptions.styleReference) : undefined;
+const styleReferencePath = requestOptions.styleReference
+  ? resolveInputPath(requestOptions.styleReference)
+  : undefined;
 
 if (requestOptions.styleReferenceCell && !requestOptions.styleReference) {
   throw new Error("--style-reference-cell requires --style-reference.");
 }
 
-const columns = requestOptions.columns ?? Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_COLUMNS ?? "4", 10);
-const columnLabels = requestOptions.columnLabels ?? parseList(process.env.PANTHEON_OBJECT_SPRITE_COLUMN_LABELS);
+const columns =
+  requestOptions.columns ??
+  Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_COLUMNS ?? "4", 10);
+const columnLabels =
+  requestOptions.columnLabels ??
+  parseList(process.env.PANTHEON_OBJECT_SPRITE_COLUMN_LABELS);
 
 if (columnLabels && columnLabels.length > columns) {
-  throw new Error(`Received ${columnLabels.length} column labels for only ${columns} columns.`);
+  throw new Error(
+    `Received ${columnLabels.length} column labels for only ${columns} columns.`,
+  );
 }
 
 const manifest = await runObjectSpriteWorkflow({
@@ -68,13 +87,27 @@ const manifest = await runObjectSpriteWorkflow({
   stylePrompt: requestOptions.stylePrompt,
   styleReferencePath,
   styleReferenceCell: requestOptions.styleReferenceCell,
-  imageModel: requestOptions.imageModel ?? process.env.OPENROUTER_IMAGE_MODEL ?? "google/gemini-2.5-flash-image",
-  reasoningEffort: requestOptions.reasoningEffort ?? parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high"),
-  states: requestOptions.states && requestOptions.states.length > 0 ? requestOptions.states : defaultPlantStates(),
+  imageModel:
+    requestOptions.imageModel ??
+    process.env.OPENROUTER_IMAGE_MODEL ??
+    "google/gemini-2.5-flash-image",
+  reasoningEffort:
+    requestOptions.reasoningEffort ??
+    parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high"),
+  states:
+    requestOptions.states && requestOptions.states.length > 0
+      ? requestOptions.states
+      : defaultPlantStates(),
   columns,
   columnLabels,
-  cellSize: requestOptions.cellSize ?? Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_CELL_SIZE ?? "128", 10),
-  background: requestOptions.background ?? parseBackground(process.env.PANTHEON_OBJECT_SPRITE_BACKGROUND ?? "transparent"),
+  cellSize:
+    requestOptions.cellSize ??
+    Number.parseInt(process.env.PANTHEON_OBJECT_SPRITE_CELL_SIZE ?? "128", 10),
+  background:
+    requestOptions.background ??
+    parseBackground(
+      process.env.PANTHEON_OBJECT_SPRITE_BACKGROUND ?? "transparent",
+    ),
   outputDir: requestOptions.out ?? "generated/object-sprites",
 });
 
@@ -100,6 +133,18 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--plant":
         parsed.plantPrompt = readValue(arg, next);
+        index += 1;
+        break;
+      case "--tree-id":
+        parsed.treeId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--tree-name":
+        parsed.treeName = readValue(arg, next);
+        index += 1;
+        break;
+      case "--tree":
+        parsed.treePrompt = readValue(arg, next);
         index += 1;
         break;
       case "--player-id":
@@ -135,7 +180,9 @@ function parseArgs(args: string[]): CliOptions {
         index += 1;
         break;
       case "--style-reference-cell":
-        parsed.styleReferenceCell = parseStyleReferenceCell(readValue(arg, next));
+        parsed.styleReferenceCell = parseStyleReferenceCell(
+          readValue(arg, next),
+        );
         index += 1;
         break;
       case "--image-model":
@@ -147,7 +194,10 @@ function parseArgs(args: string[]): CliOptions {
         index += 1;
         break;
       case "--state":
-        parsed.states = [...(parsed.states ?? []), parseState(readValue(arg, next))];
+        parsed.states = [
+          ...(parsed.states ?? []),
+          parseState(readValue(arg, next)),
+        ];
         index += 1;
         break;
       case "--columns":
@@ -188,7 +238,10 @@ function applyPlantDefaults(options: CliOptions): CliOptions {
     return options;
   }
 
-  const plantName = options.plantName ?? options.objectName ?? titleCase(options.plantId ?? "plant");
+  const plantName =
+    options.plantName ??
+    options.objectName ??
+    titleCase(options.plantId ?? "plant");
   const plantId = options.plantId ?? options.objectId ?? slugify(plantName);
   const plantPrompt = options.plantPrompt ?? options.objectPrompt;
 
@@ -201,16 +254,76 @@ function applyPlantDefaults(options: CliOptions): CliOptions {
     spriteKind: options.spriteKind ?? "plant",
     objectId: options.objectId ?? plantId,
     objectName: options.objectName ?? plantName,
-    objectPrompt: options.objectPrompt ?? `${plantPrompt}; readable as a small top-down farming game crop`,
+    objectPrompt:
+      options.objectPrompt ??
+      `${plantPrompt}; readable as a small top-down farming game crop`,
     stylePrompt: options.stylePrompt ?? defaultPlantStylePrompt(),
-    styleReference: options.styleReference ?? "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
-    styleReferenceCell: options.styleReferenceCell ?? { row: 1, column: 1, cellSize: 256 },
+    styleReference:
+      options.styleReference ??
+      "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
+    styleReferenceCell: options.styleReferenceCell ?? {
+      row: 1,
+      column: 1,
+      cellSize: 256,
+    },
     states: options.states ?? defaultPlantStates(),
     columns: options.columns ?? 4,
-    columnLabels: options.columnLabels ?? ["step 1", "step 2", "step 3", "step 4"],
+    columnLabels: options.columnLabels ?? [
+      "step 1",
+      "step 2",
+      "step 3",
+      "step 4",
+    ],
     cellSize: options.cellSize ?? 128,
     background: options.background ?? "transparent",
     out: options.out ?? `generated/object-sprites/${plantId}`,
+  };
+}
+
+function applyTreeDefaults(options: CliOptions): CliOptions {
+  if (!options.treeId && !options.treeName && !options.treePrompt) {
+    return options;
+  }
+
+  const treeName =
+    options.treeName ??
+    options.objectName ??
+    titleCase(options.treeId ?? "tree");
+  const treeId = options.treeId ?? options.objectId ?? slugify(treeName);
+  const treePrompt = options.treePrompt ?? options.objectPrompt;
+
+  if (!treePrompt) {
+    throw new Error("--tree requires a tree description.");
+  }
+
+  return {
+    ...options,
+    spriteKind: options.spriteKind ?? "tree",
+    objectId: options.objectId ?? treeId,
+    objectName: options.objectName ?? treeName,
+    objectPrompt:
+      options.objectPrompt ??
+      `${treePrompt}; readable as a small top-down farming and forest game tree`,
+    stylePrompt: options.stylePrompt ?? defaultTreeStylePrompt(),
+    styleReference:
+      options.styleReference ??
+      "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
+    styleReferenceCell: options.styleReferenceCell ?? {
+      row: 1,
+      column: 1,
+      cellSize: 256,
+    },
+    states: options.states ?? defaultTreeStates(),
+    columns: options.columns ?? 4,
+    columnLabels: options.columnLabels ?? [
+      "step 1",
+      "step 2",
+      "step 3",
+      "step 4",
+    ],
+    cellSize: options.cellSize ?? 192,
+    background: options.background ?? "transparent",
+    out: options.out ?? `generated/object-sprites/${treeId}`,
   };
 }
 
@@ -219,7 +332,10 @@ function applyPlayerDefaults(options: CliOptions): CliOptions {
     return options;
   }
 
-  const playerName = options.playerName ?? options.objectName ?? titleCase(options.playerId ?? "player");
+  const playerName =
+    options.playerName ??
+    options.objectName ??
+    titleCase(options.playerId ?? "player");
   const playerId = options.playerId ?? options.objectId ?? slugify(playerName);
   const playerPrompt = options.playerPrompt ?? options.objectPrompt;
 
@@ -232,10 +348,18 @@ function applyPlayerDefaults(options: CliOptions): CliOptions {
     spriteKind: options.spriteKind ?? "player",
     objectId: options.objectId ?? playerId,
     objectName: options.objectName ?? playerName,
-    objectPrompt: options.objectPrompt ?? `${playerPrompt}; readable as a small top-down farming/adventure game player character`,
+    objectPrompt:
+      options.objectPrompt ??
+      `${playerPrompt}; readable as a small top-down farming/adventure game player character`,
     stylePrompt: options.stylePrompt ?? defaultPlayerStylePrompt(),
-    styleReference: options.styleReference ?? "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
-    styleReferenceCell: options.styleReferenceCell ?? (options.styleReference ? undefined : { row: 1, column: 1, cellSize: 256 }),
+    styleReference:
+      options.styleReference ??
+      "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
+    styleReferenceCell:
+      options.styleReferenceCell ??
+      (options.styleReference
+        ? undefined
+        : { row: 1, column: 1, cellSize: 256 }),
     states: options.states ?? defaultPlayerStates(),
     columns: options.columns ?? 4,
     columnLabels: options.columnLabels ?? ["down", "side", "up", "action"],
@@ -249,7 +373,9 @@ function parseState(value: string): ObjectSpriteState {
   const [id, title, ...promptParts] = value.split(":");
 
   if (!id || !title) {
-    throw new Error(`Invalid state "${value}". Expected id:title or id:title:prompt.`);
+    throw new Error(
+      `Invalid state "${value}". Expected id:title or id:title:prompt.`,
+    );
   }
 
   return {
@@ -259,11 +385,23 @@ function parseState(value: string): ObjectSpriteState {
   };
 }
 
-function parseStyleReferenceCell(value: string): { row: number; column: number; cellSize: number } {
-  const [row, column, cellSize] = value.split(",").map((part) => Number.parseInt(part.trim(), 10));
+function parseStyleReferenceCell(value: string): {
+  row: number;
+  column: number;
+  cellSize: number;
+} {
+  const [row, column, cellSize] = value
+    .split(",")
+    .map((part) => Number.parseInt(part.trim(), 10));
 
-  if (!Number.isInteger(row) || !Number.isInteger(column) || !Number.isInteger(cellSize)) {
-    throw new Error(`Invalid style reference cell "${value}". Expected row,column,cellSize.`);
+  if (
+    !Number.isInteger(row) ||
+    !Number.isInteger(column) ||
+    !Number.isInteger(cellSize)
+  ) {
+    throw new Error(
+      `Invalid style reference cell "${value}". Expected row,column,cellSize.`,
+    );
   }
 
   return { row, column, cellSize };
@@ -274,22 +412,26 @@ function defaultPlantStates(): ObjectSpriteState[] {
     {
       id: "seed",
       title: "Seed",
-      prompt: "column 1 is an isolated collectible seed item with no dirt; columns 2-4 are planted seed growth steps with soil and a tiny sprout",
+      prompt:
+        "column 1 is an isolated collectible seed item with no dirt; columns 2-4 are planted seed growth steps with soil and a tiny sprout",
     },
     {
       id: "growing",
       title: "Growing",
-      prompt: "progressive growth steps from young sprout to nearly mature plant",
+      prompt:
+        "progressive growth steps from young sprout to nearly mature plant",
     },
     {
       id: "grown",
       title: "Grown",
-      prompt: "different stable variants of the mature harvest-ready plant, not animation frames",
+      prompt:
+        "different stable variants of the mature harvest-ready plant, not animation frames",
     },
     {
       id: "harvested",
       title: "Harvested",
-      prompt: "columns 1-2 are post-harvest plant remnants left in the ground; columns 3-4 are isolated harvested crop resource pickups",
+      prompt:
+        "columns 1-2 are post-harvest plant remnants left in the ground; columns 3-4 are isolated harvested crop resource pickups",
     },
   ];
 }
@@ -306,27 +448,73 @@ function defaultPlantStylePrompt(): string {
   ].join(", ");
 }
 
+function defaultTreeStates(): ObjectSpriteState[] {
+  return [
+    {
+      id: "seed",
+      title: "Seed",
+      prompt:
+        "column 1 is an isolated collectible tree seed, nut, pit, cone, or sapling item with no dirt; columns 2-4 are planted seed and tiny sapling steps rooted in soil",
+    },
+    {
+      id: "growing",
+      title: "Growing",
+      prompt:
+        "progressive sapling-to-young-tree growth steps, with trunk height and canopy volume increasing while the root point stays fixed",
+    },
+    {
+      id: "grown",
+      title: "Grown",
+      prompt:
+        "different stable mature harvest-ready tree variants with consistent species identity, not animation frames",
+    },
+    {
+      id: "harvested",
+      title: "Harvested",
+      prompt:
+        "columns 1-2 are post-harvest tree remnants such as a pruned canopy, stump, or tapped trunk; columns 3-4 are isolated harvested tree resource pickups",
+    },
+  ];
+}
+
+function defaultTreeStylePrompt(): string {
+  return [
+    "cozy hand-painted 2D game tree sprite",
+    "three-quarter top-down view",
+    "bottom-center rooted anchor point",
+    "strong readable trunk and canopy silhouette",
+    "soft natural edges",
+    "warm but balanced highlights",
+    "no outlines heavier than the terrain art",
+    "transparent background",
+  ].join(", ");
+}
+
 function defaultPlayerStates(): ObjectSpriteState[] {
   return [
     {
       id: "idle_1",
       title: "Idle 1",
-      prompt: "first idle transition for each direction; feet planted, relaxed hands, calm breathing posture",
+      prompt:
+        "first idle transition for each direction; feet planted, relaxed hands, calm breathing posture",
     },
     {
       id: "idle_2",
       title: "Idle 2",
-      prompt: "second idle transition for each direction; opposite weight shift from idle_1, feet still planted",
+      prompt:
+        "second idle transition for each direction; opposite weight shift from idle_1, feet still planted",
     },
     {
       id: "move_1",
       title: "Move 1",
-      prompt: "first walking contact pose for each direction; left foot leads, opposite arm swing",
+      prompt:
+        "first walking contact pose for each direction; left foot leads, opposite arm swing",
     },
     {
       id: "move_2",
       title: "Move 2",
-      prompt: "second walking contact pose for each direction; right foot leads, opposite arm swing",
+      prompt:
+        "second walking contact pose for each direction; right foot leads, opposite arm swing",
     },
   ];
 }
@@ -424,7 +612,9 @@ function titleCase(value: string): string {
   return value
     .split(/[^a-zA-Z0-9]+/)
     .filter(Boolean)
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .map(
+      (word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`,
+    )
     .join(" ");
 }
 
@@ -443,6 +633,11 @@ Usage:
     --plant "warm golden grain plant with sunlit wheat heads"
 
   pnpm --filter @pantheon/assets generate-object-sprites -- \\
+    --tree-id applewood \\
+    --tree-name "Applewood" \\
+    --tree "round orchard tree with red apples and fresh green leaves"
+
+  pnpm --filter @pantheon/assets generate-object-sprites -- \\
     --object-id sungrain \\
     --object-name "Sungrain" \\
     --object "golden cereal plant..." \\
@@ -452,6 +647,9 @@ Options:
       --plant-id <id>          Plant shortcut id. Fills object id and output path.
       --plant-name <name>      Plant shortcut display name.
       --plant <brief>          Plant shortcut description; uses current plant sprite defaults.
+      --tree-id <id>           Tree shortcut id. Fills object id and output path.
+      --tree-name <name>       Tree shortcut display name.
+      --tree <brief>           Tree shortcut description; uses current tree sprite defaults.
       --player-id <id>         Player shortcut id. Use "player" for the main game player.
       --player-name <name>     Player shortcut display name.
       --player <brief>         Player shortcut description; uses 3x4 movement sprite defaults.
@@ -481,7 +679,10 @@ function loadNearestEnvFile(): void {
   }
 }
 
-function findNearestFile(fileName: string, startDir: string): string | undefined {
+function findNearestFile(
+  fileName: string,
+  startDir: string,
+): string | undefined {
   let currentDir = startDir;
   const rootDir = parse(startDir).root;
 

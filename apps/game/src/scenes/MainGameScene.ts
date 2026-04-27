@@ -15,20 +15,25 @@ import { DiggingCapability } from "../game/player/components/DiggingCapability";
 import { Energy } from "../game/energy/components/Energy";
 import { EnergyBar } from "../game/ui/components/EnergyBar";
 import { FacingDirection } from "../game/player/components/FacingDirection";
+import { Footprint } from "../game/shared/components/Footprint";
 import { FocusTarget } from "../game/player/components/FocusTarget";
 import { GameClock } from "../game/time/components/GameClock";
+import { Grabbable } from "../game/shared/components/Grabbable";
 import { HandHud } from "../game/ui/components/HandHud";
 import { Hands } from "../game/player/components/Hands";
 import { IdeaState } from "../game/ideas/components/IdeaState";
 import { GridTargetHighlight } from "../game/terrain/components/GridTargetHighlight";
 import { InputState } from "../game/player/components/InputState";
+import { ItemUseConstraints } from "../game/shared/components/ItemUseConstraints";
 import { JournalPanel } from "../game/ui/components/JournalPanel";
 import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
 import { NeedState } from "../game/needs/components/NeedState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
+import { plantDefinitions } from "../game/plants/PlantDefinitions";
 import { Position } from "../game/shared/components/Position";
 import { Renderable } from "../game/shared/components/Renderable";
 import { ActionProgressBar } from "../game/ui/components/ActionProgressBar";
+import { SeedDrop } from "../game/plants/components/SeedDrop";
 import { SeedHud } from "../game/ui/components/SeedHud";
 import { SeedPouch } from "../game/plants/components/SeedPouch";
 import { SkillSet } from "../game/ideas/components/SkillSet";
@@ -43,6 +48,8 @@ import { TerrainGrid } from "../game/terrain/components/TerrainGrid";
 import { TerrainHardness } from "../game/terrain/components/TerrainHardness";
 import { TerrainLayer } from "../game/terrain/components/TerrainLayer";
 import { Velocity } from "../game/shared/components/Velocity";
+import { WeightInspectable } from "../game/shared/components/WeightInspectable";
+import { WeightedObject } from "../game/shared/components/WeightedObject";
 import { plantSpriteTextureKey } from "../game/plants/PlantSpriteAssets";
 import {
   getPlayerSpriteAsset,
@@ -56,6 +63,7 @@ const gridWidth = 200;
 const gridHeight = 200;
 const worldWidth = gridWidth * tileSize;
 const worldHeight = gridHeight * tileSize;
+const seedDropWeight = 0.02;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
@@ -237,6 +245,10 @@ export class MainGameScene extends Phaser.Scene {
       GridTargetHighlight,
       new GridTargetHighlight(this.add.graphics().setDepth(9)),
     );
+
+    if (shouldSpawnSeedTestRow()) {
+      spawnSeedTestRow(world, baseGrid, spawnX, spawnY);
+    }
 
     const keyboard = this.input.keyboard;
 
@@ -592,4 +604,58 @@ export class MainGameScene extends Phaser.Scene {
 
     return { section, background, label: text };
   }
+}
+
+function shouldSpawnSeedTestRow(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("seedTest") ?? params.get("testSeeds");
+
+  return value === "1" || value === "true" || value === "on";
+}
+
+function spawnSeedTestRow(
+  world: World,
+  grid: TerrainGrid,
+  spawnX: number,
+  spawnY: number,
+): void {
+  const definitions = Object.values(plantDefinitions);
+  const totalDrops = definitions.length * 2;
+  const startTileX =
+    Math.floor(spawnX / grid.tileSize) - Math.floor(totalDrops / 2);
+  const tileY = Math.floor(spawnY / grid.tileSize) + 2;
+
+  definitions.forEach((definition, definitionIndex) => {
+    for (let copyIndex = 0; copyIndex < 2; copyIndex += 1) {
+      const tileX = startTileX + definitionIndex * 2 + copyIndex;
+      const drop = world.createEntity();
+
+      world.addComponent(
+        drop,
+        Position,
+        new Position(
+          tileX * grid.tileSize + grid.tileSize / 2,
+          tileY * grid.tileSize + grid.tileSize / 2,
+        ),
+      );
+      world.addComponent(drop, SeedDrop, new SeedDrop(definition.seedId, 1));
+      world.addComponent(
+        drop,
+        ItemUseConstraints,
+        new ItemUseConstraints("dirt"),
+      );
+      world.addComponent(drop, Grabbable, new Grabbable());
+      world.addComponent(drop, WeightedObject, new WeightedObject(seedDropWeight));
+      world.addComponent(drop, Footprint, new Footprint(54, 54));
+      world.addComponent(
+        drop,
+        WeightInspectable,
+        new WeightInspectable(definition.seedLabel),
+      );
+    }
+  });
 }
