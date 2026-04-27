@@ -99,7 +99,7 @@ OPENROUTER_REASONING_EFFORT=high
 
 Use this for flexible object atlases such as plants, tools, resources, pickups, or world props. Each state is one row. For plants, seed column 1 is the isolated seed pickup, seed columns 2-4 and growing columns are gradual growth steps, grown columns are stable harvest-ready variants, and the harvested row is split between plant remnants and crop-resource pickups.
 
-The workflow automatically writes and sends the image model a checkerboard layout guide matching your requested rows and columns. The guide uses equal square cells and center marks so the model has a visible composition template instead of only text instructions. The raw generated sprite sheet is prompted to keep that checkerboard visible for verification; the game publisher can strip the neutral grid/background for runtime use. You can also provide either a detailed text style guide, a style reference image, or one cropped tile from an existing atlas. The game autotile atlases use `256` pixel cells, so `--style-reference-cell 1,1,256` uses the center-ish grass tile from a 7x7 atlas as inspiration.
+The workflow automatically writes and sends the image model a checkerboard layout guide matching your requested rows and columns. The guide uses only alternating white and gray square cells, with no borders, labels, dots, or center marks, so the model has a visible composition template instead of only text instructions. The raw generated sprite sheet is prompted to keep that checkerboard visible for verification; the game publisher can strip the neutral grid/background for runtime use. You can also provide either a detailed text style guide, a style reference image, or one cropped tile from an existing atlas. The game autotile atlases use `256` pixel cells, so `--style-reference-cell 1,1,256` uses the center-ish grass tile from a 7x7 atlas as inspiration.
 
 For plants, use the shortcut form when the current defaults are enough:
 
@@ -135,6 +135,19 @@ The command writes:
 - `object-sprite-layout-guide.png` with the raw checkerboard grid sent to the image generator.
 - `object-sprite-manifest.json` with the atlas dimensions, row/column labels, prompts, model id, and per-cell coordinates.
 - A generated sprite sheet PNG decoded from the OpenRouter image response.
+
+Player character sheets use the same command and publishing flow. Use the `--player` shortcut to generate the default movement grid:
+
+```sh
+pnpm --filter @pantheon/assets generate-object-sprites -- \
+  --player-id "player" \
+  --player-name "Player" \
+  --player "a wandering farmer with a simple tunic, boots, small pack, and practical field tools"
+```
+
+The default player sheet is one square `4 x 4` atlas. Rows are `idle_1`, `idle_2`, `move_1`, and `move_2`; columns are `down`, `side`, `up`, and `action`. The first three columns drive normal movement. The action column contains generic reusable action/interact poses for down, side, and up, plus a side sleeping/resting pose. Side-facing cells face right and the game mirrors them for left movement.
+
+More detail: [Plant Generator](./PLANT_GENERATOR.md).
 
 Publish generated object sprites into the game after reviewing the image:
 

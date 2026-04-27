@@ -43,7 +43,7 @@ export class PlantRenderSystem implements System {
   private createVisual(plantId: string, useSprite: boolean): PlantVisual {
     const container = this.scene.add.container(0, 0).setDepth(8);
     const sprite = useSprite
-      ? this.scene.add.sprite(0, 0, plantSpriteTextureKey(plantId)).setOrigin(0.5, 0.6)
+      ? this.scene.add.sprite(0, 0, plantSpriteTextureKey(plantId)).setOrigin(0.5, 1)
       : undefined;
     const stem = this.scene.add.rectangle(0, 0, 14, 46, 0x7dbd47, 1);
     const body = this.scene.add.ellipse(0, 0, 52, 52, 0xd8a541, 1);

@@ -44,6 +44,10 @@ import { TerrainHardness } from "../game/terrain/components/TerrainHardness";
 import { TerrainLayer } from "../game/terrain/components/TerrainLayer";
 import { Velocity } from "../game/shared/components/Velocity";
 import { plantSpriteTextureKey } from "../game/plants/PlantSpriteAssets";
+import {
+  getPlayerSpriteAsset,
+  playerSpriteTextureKey,
+} from "../game/player/PlayerSpriteAssets";
 
 const grassAtlasKey = "main-vibrant-grass-blob-7x7";
 const dirtAtlasKey = "main-dirt-blob-7x7";
@@ -92,9 +96,7 @@ export class MainGameScene extends Phaser.Scene {
     const dirtGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const spawnX = worldWidth / 2;
     const spawnY = worldHeight / 2;
-    const playerSprite = this.add
-      .circle(spawnX, spawnY, 34, 0xf2c15f)
-      .setDepth(10);
+    const playerSprite = this.createPlayerSprite(spawnX, spawnY);
     const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
     const dayNightOverlay = this.createDayNightOverlay();
@@ -115,8 +117,6 @@ export class MainGameScene extends Phaser.Scene {
       urgency: 65,
       active: false,
     });
-
-    playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setZoom(0.7);
@@ -257,6 +257,26 @@ export class MainGameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.world?.update(delta / 1000);
+  }
+
+  private createPlayerSprite(
+    x: number,
+    y: number,
+  ): Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform {
+    const spriteAsset = getPlayerSpriteAsset();
+
+    if (spriteAsset) {
+      return this.add
+        .sprite(x, y, playerSpriteTextureKey())
+        .setOrigin(0.5, 1)
+        .setDepth(10)
+        .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
+    }
+
+    return this.add
+      .circle(x, y, 34, 0xf2c15f)
+      .setDepth(10)
+      .setStrokeStyle(5, 0x3a2514, 0.95);
   }
 
   private createEnergyBar(): EnergyBar {

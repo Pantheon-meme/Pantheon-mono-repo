@@ -143,9 +143,11 @@ export const objectSpriteWorkflow = createWorkflow({
   .commit();
 
 export async function runObjectSpriteWorkflow(request: ObjectSpriteRequest): Promise<ObjectSpriteManifest> {
+  const parsedRequest = objectSpriteRequestSchema.parse(request);
+
   const run = await objectSpriteWorkflow.createRun();
   const result = await run.start({
-    inputData: objectSpriteRequestSchema.parse(request),
+    inputData: parsedRequest,
   });
 
   if (result.status !== "success") {
@@ -170,7 +172,7 @@ function buildObjectSpritePrompt(
     `Create a game object sprite sheet for ${request.objectName}.`,
     `Object brief: ${request.objectPrompt}.`,
     "",
-    "Reference image 1 is a checkerboard layout guide. Use it as the exact composition template.",
+    "Reference image 1 is a checkerboard layout guide. Use it as the exact composition template with exact sizes, all cells are square all equal size.",
     `Preserve its ${columns}:${rows} sheet ratio and its ${columns} columns by ${rows} rows of equal square cells.`,
     `The exact guide has also been saved locally at ${layoutGuidePath} for verification.`,
     "Place exactly one frame in the center of each checkerboard cell.",
@@ -198,11 +200,7 @@ function buildObjectSpritePrompt(
     ...columnLabels.map((label, column) => `Column ${column}: ${label}.`),
     "",
     "Column behavior:",
-    "For seed rows, column 1 is an isolated collectible seed item with no dirt below it. Columns 2 through the end are planted seed growth steps from left to right.",
-    "For grown or harvest-ready rows, columns are different stable variants of the same mature state, not a transformation sequence.",
-    "For harvested rows, the first half of columns are post-harvest plant remnants left in the ground, and the second half are isolated harvested crop/resource pickups.",
-    "Keep all columns in a row coherent for that row's state, not different unrelated designs.",
-    "Preserve the same silhouette language and materials across all states so the object clearly evolves from row to row.",
+    ...buildColumnBehaviorPrompt(request),
     "",
     "Style direction:",
     request.stylePrompt,
@@ -214,7 +212,59 @@ function buildObjectSpritePrompt(
   ].join("\n");
 }
 
-async function createLayoutGuide(request: ObjectSpriteRequest): Promise<{ dataUrl: string; filePath: string }> {
+function buildColumnBehaviorPrompt(request: ObjectSpriteRequest): string[] {
+  if (request.spriteKind === "plant") {
+    return [
+      "For seed rows, column 1 is an isolated collectible seed item with no dirt below it. Columns 2 through the end are planted seed growth steps from left to right.",
+      "For grown or harvest-ready rows, columns are different stable variants of the same mature state, not a transformation sequence.",
+      "For harvested rows, the first half of columns are post-harvest plant remnants left in the ground, and the second half are isolated harvested crop/resource pickups.",
+      "Keep all columns in a row coherent for that row's state, not different unrelated designs.",
+      "Preserve the same silhouette language and materials across all states so the object clearly evolves from row to row.",
+    ];
+  }
+
+  if (request.spriteKind === "player") {
+    return [
+      "This is a square 4x4 player animation sheet.",
+      "Rows are animation states: row 0 idle_1, row 1 idle_2, row 2 move_1, row 3 move_2.",
+      "Columns 0-2 are facing directions: column 0 down, column 1 side/right, column 2 up.",
+      "Column 3 is for reusable action/interact poses. These poses must work for foraging, digging, grabbing, picking up, planting, harvesting, and using something near the ground.",
+      "Action column rows 0-2 are the same generic action pose in each direction: down, side/right, and up. Row 3 column 3 is a side sleeping/resting pose.",
+      "Side-facing cells must face right; the game will mirror them for left movement.",
+      "Each cell must use the exact state and direction for its row and column.",
+      "Keep the player's feet or ground contact point consistent inside each direction column so movement does not wobble.",
+      "Use the same character design, outfit, proportions, and equipment silhouette in every cell.",
+      "Exact cell poses:",
+      "Row 0 column 0, idle_1 down: head faces camera/down, torso faces down, weight slightly on left foot, left shoulder a little lower, hands relaxed low.",
+      "Row 0 column 1, idle_1 side: character faces right, head in right profile, weight on rear/left foot, front/right foot light, hands relaxed.",
+      "Row 0 column 2, idle_1 up: head faces away/up, back of head visible, torso faces away, weight slightly on left foot, hands relaxed low.",
+      "Row 0 column 3, generic action down: character faces camera/down while interacting with the ground. Knees bent in a stable crouch, torso leaning forward, head lowered, both hands reaching down in front of the feet as if foraging, digging, grabbing, planting, or picking something up.",
+      "Row 1 column 0, idle_2 down: head faces camera/down, torso faces down, weight slightly on right foot, right shoulder a little lower, hands shifted subtly from idle_1.",
+      "Row 1 column 1, idle_2 side: character faces right, head in right profile, weight on front/right foot, rear/left foot light, head and shoulders subtly bobbed from idle_1.",
+      "Row 1 column 2, idle_2 up: head faces away/up, back of head visible, torso faces away, weight slightly on right foot, hands shifted subtly from idle_1.",
+      "Row 1 column 3, generic action side: character faces right in profile while interacting with the ground. Knees bent in a stable crouch, torso leaning forward, head angled down, front/right hand reaching down and forward, rear/left hand supporting balance near the body. This must read as foraging, digging, grabbing, planting, or picking something up from the side.",
+      "Row 2 column 0, move_1 down: head faces camera/down. Left leg is the forward/front/contact leg, with left foot lower in the cell. Right leg is the rear/back leg, with right foot higher in the cell. Right hand swings forward/down; left hand swings back/up.",
+      "Row 2 column 1, move_1 side: character faces right. RIGHT leg is the forward/front/contact leg, with right foot visibly in front of the body and farther to the right. LEFT leg is the rear/back leg, with left foot visibly behind the body and farther to the left. RIGHT hand swings back/left behind the torso. LEFT hand swings forward/right in front of the torso.",
+      "Row 2 column 2, move_1 up: head faces away/up. Left leg is the forward/front/contact leg, with left foot higher in the cell. Right leg is the rear/back leg, with right foot lower in the cell. Right hand swings forward/up; left hand swings back/down.",
+      "Row 2 column 3, generic action up: character faces away/up while interacting with the ground. Back of head visible, knees bent in a stable crouch, torso leaning forward away from camera, shoulders rounded, both hands reaching down above/away from the body as if foraging, digging, grabbing, planting, or picking something up.",
+      "Row 3 column 0, move_2 down: head faces camera/down. Right leg is the forward/front/contact leg, with right foot lower in the cell. Left leg is the rear/back leg, with left foot higher in the cell. Left hand swings forward/down; right hand swings back/up. This must visibly swap the front and back legs from row 2 column 0.",
+      "Row 3 column 1, move_2 side: character faces right. LEFT leg is the forward/front/contact leg, with left foot visibly in front of the body and farther to the right. RIGHT leg is the rear/back leg, with right foot visibly behind the body and farther to the left. RIGHT hand swings forward/right in front of the torso. LEFT hand swings back/left behind the torso. This must be the exact reverse of row 2 column 1: the front leg, back leg, front hand, and back hand all swap sides. Do not reuse the same side-walk silhouette.",
+      "Row 3 column 2, move_2 up: head faces away/up. Right leg is the forward/front/contact leg, with right foot higher in the cell. Left leg is the rear/back leg, with left foot lower in the cell. Left hand swings forward/up; right hand swings back/down. This must visibly swap the front and back legs from row 2 column 2.",
+      "Row 3 column 3, side sleeping/resting: character lies on their side facing right, curled or relaxed sleeping pose, head resting low, knees slightly bent, arms tucked near torso.",
+    ];
+  }
+
+  return [
+    "Within each row, columns should be coherent frames or variants for that same state, not different unrelated designs.",
+    "Frame-to-frame changes should be readable but modest, suitable for stepping through in a 2D game.",
+    "Preserve the same silhouette language and materials across all states.",
+  ];
+}
+
+async function createLayoutGuide(
+  request: ObjectSpriteRequest,
+  fileName = "object-sprite-layout-guide.png",
+): Promise<{ dataUrl: string; filePath: string }> {
   const guideCellSize = 256;
   const width = request.columns * guideCellSize;
   const height = request.states.length * guideCellSize;
@@ -228,7 +278,7 @@ async function createLayoutGuide(request: ObjectSpriteRequest): Promise<{ dataUr
 ${background}
 </svg>`;
   const png = await sharp(Buffer.from(svg)).png().toBuffer();
-  const filePath = path.join(request.outputDir, "object-sprite-layout-guide.png");
+  const filePath = path.join(request.outputDir, fileName);
 
   await mkdir(request.outputDir, { recursive: true });
   await writeFile(filePath, png);

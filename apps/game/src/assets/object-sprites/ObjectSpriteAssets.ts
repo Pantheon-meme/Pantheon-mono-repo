@@ -1,6 +1,7 @@
 import duskmilletSpriteUrl from "./duskmillet/duskmillet-sprite-sheet.png?url";
 import emberwheatSpriteUrl from "./emberwheat/emberwheat-sprite-sheet.png?url";
 import frostbarleySpriteUrl from "./frostbarley/frostbarley-sprite-sheet.png?url";
+import playerSpriteUrl from "./player/player-sprite-sheet.png?url";
 import silveroatSpriteUrl from "./silveroat/silveroat-sprite-sheet.png?url";
 import starryeSpriteUrl from "./starrye/starrye-sprite-sheet.png?url";
 import sungrainSpriteUrl from "./sungrain/sungrain-sprite-sheet.png?url";
@@ -584,6 +585,194 @@ export const objectSpriteAssets = {
                 "stateId": "harvested",
                 "stateTitle": "Harvested",
                 "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "player": {
+    imageUrl: playerSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "down",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "side",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "up",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "action",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "down",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "side",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "up",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "action",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "down",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "side",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "up",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "action",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "down",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "side",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "up",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "action",
                 "row": 3,
                 "column": 3,
                 "x": 768,

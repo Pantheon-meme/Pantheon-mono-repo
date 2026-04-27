@@ -12,6 +12,10 @@ type CliOptions = {
   plantId?: string;
   plantName?: string;
   plantPrompt?: string;
+  playerId?: string;
+  playerName?: string;
+  playerPrompt?: string;
+  spriteKind?: "object" | "plant" | "player";
   objectId?: string;
   objectName?: string;
   objectPrompt?: string;
@@ -36,7 +40,7 @@ type CliOptions = {
 loadNearestEnvFile();
 
 const options = parseArgs(process.argv.slice(2));
-const requestOptions = applyPlantDefaults(options);
+const requestOptions = applyPlayerDefaults(applyPlantDefaults(options));
 
 if (requestOptions.help || !requestOptions.objectId || !requestOptions.objectName || !requestOptions.objectPrompt || !requestOptions.stylePrompt) {
   printHelp();
@@ -57,6 +61,7 @@ if (columnLabels && columnLabels.length > columns) {
 }
 
 const manifest = await runObjectSpriteWorkflow({
+  spriteKind: requestOptions.spriteKind ?? "object",
   objectId: requestOptions.objectId,
   objectName: requestOptions.objectName,
   objectPrompt: requestOptions.objectPrompt,
@@ -95,6 +100,18 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--plant":
         parsed.plantPrompt = readValue(arg, next);
+        index += 1;
+        break;
+      case "--player-id":
+        parsed.playerId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--player-name":
+        parsed.playerName = readValue(arg, next);
+        index += 1;
+        break;
+      case "--player":
+        parsed.playerPrompt = readValue(arg, next);
         index += 1;
         break;
       case "--object-id":
@@ -181,6 +198,7 @@ function applyPlantDefaults(options: CliOptions): CliOptions {
 
   return {
     ...options,
+    spriteKind: options.spriteKind ?? "plant",
     objectId: options.objectId ?? plantId,
     objectName: options.objectName ?? plantName,
     objectPrompt: options.objectPrompt ?? `${plantPrompt}; readable as a small top-down farming game crop`,
@@ -193,6 +211,37 @@ function applyPlantDefaults(options: CliOptions): CliOptions {
     cellSize: options.cellSize ?? 128,
     background: options.background ?? "transparent",
     out: options.out ?? `generated/object-sprites/${plantId}`,
+  };
+}
+
+function applyPlayerDefaults(options: CliOptions): CliOptions {
+  if (!options.playerId && !options.playerName && !options.playerPrompt) {
+    return options;
+  }
+
+  const playerName = options.playerName ?? options.objectName ?? titleCase(options.playerId ?? "player");
+  const playerId = options.playerId ?? options.objectId ?? slugify(playerName);
+  const playerPrompt = options.playerPrompt ?? options.objectPrompt;
+
+  if (!playerPrompt) {
+    throw new Error("--player requires a character description.");
+  }
+
+  return {
+    ...options,
+    spriteKind: options.spriteKind ?? "player",
+    objectId: options.objectId ?? playerId,
+    objectName: options.objectName ?? playerName,
+    objectPrompt: options.objectPrompt ?? `${playerPrompt}; readable as a small top-down farming/adventure game player character`,
+    stylePrompt: options.stylePrompt ?? defaultPlayerStylePrompt(),
+    styleReference: options.styleReference ?? "apps/game/src/assets/autotiles/vibrant-grass/autotile-blob-7x7.png",
+    styleReferenceCell: options.styleReferenceCell ?? (options.styleReference ? undefined : { row: 1, column: 1, cellSize: 256 }),
+    states: options.states ?? defaultPlayerStates(),
+    columns: options.columns ?? 4,
+    columnLabels: options.columnLabels ?? ["down", "side", "up", "action"],
+    cellSize: options.cellSize ?? 128,
+    background: options.background ?? "transparent",
+    out: options.out ?? `generated/object-sprites/${playerId}`,
   };
 }
 
@@ -252,6 +301,43 @@ function defaultPlantStylePrompt(): string {
     "crisp readable silhouette",
     "soft natural edges",
     "warm but balanced highlights",
+    "no outlines heavier than the terrain art",
+    "transparent background",
+  ].join(", ");
+}
+
+function defaultPlayerStates(): ObjectSpriteState[] {
+  return [
+    {
+      id: "idle_1",
+      title: "Idle 1",
+      prompt: "first idle transition for each direction; feet planted, relaxed hands, calm breathing posture",
+    },
+    {
+      id: "idle_2",
+      title: "Idle 2",
+      prompt: "second idle transition for each direction; opposite weight shift from idle_1, feet still planted",
+    },
+    {
+      id: "move_1",
+      title: "Move 1",
+      prompt: "first walking contact pose for each direction; left foot leads, opposite arm swing",
+    },
+    {
+      id: "move_2",
+      title: "Move 2",
+      prompt: "second walking contact pose for each direction; right foot leads, opposite arm swing",
+    },
+  ];
+}
+
+function defaultPlayerStylePrompt(): string {
+  return [
+    "cozy hand-painted 2D game character sprite",
+    "three-quarter top-down view",
+    "crisp readable silhouette",
+    "soft natural edges",
+    "consistent outfit and proportions",
     "no outlines heavier than the terrain art",
     "transparent background",
   ].join(", ");
@@ -347,6 +433,11 @@ function printHelp(): void {
 
 Usage:
   pnpm --filter @pantheon/assets generate-object-sprites -- \\
+    --player-id player \\
+    --player-name "Player" \\
+    --player "wandering farmer with simple tunic and boots"
+
+  pnpm --filter @pantheon/assets generate-object-sprites -- \\
     --plant-id sungrain \\
     --plant-name "Sungrain" \\
     --plant "warm golden grain plant with sunlit wheat heads"
@@ -361,6 +452,9 @@ Options:
       --plant-id <id>          Plant shortcut id. Fills object id and output path.
       --plant-name <name>      Plant shortcut display name.
       --plant <brief>          Plant shortcut description; uses current plant sprite defaults.
+      --player-id <id>         Player shortcut id. Use "player" for the main game player.
+      --player-name <name>     Player shortcut display name.
+      --player <brief>         Player shortcut description; uses 3x4 movement sprite defaults.
       --object-id <id>          Stable asset id, e.g. sungrain.
       --object-name <name>      Display name for prompt/manifest.
       --object <brief>          Object description and distinguishing details.
