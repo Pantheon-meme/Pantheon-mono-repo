@@ -3,11 +3,17 @@ import type { World } from "../../ecs/World";
 import { FacingDirection } from "../player/components/FacingDirection";
 import { FocusTarget } from "../player/components/FocusTarget";
 import { Position } from "../shared/components/Position";
+import { Footprint } from "../shared/components/Footprint";
+import { Grabbable } from "../shared/components/Grabbable";
+import { HarvestedPlant } from "../plants/components/HarvestedPlant";
 import { SeedPouch } from "../plants/components/SeedPouch";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
+import { WeightInspectable } from "../shared/components/WeightInspectable";
+import { WeightedObject } from "../shared/components/WeightedObject";
 import { getPlantBySeed, plantDefinitions } from "../plants/PlantDefinitions";
 import { getFacingTargetCell } from "../terrain/GridTargeting";
 import {
+  clamp,
   createPlantEntity,
   findPlantAt,
   findPlantByEntity,
@@ -17,6 +23,7 @@ import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 
 const plantEnergyCost = 8;
 const fetchEnergyCost = 6;
+const harvestDropWeight = 0.35;
 
 export const plantActionDefinitions: Record<string, ActionDefinition> = {
   plant: {
@@ -87,13 +94,12 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
 }
 
 function fetchPlant(world: World, actor: Entity): ActionEffectResult {
-  const pouch = world.getComponent(actor, SeedPouch);
   const position = world.getComponent(actor, Position);
   const facing = world.getComponent(actor, FacingDirection);
   const focus = world.getComponent(actor, FocusTarget);
   const grid = world.query(TerrainGrid)[0]?.[1];
 
-  if (!pouch || !position || !facing || !grid) {
+  if (!position || !facing || !grid) {
     return { message: "Fetch: no plant nearby", applied: false };
   }
 
@@ -119,10 +125,17 @@ function fetchPlant(world: World, actor: Entity): ActionEffectResult {
   }
 
   plant.plant.stage = "fetched";
-  pouch.add(definition.seedId, 2);
+  dropHarvestedPlant(
+    world,
+    grid,
+    definition.id,
+    definition.label,
+    plant.plant.tileX,
+    plant.plant.tileY,
+  );
 
   return {
-    message: `Fetch: gathered ${definition.label} and recovered 2 ${definition.seedLabel}`,
+    message: `Fetch: ${definition.label} dropped nearby`,
   };
 }
 
@@ -136,4 +149,40 @@ function cycleSeed(world: World, actor: Entity): ActionEffectResult {
   pouch.cycle();
 
   return { message: `Selected ${seedLabel(pouch.activeSeedId)}` };
+}
+
+function dropHarvestedPlant(
+  world: World,
+  grid: TerrainGrid,
+  plantId: string,
+  label: string,
+  tileX: number,
+  tileY: number,
+): void {
+  const drop = world.createEntity();
+  const angle = Math.random() * Math.PI * 2;
+  const distance = grid.tileSize * (0.18 + Math.random() * 0.42);
+  const centerX = tileX * grid.tileSize + grid.tileSize / 2;
+  const centerY = tileY * grid.tileSize + grid.tileSize / 2;
+  const x = clamp(
+    centerX + Math.cos(angle) * distance,
+    0,
+    grid.width * grid.tileSize,
+  );
+  const y = clamp(
+    centerY + Math.sin(angle) * distance,
+    0,
+    grid.height * grid.tileSize,
+  );
+
+  world.addComponent(drop, Position, new Position(x, y));
+  world.addComponent(drop, HarvestedPlant, new HarvestedPlant(plantId));
+  world.addComponent(drop, Grabbable, new Grabbable());
+  world.addComponent(
+    drop,
+    WeightedObject,
+    new WeightedObject(harvestDropWeight),
+  );
+  world.addComponent(drop, Footprint, new Footprint(70, 70));
+  world.addComponent(drop, WeightInspectable, new WeightInspectable(label));
 }

@@ -13,6 +13,7 @@ import { FocusTargetSystem } from "../player/systems/FocusTargetSystem";
 import { GameClockSystem } from "../time/systems/GameClockSystem";
 import { GridTargetHighlightSystem } from "../terrain/systems/GridTargetHighlightSystem";
 import { HandHudSystem } from "../ui/systems/HandHudSystem";
+import { HarvestedPlantRenderSystem } from "../plants/systems/HarvestedPlantRenderSystem";
 import { HeldItemPositionSystem } from "../player/systems/HeldItemPositionSystem";
 import { InputSystem } from "../player/systems/InputSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
@@ -65,6 +66,7 @@ export function registerSystems(
   world.addSystem(new GridTargetHighlightSystem());
   world.addSystem(new RenderSystem());
   world.addSystem(new PlantRenderSystem(scene));
+  world.addSystem(new HarvestedPlantRenderSystem(scene));
   world.addSystem(new SeedDropRenderSystem(scene));
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
