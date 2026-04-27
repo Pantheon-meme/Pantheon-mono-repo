@@ -123,7 +123,7 @@ pnpm --filter @pantheon/assets generate-object-sprites -- \
 pnpm --filter @pantheon/assets generate-tree-sprites
 ```
 
-Tree sheets use the same row contract as plants, but default to taller 192px rooted cells and tree-specific prompts for saplings, mature variants, and harvested fruit/cone/branch/resource pickups.
+Tree sheets use the same row contract as plants, but default to larger 256px rooted cells and tree-specific prompts for saplings, mature variants, and harvested fruit/cone/branch/resource pickups. Runtime interaction still belongs to one tile, while mature tree visuals are scaled to read at roughly two terrain tiles tall.
 
 ```sh
 pnpm --filter @pantheon/assets generate-object-sprites -- \

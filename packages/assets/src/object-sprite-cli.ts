@@ -321,7 +321,7 @@ function applyTreeDefaults(options: CliOptions): CliOptions {
       "step 3",
       "step 4",
     ],
-    cellSize: options.cellSize ?? 192,
+    cellSize: options.cellSize ?? 256,
     background: options.background ?? "transparent",
     out: options.out ?? `generated/object-sprites/${treeId}`,
   };
@@ -460,13 +460,13 @@ function defaultTreeStates(): ObjectSpriteState[] {
       id: "growing",
       title: "Growing",
       prompt:
-        "progressive sapling-to-young-tree growth steps, with trunk height and canopy volume increasing while the root point stays fixed",
+        "progressive sapling-to-young-tree growth steps, with trunk height and canopy volume increasing while the root point stays fixed; later columns should clearly grow toward a large tree silhouette",
     },
     {
       id: "grown",
       title: "Grown",
       prompt:
-        "different stable mature harvest-ready tree variants with consistent species identity, not animation frames",
+        "different stable mature harvest-ready tree variants with consistent species identity, not animation frames; full tree silhouettes designed to render about two terrain tiles tall, with substantial trunk height and canopy mass",
     },
     {
       id: "harvested",
@@ -482,6 +482,8 @@ function defaultTreeStylePrompt(): string {
     "cozy hand-painted 2D game tree sprite",
     "three-quarter top-down view",
     "bottom-center rooted anchor point",
+    "mature trees are large world objects, not crop-sized shrubs",
+    "grown tree frames should remain crisp when rendered about two terrain tiles tall",
     "strong readable trunk and canopy silhouette",
     "soft natural edges",
     "warm but balanced highlights",

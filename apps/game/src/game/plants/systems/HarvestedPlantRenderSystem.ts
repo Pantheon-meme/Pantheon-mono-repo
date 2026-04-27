@@ -45,7 +45,7 @@ export class HarvestedPlantRenderSystem implements System {
         renderHarvestedSprite(
           visual,
           spriteAsset,
-          definition.visualScale,
+          definition.kind === "tree" ? 1.15 : definition.visualScale,
           deltaSeconds,
         );
       }

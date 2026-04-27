@@ -255,6 +255,8 @@ function buildColumnBehaviorPrompt(request: ObjectSpriteRequest): string[] {
         ? [
             "Tree frames should be rooted at the bottom center of each cell, with trunks growing upward from a stable ground contact point.",
             "Keep canopies readable from a three-quarter top-down view without covering neighboring cells.",
+            "Mature tree frames must read much larger than crop frames: use a full tree silhouette that will still look detailed and intentional when the game renders it at roughly two terrain tiles tall.",
+            "Do not make mature trees crop-sized or shrub-sized. Seed and sapling frames can be small, but grown frames should have substantial trunk height and canopy mass.",
           ]
         : []),
     ];
