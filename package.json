@@ -11,6 +11,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
+    "publish:game-assets": "pnpm --filter @pantheon/assets publish-game-assets",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

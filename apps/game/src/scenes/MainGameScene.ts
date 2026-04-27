@@ -1,68 +1,44 @@
 import Phaser from "phaser";
-import dirtAtlasUrl from "../../../../packages/assets/generated/autotiles/dirt/autotile-blob-7x7.png?url";
-import grassAtlasUrl from "../../../../packages/assets/generated/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import dirtAtlasUrl from "../assets/autotiles/dirt/autotile-blob-7x7.png?url";
+import grassAtlasUrl from "../assets/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
 import { World } from "../ecs/World";
-import { blobAtlasCellSize } from "../game/autotile/BlobAutotile";
-import { ActionBindings } from "../game/components/ActionBindings";
-import { ActionLog } from "../game/components/ActionLog";
-import { ActionQueue } from "../game/components/ActionQueue";
-import { AutotileLayer } from "../game/components/AutotileLayer";
-import { DayNightOverlay } from "../game/components/DayNightOverlay";
-import { Energy } from "../game/components/Energy";
-import { EnergyBar } from "../game/components/EnergyBar";
-import { FacingDirection } from "../game/components/FacingDirection";
-import { FocusTarget } from "../game/components/FocusTarget";
-import { GameClock } from "../game/components/GameClock";
-import { HandHud } from "../game/components/HandHud";
-import { Hands } from "../game/components/Hands";
-import { IdeaState } from "../game/components/IdeaState";
-import { GridTargetHighlight } from "../game/components/GridTargetHighlight";
-import { InputState } from "../game/components/InputState";
-import { JournalPanel } from "../game/components/JournalPanel";
-import { KnowledgeState } from "../game/components/KnowledgeState";
-import { NeedState } from "../game/components/NeedState";
-import { PlayerControlled } from "../game/components/PlayerControlled";
-import { Position } from "../game/components/Position";
-import { Renderable } from "../game/components/Renderable";
-import { SeedHud } from "../game/components/SeedHud";
-import { SeedPouch } from "../game/components/SeedPouch";
-import { SkillSet } from "../game/components/SkillSet";
-import { SleepProgressBar } from "../game/components/SleepProgressBar";
-import { SleepState } from "../game/components/SleepState";
-import { SleepVisual } from "../game/components/SleepVisual";
-import { TerrainBackground } from "../game/components/TerrainBackground";
-import { TerrainBaseLayer } from "../game/components/TerrainBaseLayer";
-import { TerrainGrid } from "../game/components/TerrainGrid";
-import { TerrainLayer } from "../game/components/TerrainLayer";
-import { Velocity } from "../game/components/Velocity";
-import { AutotileRenderSystem } from "../game/systems/AutotileRenderSystem";
-import { ActionInputSystem } from "../game/systems/ActionInputSystem";
-import { ActionSystem } from "../game/systems/ActionSystem";
-import { BoundsSystem } from "../game/systems/BoundsSystem";
-import { DayNightRenderSystem } from "../game/systems/DayNightRenderSystem";
-import { EnergyBarSystem } from "../game/systems/EnergyBarSystem";
-import { EnergySystem } from "../game/systems/EnergySystem";
-import { FacingDirectionSystem } from "../game/systems/FacingDirectionSystem";
-import { FocusInputSystem } from "../game/systems/FocusInputSystem";
-import { FocusTargetSystem } from "../game/systems/FocusTargetSystem";
-import { GameClockSystem } from "../game/systems/GameClockSystem";
-import { GridTargetHighlightSystem } from "../game/systems/GridTargetHighlightSystem";
-import { HandHudSystem } from "../game/systems/HandHudSystem";
-import { HeldItemPositionSystem } from "../game/systems/HeldItemPositionSystem";
-import { InputSystem } from "../game/systems/InputSystem";
-import { JournalSystem } from "../game/systems/JournalSystem";
-import { MovementSystem } from "../game/systems/MovementSystem";
-import { PlantGrowthSystem } from "../game/systems/PlantGrowthSystem";
-import { PlantRenderSystem } from "../game/systems/PlantRenderSystem";
-import { RenderSystem } from "../game/systems/RenderSystem";
-import { SeedDropRenderSystem } from "../game/systems/SeedDropRenderSystem";
-import { SeedHudSystem } from "../game/systems/SeedHudSystem";
-import { SleepProgressBarSystem } from "../game/systems/SleepProgressBarSystem";
-import { SleepSystem } from "../game/systems/SleepSystem";
-import { SleepVisualSystem } from "../game/systems/SleepVisualSystem";
-import { TerrainBackgroundSystem } from "../game/systems/TerrainBackgroundSystem";
-import { TerrainBaseRenderSystem } from "../game/systems/TerrainBaseRenderSystem";
-import { WeightDisplaySystem } from "../game/systems/WeightDisplaySystem";
+import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
+import { registerSystems } from "../game/bootstrap/registerSystems";
+import { ActionBindings } from "../game/actions/components/ActionBindings";
+import { ActionLog } from "../game/actions/components/ActionLog";
+import { ActionProgress } from "../game/actions/components/ActionProgress";
+import { ActionQueue } from "../game/actions/components/ActionQueue";
+import { AutotileLayer } from "../game/terrain/components/AutotileLayer";
+import { DayNightOverlay } from "../game/ui/components/DayNightOverlay";
+import { Energy } from "../game/energy/components/Energy";
+import { EnergyBar } from "../game/ui/components/EnergyBar";
+import { FacingDirection } from "../game/player/components/FacingDirection";
+import { FocusTarget } from "../game/player/components/FocusTarget";
+import { GameClock } from "../game/time/components/GameClock";
+import { HandHud } from "../game/ui/components/HandHud";
+import { Hands } from "../game/player/components/Hands";
+import { IdeaState } from "../game/ideas/components/IdeaState";
+import { GridTargetHighlight } from "../game/terrain/components/GridTargetHighlight";
+import { InputState } from "../game/player/components/InputState";
+import { JournalPanel } from "../game/ui/components/JournalPanel";
+import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
+import { NeedState } from "../game/needs/components/NeedState";
+import { PlayerControlled } from "../game/player/components/PlayerControlled";
+import { Position } from "../game/shared/components/Position";
+import { Renderable } from "../game/shared/components/Renderable";
+import { ActionProgressBar } from "../game/ui/components/ActionProgressBar";
+import { SeedHud } from "../game/ui/components/SeedHud";
+import { SeedPouch } from "../game/plants/components/SeedPouch";
+import { SkillSet } from "../game/ideas/components/SkillSet";
+import { SleepProgressBar } from "../game/ui/components/SleepProgressBar";
+import { SleepState } from "../game/sleep/components/SleepState";
+import { SleepVisual } from "../game/ui/components/SleepVisual";
+import { TargetActionMenu } from "../game/ui/components/TargetActionMenu";
+import { TerrainBackground } from "../game/terrain/components/TerrainBackground";
+import { TerrainBaseLayer } from "../game/terrain/components/TerrainBaseLayer";
+import { TerrainGrid } from "../game/terrain/components/TerrainGrid";
+import { TerrainLayer } from "../game/terrain/components/TerrainLayer";
+import { Velocity } from "../game/shared/components/Velocity";
 
 const grassAtlasKey = "main-vibrant-grass-blob-7x7";
 const dirtAtlasKey = "main-dirt-blob-7x7";
@@ -96,6 +72,7 @@ export class MainGameScene extends Phaser.Scene {
     const journal = world.createEntity();
     const seedHud = world.createEntity();
     const handHud = world.createEntity();
+    const targetActionMenu = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -105,6 +82,7 @@ export class MainGameScene extends Phaser.Scene {
     const playerSprite = this.add
       .circle(spawnX, spawnY, 34, 0xf2c15f)
       .setDepth(10);
+    const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
     const dayNightOverlay = this.createDayNightOverlay();
     const sleepProgressBar = this.createSleepProgressBar();
@@ -112,6 +90,7 @@ export class MainGameScene extends Phaser.Scene {
     const journalPanel = this.createJournalPanel();
     const seedHudDisplay = this.createSeedHud();
     const handHudDisplay = this.createHandHud();
+    const targetActionMenuDisplay = this.createTargetActionMenu();
     const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
 
@@ -121,7 +100,7 @@ export class MainGameScene extends Phaser.Scene {
       description:
         "Two hands are not enough. Something wearable or tied together might help.",
       urgency: 65,
-      active: true,
+      active: false,
     });
 
     playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
@@ -184,6 +163,11 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(journal, JournalPanel, journalPanel);
     world.addComponent(seedHud, SeedHud, seedHudDisplay);
     world.addComponent(handHud, HandHud, handHudDisplay);
+    world.addComponent(
+      targetActionMenu,
+      TargetActionMenu,
+      targetActionMenuDisplay,
+    );
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -207,6 +191,8 @@ export class MainGameScene extends Phaser.Scene {
       new SkillSet({ foraging: 1, reflection: 1 }),
     );
     world.addComponent(player, SleepState, new SleepState());
+    world.addComponent(player, ActionProgress, new ActionProgress());
+    world.addComponent(player, ActionProgressBar, actionProgressBar);
     world.addComponent(player, ActionQueue, new ActionQueue());
     world.addComponent(
       player,
@@ -223,6 +209,7 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.TWO]: "left-hand-use",
         [Phaser.Input.Keyboard.KeyCodes.THREE]: "right-hand-toggle",
         [Phaser.Input.Keyboard.KeyCodes.FOUR]: "right-hand-use",
+        [Phaser.Input.Keyboard.KeyCodes.FIVE]: "carry-more-need",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
@@ -241,46 +228,13 @@ export class MainGameScene extends Phaser.Scene {
       throw new Error("Keyboard input is unavailable.");
     }
 
-    world.addSystem(new TerrainBaseRenderSystem());
-    world.addSystem(new AutotileRenderSystem(this));
-    world.addSystem(new TerrainBackgroundSystem(this));
-    world.addSystem(new JournalSystem(this));
-    world.addSystem(new FocusInputSystem(keyboard));
-    world.addSystem(
-      new InputSystem(
-        keyboard.createCursorKeys(),
-        keyboard.addKeys("W,A,S,D") as Record<
-          "W" | "A" | "S" | "D",
-          Phaser.Input.Keyboard.Key
-        >,
-      ),
+    registerSystems(
+      world,
+      this,
+      keyboard,
+      new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
+      weightLabel,
     );
-    world.addSystem(new ActionInputSystem(keyboard));
-    world.addSystem(new GameClockSystem());
-    world.addSystem(new EnergySystem());
-    world.addSystem(new PlantGrowthSystem());
-    world.addSystem(new FacingDirectionSystem());
-    world.addSystem(new MovementSystem());
-    world.addSystem(new HeldItemPositionSystem());
-    world.addSystem(new FocusTargetSystem());
-    world.addSystem(new ActionSystem());
-    world.addSystem(new SleepSystem());
-    world.addSystem(
-      new BoundsSystem(
-        new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
-      ),
-    );
-    world.addSystem(new GridTargetHighlightSystem());
-    world.addSystem(new RenderSystem());
-    world.addSystem(new PlantRenderSystem(this));
-    world.addSystem(new SeedDropRenderSystem(this));
-    world.addSystem(new SleepVisualSystem());
-    world.addSystem(new DayNightRenderSystem());
-    world.addSystem(new SleepProgressBarSystem());
-    world.addSystem(new SeedHudSystem());
-    world.addSystem(new HandHudSystem());
-    world.addSystem(new EnergyBarSystem());
-    world.addSystem(new WeightDisplaySystem(weightLabel));
 
     this.world = world;
   }
@@ -313,6 +267,48 @@ export class MainGameScene extends Phaser.Scene {
     background.setStrokeStyle(2, 0xe8f0e8, 0.55);
 
     return new EnergyBar(background, fill, label, width, height, x, y);
+  }
+
+  private createActionProgressBar(): ActionProgressBar {
+    const width = 156;
+    const height = 12;
+    const container = this.add.container(0, 0).setDepth(106).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, width, height, 0x101821, 0.9)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0xf6efd7, 0.8);
+    const fill = this.add
+      .rectangle(-width / 2, -height / 2, 0, height, 0xf0c85a, 1)
+      .setOrigin(0);
+    const label = this.add
+      .text(0, -24, "", {
+        align: "center",
+        color: "#f6efd7",
+        fixedWidth: 220,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "14px",
+        fontStyle: "700",
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(0.5);
+
+    container.add([background, fill, label]);
+
+    return new ActionProgressBar(
+      container,
+      background,
+      fill,
+      label,
+      width,
+      height,
+      -78,
+    );
   }
 
   private createDayNightOverlay(): DayNightOverlay {
@@ -426,6 +422,28 @@ export class MainGameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(101);
+  }
+
+  private createTargetActionMenu(): TargetActionMenu {
+    const container = this.add.container(0, 0).setDepth(104).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, 440, 112, 0x101821, 0.9)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0xf1d38b, 0.72);
+    const title = this.add
+      .text(0, -38, "", {
+        align: "center",
+        color: "#f6efd7",
+        fixedWidth: 400,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+        fontStyle: "700",
+      })
+      .setOrigin(0.5);
+
+    container.add([background, title]);
+
+    return new TargetActionMenu(container, background, title, 440, 38);
   }
 
   private createSleepVisual(): SleepVisual {

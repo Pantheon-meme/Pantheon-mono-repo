@@ -16,6 +16,7 @@
     "generate": "tsx src/cli.ts",
     "generate-autotiles": "tsx src/autotile-cli.ts",
     "combine-autotile-atlas": "tsx src/combine-autotile-atlas.ts",
+    "publish-game-assets": "tsx src/publish-game-assets.ts",
     "lint": "tsc --noEmit -p tsconfig.json",
     "test": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"

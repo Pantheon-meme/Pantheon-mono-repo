@@ -1,6 +1,6 @@
-import { FacingDirection } from "../components/FacingDirection";
-import { Position } from "../components/Position";
-import { TerrainGrid } from "../components/TerrainGrid";
+import { FacingDirection } from "../player/components/FacingDirection";
+import { Position } from "../shared/components/Position";
+import { TerrainGrid } from "./components/TerrainGrid";
 
 export type TerrainCell = {
   x: number;

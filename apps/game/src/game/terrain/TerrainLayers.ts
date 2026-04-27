@@ -1,6 +1,6 @@
 import type { World } from "../../ecs/World";
-import { TerrainGrid } from "../components/TerrainGrid";
-import { TerrainLayer } from "../components/TerrainLayer";
+import { TerrainGrid } from "./components/TerrainGrid";
+import { TerrainLayer } from "./components/TerrainLayer";
 
 export type TerrainLayerEntry = {
   grid: TerrainGrid;

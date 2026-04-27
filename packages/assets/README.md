@@ -93,3 +93,13 @@ PANTHEON_AUTOTILE_MASK_DIR=masks
 PANTHEON_AUTOTILE_CONCURRENCY=4
 OPENROUTER_REASONING_EFFORT=high
 ```
+
+## Publish Game Assets
+
+Generated assets stay ignored under `packages/assets/generated`. To update the checked-in copies consumed by the game, publish the required autotile atlases after generation:
+
+```sh
+pnpm publish:game-assets
+```
+
+This copies the current `dirt`, `vibrant-grass`, and `water` `autotile-blob-7x7.png` files into `apps/game/src/assets/autotiles`.

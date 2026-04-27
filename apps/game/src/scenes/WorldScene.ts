@@ -1,18 +1,18 @@
 import Phaser from "phaser";
 import { World } from "../ecs/World";
-import { Footprint } from "../game/components/Footprint";
-import { InputState } from "../game/components/InputState";
-import { PlayerControlled } from "../game/components/PlayerControlled";
-import { Position } from "../game/components/Position";
-import { Renderable } from "../game/components/Renderable";
-import { Velocity } from "../game/components/Velocity";
-import { WeightInspectable } from "../game/components/WeightInspectable";
-import { WeightedObject } from "../game/components/WeightedObject";
-import { BoundsSystem } from "../game/systems/BoundsSystem";
-import { InputSystem } from "../game/systems/InputSystem";
-import { MovementSystem } from "../game/systems/MovementSystem";
-import { RenderSystem } from "../game/systems/RenderSystem";
-import { WeightDisplaySystem } from "../game/systems/WeightDisplaySystem";
+import { Footprint } from "../game/shared/components/Footprint";
+import { InputState } from "../game/player/components/InputState";
+import { PlayerControlled } from "../game/player/components/PlayerControlled";
+import { Position } from "../game/shared/components/Position";
+import { Renderable } from "../game/shared/components/Renderable";
+import { Velocity } from "../game/shared/components/Velocity";
+import { WeightInspectable } from "../game/shared/components/WeightInspectable";
+import { WeightedObject } from "../game/shared/components/WeightedObject";
+import { BoundsSystem } from "../game/shared/systems/BoundsSystem";
+import { InputSystem } from "../game/player/systems/InputSystem";
+import { MovementSystem } from "../game/player/systems/MovementSystem";
+import { RenderSystem } from "../game/shared/systems/RenderSystem";
+import { WeightDisplaySystem } from "../game/ui/systems/WeightDisplaySystem";
 
 export class WorldScene extends Phaser.Scene {
   private world?: World;
