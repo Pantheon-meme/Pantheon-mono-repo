@@ -11,5 +11,6 @@ export type ActionDefinition = {
   label: string;
   energyDelta: number;
   durationSeconds: number;
+  canStart?: (world: World, actor: Entity) => ActionEffectResult;
   apply?: (world: World, actor: Entity) => ActionEffectResult;
 };

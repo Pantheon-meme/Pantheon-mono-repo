@@ -35,15 +35,15 @@ export const forageActionDefinitions: Record<string, ActionDefinition> = {
     label: "Forage",
     energyDelta: -forageEnergyCost,
     durationSeconds: 2.4,
+    canStart: canForage,
     apply: forage,
   },
 };
 
-function forage(world: World, actor: Entity): ActionEffectResult {
+function canForage(world: World, actor: Entity): ActionEffectResult {
   const position = world.getComponent(actor, Position);
   const focus = world.getComponent(actor, FocusTarget);
   const skills = world.getComponent(actor, SkillSet);
-  const ideas = world.getComponent(actor, IdeaState);
   const grid = world.query(TerrainGrid)[0]?.[1];
 
   if (!position || !skills || !grid) {
@@ -55,6 +55,26 @@ function forage(world: World, actor: Entity): ActionEffectResult {
       message: `Forage: ${focus.objectLabel} is in focus`,
       applied: false,
     };
+  }
+
+  return {};
+}
+
+function forage(world: World, actor: Entity): ActionEffectResult {
+  const startResult = canForage(world, actor);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const position = world.getComponent(actor, Position);
+  const focus = world.getComponent(actor, FocusTarget);
+  const skills = world.getComponent(actor, SkillSet);
+  const ideas = world.getComponent(actor, IdeaState);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+
+  if (!position || !skills || !grid) {
+    return { message: "Forage: nowhere to search", applied: false };
   }
 
   const tileX = focus?.tileX ?? Math.floor(position.x / grid.tileSize);

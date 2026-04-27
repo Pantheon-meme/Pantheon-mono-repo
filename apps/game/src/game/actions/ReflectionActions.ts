@@ -45,11 +45,12 @@ export const reflectionActionDefinitions: Record<string, ActionDefinition> = {
     label: "Reflect",
     energyDelta: -reflectionEnergyCost,
     durationSeconds: 3.2,
+    canStart: canReflect,
     apply: reflect,
   },
 };
 
-function reflect(world: World, actor: Entity): ActionEffectResult {
+function canReflect(world: World, actor: Entity): ActionEffectResult {
   const energy = world.getComponent(actor, Energy);
   const ideas = world.getComponent(actor, IdeaState);
   const knowledge = world.getComponent(actor, KnowledgeState);
@@ -75,6 +76,54 @@ function reflect(world: World, actor: Entity): ActionEffectResult {
       message: `Reflect needs ${reflectionEnergyCost} energy`,
       applied: false,
     };
+  }
+
+  const need = needs.activeNeeds[0];
+
+  if (!need) {
+    return { message: "Reflect: no urgent need", applied: false };
+  }
+
+  const idea = getIdeasForNeed(need.id).find((candidate) => {
+    const progress = ideas.ideas.get(candidate.id);
+
+    return (
+      !progress?.unlocked && knowledge.knowsAll(candidate.requiredKnownItems)
+    );
+  });
+
+  if (!idea) {
+    return { message: "Reflect: no reachable idea yet", applied: false };
+  }
+
+  return {};
+}
+
+function reflect(world: World, actor: Entity): ActionEffectResult {
+  const startResult = canReflect(world, actor);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const energy = world.getComponent(actor, Energy);
+  const ideas = world.getComponent(actor, IdeaState);
+  const knowledge = world.getComponent(actor, KnowledgeState);
+  const needs = world.getComponent(actor, NeedState);
+  const position = world.getComponent(actor, Position);
+  const skills = world.getComponent(actor, SkillSet);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+
+  if (
+    !energy ||
+    !ideas ||
+    !knowledge ||
+    !needs ||
+    !position ||
+    !skills ||
+    !grid
+  ) {
+    return { message: "Reflect: thoughts scatter", applied: false };
   }
 
   const need = needs.activeNeeds[0];

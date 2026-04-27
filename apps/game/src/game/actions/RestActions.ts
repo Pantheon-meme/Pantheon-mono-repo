@@ -28,11 +28,12 @@ export const restActionDefinitions: Record<string, ActionDefinition> = {
     label: "Sleep",
     energyDelta: 0,
     durationSeconds: 1.2,
+    canStart: canSleep,
     apply: sleep,
   },
 };
 
-function sleep(world: World, actor: Entity): ActionEffectResult {
+function canSleep(world: World, actor: Entity): ActionEffectResult {
   const position = world.getComponent(actor, Position);
   const sleepState = world.getComponent(actor, SleepState);
   const energy = world.getComponent(actor, Energy);
@@ -48,6 +49,25 @@ function sleep(world: World, actor: Entity): ActionEffectResult {
 
   if (energy.current >= energy.max) {
     return { message: "Sleep: energy already full", applied: false };
+  }
+
+  return {};
+}
+
+function sleep(world: World, actor: Entity): ActionEffectResult {
+  const startResult = canSleep(world, actor);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const position = world.getComponent(actor, Position);
+  const sleepState = world.getComponent(actor, SleepState);
+  const energy = world.getComponent(actor, Energy);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+
+  if (!position || !sleepState || !energy || !grid) {
+    return { message: "Sleep: no place to rest", applied: false };
   }
 
   const tileX = Math.floor(position.x / grid.tileSize);

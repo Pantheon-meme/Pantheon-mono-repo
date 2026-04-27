@@ -29,6 +29,7 @@ export const handActionDefinitions: Record<string, ActionDefinition> = {
     label: "Left hand",
     energyDelta: 0,
     durationSeconds: 0.45,
+    canStart: (world, actor) => canToggleHand(world, actor, "left"),
     apply: (world, actor) => toggleHand(world, actor, "left"),
   },
   "left-hand-use": {
@@ -36,6 +37,7 @@ export const handActionDefinitions: Record<string, ActionDefinition> = {
     label: "Use left hand",
     energyDelta: 0,
     durationSeconds: 0.8,
+    canStart: (world, actor) => canUseHand(world, actor, "left"),
     apply: (world, actor) => useHand(world, actor, "left"),
   },
   "right-hand-toggle": {
@@ -43,6 +45,7 @@ export const handActionDefinitions: Record<string, ActionDefinition> = {
     label: "Right hand",
     energyDelta: 0,
     durationSeconds: 0.45,
+    canStart: (world, actor) => canToggleHand(world, actor, "right"),
     apply: (world, actor) => toggleHand(world, actor, "right"),
   },
   "right-hand-use": {
@@ -50,9 +53,29 @@ export const handActionDefinitions: Record<string, ActionDefinition> = {
     label: "Use right hand",
     energyDelta: 0,
     durationSeconds: 0.8,
+    canStart: (world, actor) => canUseHand(world, actor, "right"),
     apply: (world, actor) => useHand(world, actor, "right"),
   },
 };
+
+function canToggleHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
+  const slot = hands?.get(hand);
+
+  if (!hands || !slot) {
+    return { message: `${handLabel(hand)} hand: unavailable`, applied: false };
+  }
+
+  if (slot.held) {
+    return {};
+  }
+
+  return canGrabIntoHand(world, actor, hand);
+}
 
 function toggleHand(
   world: World,
@@ -73,7 +96,7 @@ function toggleHand(
   return grabIntoHand(world, actor, hand);
 }
 
-function grabIntoHand(
+function canGrabIntoHand(
   world: World,
   actor: Entity,
   hand: HandId,
@@ -103,6 +126,31 @@ function grabIntoHand(
   if (weight.weight > hands.maxHandWeight) {
     return {
       message: `${focus.objectLabel} is too heavy for one hand`,
+      applied: false,
+    };
+  }
+
+  return {};
+}
+
+function grabIntoHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const startResult = canGrabIntoHand(world, actor, hand);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const hands = world.getComponent(actor, Hands);
+  const focus = world.getComponent(actor, FocusTarget);
+  const slot = hands?.get(hand);
+
+  if (!hands || !slot || !focus || focus.kind !== "object" || !focus.object) {
+    return {
+      message: `${handLabel(hand)} hand: no object focused`,
       applied: false,
     };
   }
@@ -144,11 +192,45 @@ function dropFromHand(
   return { message: `${handLabel(hand)} hand dropped ${label}` };
 }
 
+function canUseHand(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+): ActionEffectResult {
+  const hands = world.getComponent(actor, Hands);
+  const focus = world.getComponent(actor, FocusTarget);
+  const slot = hands?.get(hand);
+  const held = slot?.held;
+
+  if (!hands || !slot || !held) {
+    return { message: `${handLabel(hand)} hand is empty`, applied: false };
+  }
+
+  const seedDrop = world.getComponent(held, SeedDrop);
+
+  if (seedDrop && !seedDrop.collected) {
+    return canUseHeldSeed(world, actor, hand, held, seedDrop, focus);
+  }
+
+  const label = world.getComponent(held, WeightInspectable)?.label ?? "object";
+
+  return {
+    message: `${handLabel(hand)} hand: ${label} has no use yet`,
+    applied: false,
+  };
+}
+
 function useHand(
   world: World,
   actor: Entity,
   hand: HandId,
 ): ActionEffectResult {
+  const startResult = canUseHand(world, actor, hand);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
   const hands = world.getComponent(actor, Hands);
   const focus = world.getComponent(actor, FocusTarget);
   const slot = hands?.get(hand);
@@ -172,7 +254,7 @@ function useHand(
   };
 }
 
-function useHeldSeed(
+function canUseHeldSeed(
   world: World,
   actor: Entity,
   hand: HandId,
@@ -211,6 +293,35 @@ function useHeldSeed(
   if (findPlantAt(world, focus.tileX, focus.tileY, false)) {
     return {
       message: `${handLabel(hand)} hand: tile already has a plant`,
+      applied: false,
+    };
+  }
+
+  return {};
+}
+
+function useHeldSeed(
+  world: World,
+  actor: Entity,
+  hand: HandId,
+  held: Entity,
+  seedDrop: SeedDrop,
+  focus: FocusTarget | undefined,
+): ActionEffectResult {
+  const startResult = canUseHeldSeed(world, actor, hand, held, seedDrop, focus);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const hands = world.getComponent(actor, Hands);
+  const slot = hands?.get(hand);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+  const definition = getPlantBySeed(seedDrop.seedId);
+
+  if (!hands || !slot || !grid || !definition || !focus) {
+    return {
+      message: `${handLabel(hand)} hand: seed cannot be used`,
       applied: false,
     };
   }

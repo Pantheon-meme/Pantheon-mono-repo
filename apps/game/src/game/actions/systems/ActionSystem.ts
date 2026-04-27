@@ -88,6 +88,14 @@ export class ActionSystem implements System {
         continue;
       }
 
+      const startResult = action.canStart?.(world, entity);
+
+      if (startResult?.applied === false) {
+        log.lastMessage = startResult.message ?? `${action.label}: no effect`;
+        actionId = queue.shift();
+        continue;
+      }
+
       progress.start(action.id, action.label, action.durationSeconds);
       log.lastMessage = `${action.label}: started`;
 

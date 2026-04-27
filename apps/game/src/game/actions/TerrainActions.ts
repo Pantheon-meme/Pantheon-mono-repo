@@ -13,11 +13,12 @@ export const terrainActionDefinitions: Record<string, ActionDefinition> = {
     label: "Dig",
     energyDelta: -12,
     durationSeconds: 2,
+    canStart: canDig,
     apply: dig,
   },
 };
 
-function dig(world: World, actor: Entity): ActionEffectResult {
+function canDig(world: World, actor: Entity): ActionEffectResult {
   const position = world.getComponent(actor, Position);
   const facing = world.getComponent(actor, FacingDirection);
   const focus = world.getComponent(actor, FocusTarget);
@@ -41,6 +42,29 @@ function dig(world: World, actor: Entity): ActionEffectResult {
   if (dirtLayer.grid.has(targetCell.x, targetCell.y)) {
     return { message: "Dig: already dirt", applied: false };
   }
+
+  return {};
+}
+
+function dig(world: World, actor: Entity): ActionEffectResult {
+  const startResult = canDig(world, actor);
+
+  if (startResult.applied === false) {
+    return startResult;
+  }
+
+  const position = world.getComponent(actor, Position);
+  const facing = world.getComponent(actor, FacingDirection);
+  const focus = world.getComponent(actor, FocusTarget);
+  const dirtLayer = getTerrainLayer(world, "dirt");
+
+  if (!position || !facing || !dirtLayer) {
+    return { message: "Dig: no target", applied: false };
+  }
+
+  const targetCell = focus
+    ? { x: focus.tileX, y: focus.tileY }
+    : getFacingTargetCell(dirtLayer.grid, position, facing);
 
   dirtLayer.grid.set(targetCell.x, targetCell.y, true);
 
