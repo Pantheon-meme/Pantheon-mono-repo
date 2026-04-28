@@ -60,5 +60,14 @@ export default defineWorld({
       },
       key: ["player"],
     },
+    WorldTime: {
+      schema: {
+        id: "bytes32",
+        startedAt: "uint64",
+        dayLength: "uint64",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
   },
 });

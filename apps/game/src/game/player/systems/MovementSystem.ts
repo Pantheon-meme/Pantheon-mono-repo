@@ -3,6 +3,7 @@ import type { Entity } from "../../../ecs/World";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { MudWorld } from "../../mud/components/MudWorld";
+import type { MudMoveCallbacks } from "../../mud/MudWorldBridge";
 import { InputState } from "../components/InputState";
 import { MovementState } from "../components/MovementState";
 import { Position } from "../../shared/components/Position";
@@ -69,21 +70,18 @@ export class MovementSystem implements System {
     movement.confirmedTileX ??= Math.floor(position.x / grid.tileSize);
     movement.confirmedTileY ??= Math.floor(position.y / grid.tileSize);
 
-    if (movement.pending) {
-      velocity.x = 0;
-      velocity.y = 0;
-      return;
-    }
-
     const direction = chooseOrthogonalDirection(input.directionX, input.directionY);
 
     if (direction.x === 0 && direction.y === 0) {
       velocity.x = 0;
       velocity.y = 0;
+
       if (movement.wasMoving) {
         movement.wasMoving = false;
-        this.submitDropPointMove(world, entity, position, movement, grid, mud);
+        this.queueDropPointMove(world, entity, position, movement, grid);
       }
+
+      this.submitQueuedMove(world, entity, position, velocity, movement, grid, mud);
       return;
     }
 
@@ -94,30 +92,100 @@ export class MovementSystem implements System {
     position.y += velocity.y * deltaSeconds;
   }
 
-  private submitDropPointMove(
+  private queueDropPointMove(
     world: World,
     entity: Entity,
     position: Position,
+    movement: MovementState,
+    grid: TerrainGrid,
+  ): void {
+    const targetTileX = clampTile(Math.floor(position.x / grid.tileSize), grid.width);
+    const targetTileY = clampTile(Math.floor(position.y / grid.tileSize), grid.height);
+
+    if (
+      movement.confirmedTileX === targetTileX &&
+      movement.confirmedTileY === targetTileY
+    ) {
+      movement.queuedTileX = undefined;
+      movement.queuedTileY = undefined;
+      return;
+    }
+
+    movement.queuedTileX = targetTileX;
+    movement.queuedTileY = targetTileY;
+
+    if (movement.pending) {
+      updateActionLog(world, entity, `Move: queued ${targetTileX},${targetTileY}`);
+    }
+  }
+
+  private submitQueuedMove(
+    world: World,
+    entity: Entity,
+    position: Position,
+    velocity: Velocity,
     movement: MovementState,
     grid: TerrainGrid,
     mud: MudWorld,
   ): void {
     const previousTileX = movement.confirmedTileX;
     const previousTileY = movement.confirmedTileY;
-    const targetTileX = clampTile(Math.floor(position.x / grid.tileSize), grid.width);
-    const targetTileY = clampTile(Math.floor(position.y / grid.tileSize), grid.height);
+    const targetTileX = movement.queuedTileX;
+    const targetTileY = movement.queuedTileY;
 
-    if (previousTileX === targetTileX && previousTileY === targetTileY) {
+    if (
+      movement.pending ||
+      previousTileX === undefined ||
+      previousTileY === undefined ||
+      targetTileX === undefined ||
+      targetTileY === undefined
+    ) {
       return;
     }
 
-    movement.pending = true;
-    updateActionLog(world, entity, `Move: submitting ${targetTileX},${targetTileY}`);
+    if (previousTileX === targetTileX && previousTileY === targetTileY) {
+      movement.queuedTileX = undefined;
+      movement.queuedTileY = undefined;
+      return;
+    }
 
-    const submitted = mud.bridge.submitMove(targetTileX, targetTileY, {
+    const distance = manhattanDistance(
+      previousTileX,
+      previousTileY,
+      targetTileX,
+      targetTileY,
+    );
+    const earliestSubmitAtMs =
+      movement.lastConfirmedAtMs +
+      (distance / tilesPerSecond(velocity, grid)) * 1000;
+
+    if (Date.now() < earliestSubmitAtMs) {
+      return;
+    }
+
+    const path = buildOrthogonalPath(
+      previousTileX,
+      previousTileY,
+      targetTileX,
+      targetTileY,
+    );
+
+    movement.pending = true;
+    movement.queuedTileX = undefined;
+    movement.queuedTileY = undefined;
+    updateActionLog(
+      world,
+      entity,
+      path.length > 1
+        ? `Move: submitting path to ${targetTileX},${targetTileY}`
+        : `Move: submitting ${targetTileX},${targetTileY}`,
+    );
+
+    const callbacks: MudMoveCallbacks = {
       onConfirmed: ({ x, y }) => {
         movement.confirmedTileX = x;
         movement.confirmedTileY = y;
+        movement.lastConfirmedAtMs = Date.now();
         movement.pending = false;
         updateActionLog(world, entity, `Move: confirmed ${x},${y}`);
       },
@@ -125,26 +193,76 @@ export class MovementSystem implements System {
         movement.pending = false;
 
         if (previousTileX !== undefined && previousTileY !== undefined) {
+          const currentTileX = clampTile(
+            Math.floor(position.x / grid.tileSize),
+            grid.width,
+          );
+          const currentTileY = clampTile(
+            Math.floor(position.y / grid.tileSize),
+            grid.height,
+          );
+          const movedAfterSubmission =
+            currentTileX !== targetTileX || currentTileY !== targetTileY;
+
           movement.confirmedTileX = previousTileX;
           movement.confirmedTileY = previousTileY;
+          movement.lastConfirmedAtMs = Date.now();
+
+          if (movedAfterSubmission) {
+            movement.queuedTileX = currentTileX;
+            movement.queuedTileY = currentTileY;
+            updateActionLog(
+              world,
+              entity,
+              `Move: ${message}; requeued ${currentTileX},${currentTileY}`,
+            );
+            return;
+          }
+
+          movement.queuedTileX = undefined;
+          movement.queuedTileY = undefined;
           position.x = previousTileX * grid.tileSize + grid.tileSize / 2;
           position.y = previousTileY * grid.tileSize + grid.tileSize / 2;
         }
 
         updateActionLog(world, entity, `Move: ${message}`);
       },
-    });
+    };
+    const submitted =
+      path.length > 1
+        ? mud.bridge.submitMovePath(path, callbacks)
+        : mud.bridge.submitMove(targetTileX, targetTileY, callbacks);
 
     if (!submitted) {
       movement.pending = false;
+      movement.queuedTileX = targetTileX;
+      movement.queuedTileY = targetTileY;
       updateActionLog(world, entity, "Move: waiting on previous move");
-
-      if (previousTileX !== undefined && previousTileY !== undefined) {
-        position.x = previousTileX * grid.tileSize + grid.tileSize / 2;
-        position.y = previousTileY * grid.tileSize + grid.tileSize / 2;
-      }
     }
   }
+}
+
+function buildOrthogonalPath(
+  previousTileX: number | undefined,
+  previousTileY: number | undefined,
+  targetTileX: number,
+  targetTileY: number,
+): Array<{ x: number; y: number }> {
+  if (previousTileX === undefined || previousTileY === undefined) {
+    return [{ x: targetTileX, y: targetTileY }];
+  }
+
+  const xChanged = previousTileX !== targetTileX;
+  const yChanged = previousTileY !== targetTileY;
+
+  if (xChanged && yChanged) {
+    return [
+      { x: targetTileX, y: previousTileY },
+      { x: targetTileX, y: targetTileY },
+    ];
+  }
+
+  return [{ x: targetTileX, y: targetTileY }];
 }
 
 function chooseOrthogonalDirection(
@@ -164,6 +282,19 @@ function chooseOrthogonalDirection(
 
 function clampTile(tile: number, size: number): number {
   return Math.max(0, Math.min(size - 1, tile));
+}
+
+function manhattanDistance(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+): number {
+  return Math.abs(toX - fromX) + Math.abs(toY - fromY);
+}
+
+function tilesPerSecond(velocity: Velocity, grid: TerrainGrid): number {
+  return Math.max(0.1, velocity.maxSpeed / grid.tileSize);
 }
 
 function updateActionLog(world: World, entity: Entity, message: string): void {

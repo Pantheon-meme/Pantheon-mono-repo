@@ -25,10 +25,18 @@ For each migrated system:
 7. Prefer small bridge/adaptor components over coupling Phaser render systems
    directly to contract calls.
 
-Movement will need special care because prediction, collision, and correction
-can be more visible than discrete actions. When migrating movement, design a
-dedicated prediction/reconciliation layer rather than copying the simpler
-single-action pattern used by digging.
+All MUD-backed user actions that depend on player position or prior onchain
+state must flow through the client action coordination layer. The action queue
+must preserve user intent order across systems: if the player moves several
+times and then sleeps, digs, plants, or harvests, the discrete action waits for
+movement reconciliation before it starts. Retryable sync failures should keep
+the action at the front of the queue instead of dropping the input.
+
+Movement needs special care because prediction, collision, and correction can be
+more visible than discrete actions. Movement may use a dedicated optimistic
+prediction/reconciliation layer, but it must expose pending/queued/confirmed
+state to the shared action queue so later actions do not execute against stale
+onchain coordinates.
 
 The existing digging migration is the reference pattern:
 

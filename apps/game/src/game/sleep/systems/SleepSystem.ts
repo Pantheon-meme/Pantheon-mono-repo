@@ -16,6 +16,11 @@ export class SleepSystem implements System {
         continue;
       }
 
+      if (!sleep.onchainStarted) {
+        log.lastMessage = "Sleep: syncing";
+        continue;
+      }
+
       const availableEnergy = Math.max(0, energy.max - energy.current);
       sleep.elapsedSeconds = Math.min(
         sleep.durationSeconds,

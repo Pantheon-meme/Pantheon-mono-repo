@@ -4,6 +4,7 @@ import type { World } from "../../ecs/World";
 export type ActionEffectResult = {
   message?: string;
   applied?: boolean;
+  retry?: boolean;
 };
 
 export type ActionDefinition = {

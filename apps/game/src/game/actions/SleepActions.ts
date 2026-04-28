@@ -85,8 +85,9 @@ function sleep(world: World, actor: Entity): ActionEffectResult {
 
   const mud = world.query(MudWorld)[0]?.[1];
   const submitted = mud?.bridge.submitSleep({
-    onConfirmed: () => {
-      updateActionLog(world, actor, "Sleep: started onchain");
+    onConfirmed: ({ energyGain }) => {
+      sleepState.confirmOnchainStart(energyGain);
+      updateActionLog(world, actor, `Sleep: started onchain (+${energyGain})`);
     },
     onRejected: (message) => {
       sleepState.finish();
@@ -97,7 +98,7 @@ function sleep(world: World, actor: Entity): ActionEffectResult {
   if (!submitted) {
     sleepState.finish();
 
-    return { message: "Sleep: waiting on MUD sync", applied: false };
+    return { message: "Sleep: waiting on MUD sync", applied: false, retry: true };
   }
 
   return {

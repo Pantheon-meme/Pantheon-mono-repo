@@ -24,4 +24,14 @@ contract PlayerSystem is System {
     PlayerLib.move(player, x, y);
     ActionLogLib.write(player, PantheonConstants.ACTION_MOVE, "Moved");
   }
+
+  function movePath(int32[] memory xs, int32[] memory ys) public {
+    address player = _msgSender();
+    PlayerLib.requireExists(player);
+    PendingActionLib.resolveReady(player);
+    PendingActionLib.requireIdle(player);
+
+    PlayerLib.movePath(player, xs, ys);
+    ActionLogLib.write(player, PantheonConstants.ACTION_MOVE, "Moved");
+  }
 }

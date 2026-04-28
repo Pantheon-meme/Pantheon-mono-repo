@@ -1,11 +1,16 @@
 const minutesPerDay = 24 * 60;
 
 export class GameClock {
+  private localStartedAtSeconds: number;
+
   constructor(
     public day = 1,
-    public minuteOfDay = 8 * 60,
-    public readonly realSecondsPerGameDay = 300,
-  ) {}
+    public minuteOfDay = 0,
+    public realSecondsPerGameDay = 300,
+    public worldStartedAtSeconds = Math.floor(Date.now() / 1000),
+  ) {
+    this.localStartedAtSeconds = this.worldStartedAtSeconds;
+  }
 
   get normalizedDayTime(): number {
     return Math.floor(this.minuteOfDay) / minutesPerDay;
@@ -19,13 +24,20 @@ export class GameClock {
     return Math.floor(this.minuteOfDay) % 60;
   }
 
-  advance(deltaSeconds: number): void {
-    const minutesToAdvance =
-      (deltaSeconds / this.realSecondsPerGameDay) * minutesPerDay;
-    const totalMinutes = this.minuteOfDay + minutesToAdvance;
-    const elapsedDays = Math.floor(totalMinutes / minutesPerDay);
+  sync(nowSeconds = Date.now() / 1000): void {
+    const elapsedSeconds = Math.max(0, nowSeconds - this.localStartedAtSeconds);
+    const totalDays = elapsedSeconds / this.realSecondsPerGameDay;
+    const elapsedDays = Math.floor(totalDays);
+    const dayProgress = totalDays - elapsedDays;
 
-    this.day += elapsedDays;
-    this.minuteOfDay = totalMinutes % minutesPerDay;
+    this.day = elapsedDays + 1;
+    this.minuteOfDay = dayProgress * minutesPerDay;
+  }
+
+  configure(worldStartedAtSeconds: number, realSecondsPerGameDay: number): void {
+    this.worldStartedAtSeconds = worldStartedAtSeconds;
+    this.realSecondsPerGameDay = realSecondsPerGameDay;
+    this.localStartedAtSeconds = worldStartedAtSeconds;
+    this.sync();
   }
 }

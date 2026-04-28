@@ -19,6 +19,7 @@ import { HeldItemPositionSystem } from "../player/systems/HeldItemPositionSystem
 import { InputSystem } from "../player/systems/InputSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
+import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
 import { PlantRenderSystem } from "../plants/systems/PlantRenderSystem";
 import { PlayerSpriteAnimationSystem } from "../player/systems/PlayerSpriteAnimationSystem";
@@ -56,6 +57,7 @@ export function registerSystems(
     ),
   );
   world.addSystem(new ActionInputSystem(keyboard));
+  world.addSystem(new MudHydrationSystem());
   world.addSystem(new GameClockSystem());
   world.addSystem(new EnergySystem());
   world.addSystem(new PlantGrowthSystem());

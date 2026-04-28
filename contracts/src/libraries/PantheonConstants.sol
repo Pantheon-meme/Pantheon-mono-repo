@@ -11,6 +11,7 @@ library PantheonConstants {
   uint32 internal constant SLEEP_GRASS_ENERGY_PER_SECOND = 4;
   uint32 internal constant SLEEP_DIRT_ENERGY_PER_SECOND = 7;
   uint64 internal constant SLEEP_DURATION = 6;
+  uint64 internal constant DEFAULT_DAY_LENGTH = 300;
   uint8 internal constant PLANT_STAGE_GROWING = 0;
   uint8 internal constant PLANT_STAGE_HARVESTED = 2;
 
@@ -21,4 +22,5 @@ library PantheonConstants {
   bytes32 internal constant ACTION_SLEEP = bytes32("sleep");
   bytes32 internal constant ACTION_SPAWN = bytes32("spawn");
   bytes32 internal constant TERRAIN_DIRT = bytes32("dirt");
+  bytes32 internal constant WORLD_TIME_ID = bytes32("world");
 }
