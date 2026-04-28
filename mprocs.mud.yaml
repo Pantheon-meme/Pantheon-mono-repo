@@ -1,0 +1,10 @@
+procs:
+  anvil:
+    cwd: contracts
+    shell: pnpm run node
+  contracts:
+    cwd: contracts
+    shell: pnpm mud dev-contracts --rpc http://127.0.0.1:8545
+  explorer:
+    cwd: contracts
+    shell: pnpm explorer

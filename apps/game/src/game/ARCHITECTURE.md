@@ -54,6 +54,25 @@ display it.
 When a system starts doing more than one of those jobs, split the extra behavior
 into a new system or a helper module.
 
+## MUD Migration
+
+When a gameplay system moves into MUD, MUD becomes the authoritative state layer
+and Phaser becomes an optimistic presentation layer. User-facing actions should
+apply the expected local state immediately, submit the matching MUD transaction
+in the background, and reconcile or roll back once the transaction/indexed state
+arrives.
+
+Every migrated interactive action should include:
+
+1. An optimistic local update.
+2. A background MUD transaction.
+3. A rollback snapshot for rejection or failure.
+4. A confirmation/reconciliation path that avoids double-applying state.
+5. Existing UI/log feedback for pending, confirmed, and rejected states.
+
+Movement should use a dedicated prediction and reconciliation design, since
+position correction is more visible than discrete actions like digging.
+
 ## Adding a System
 
 1. Add a small component for persistent state if the system needs one.

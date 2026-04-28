@@ -27,6 +27,8 @@ import { InputState } from "../game/player/components/InputState";
 import { ItemUseConstraints } from "../game/shared/components/ItemUseConstraints";
 import { JournalPanel } from "../game/ui/components/JournalPanel";
 import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
+import { MudWorld } from "../game/mud/components/MudWorld";
+import { MudWorldBridge } from "../game/mud/MudWorldBridge";
 import { NeedState } from "../game/needs/components/NeedState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { plantDefinitions } from "../game/plants/PlantDefinitions";
@@ -92,6 +94,7 @@ export class MainGameScene extends Phaser.Scene {
     const atlasWarmupTerrain = world.createEntity();
     const dirtTerrain = world.createEntity();
     const diggingTerrain = world.createEntity();
+    const mudWorld = world.createEntity();
     const time = world.createEntity();
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
@@ -180,6 +183,7 @@ export class MainGameScene extends Phaser.Scene {
     );
     world.addComponent(diggingTerrain, TerrainHardness, new TerrainHardness());
     world.addComponent(diggingTerrain, TerrainDigDepth, new TerrainDigDepth());
+    world.addComponent(mudWorld, MudWorld, new MudWorld(MudWorldBridge.fromEnv()));
 
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);

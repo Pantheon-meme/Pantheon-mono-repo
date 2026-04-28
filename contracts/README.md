@@ -1,14 +1,27 @@
 # Contracts
 
-Smart contracts and deployment scripts live here.
+MUD world contracts for Pantheon.
 
-Possible future contract areas:
+This package is the first onchain slice of the game. It keeps Phaser rendering
+offchain for now, while authoritative player, terrain, plant, and action log
+state lives in MUD tables that can be synchronized by the MUD indexer.
 
-- Deity registry.
-- Land ownership.
-- Playable NFT population.
-- Character and resource state.
-- Game action settlement.
-- iNFT or agent ownership extensions.
+## Localnet
 
-No contract framework has been selected yet.
+From the repository root:
+
+```sh
+pnpm install
+pnpm mud:dev
+```
+
+This starts Anvil, deploys the MUD world with hot reloading, and opens the MUD
+Explorer/indexer process.
+
+Useful one-off commands:
+
+```sh
+pnpm mud:build
+pnpm mud:node
+pnpm mud:deploy:local
+```
