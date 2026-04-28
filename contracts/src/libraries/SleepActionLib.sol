@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.24;
+
+import { PlayerState, TerrainState } from "../codegen/index.sol";
+import { PantheonConstants } from "./PantheonConstants.sol";
+import { PlayerLib } from "./PlayerLib.sol";
+
+library SleepActionLib {
+  function start(address player) internal returns (uint64 readyAt, uint32 energyGain) {
+    require(PlayerState.getEnergy(player) < PlayerState.getMaxEnergy(player), "energy full");
+
+    uint32 rate = energyRate(player);
+    energyGain = rate * uint32(PantheonConstants.SLEEP_DURATION);
+    readyAt = uint64(block.timestamp) + PantheonConstants.SLEEP_DURATION;
+  }
+
+  function resolve(address player, uint32 energyGain) internal {
+    PlayerLib.addEnergy(player, energyGain);
+  }
+
+  function energyRate(address player) internal view returns (uint32) {
+    int32 x = PlayerState.getX(player);
+    int32 y = PlayerState.getY(player);
+    bytes32 material = TerrainState.getMaterial(x, y);
+
+    if (material == bytes32(0)) {
+      return PantheonConstants.SLEEP_GRASS_ENERGY_PER_SECOND;
+    }
+
+    require(material == PantheonConstants.TERRAIN_DIRT, "sleep needs grass or dirt");
+    return PantheonConstants.SLEEP_DIRT_ENERGY_PER_SECOND;
+  }
+}

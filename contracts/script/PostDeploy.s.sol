@@ -15,7 +15,7 @@ contract PostDeploy is Script {
 
     vm.startBroadcast(deployerPrivateKey);
 
-    IWorld(worldAddress).pantheon__spawn(0, 0);
+    IWorld(worldAddress).pantheon__spawn(100, 100);
     console.log("Seeded deployer player in world:", worldAddress);
 
     vm.stopBroadcast();

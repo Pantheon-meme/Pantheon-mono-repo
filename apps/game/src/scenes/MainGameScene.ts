@@ -30,6 +30,7 @@ import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
 import { MudWorld } from "../game/mud/components/MudWorld";
 import { MudWorldBridge } from "../game/mud/MudWorldBridge";
 import { NeedState } from "../game/needs/components/NeedState";
+import { MovementState } from "../game/player/components/MovementState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { plantDefinitions } from "../game/plants/PlantDefinitions";
 import { seedWorldTrees } from "../game/plants/WorldTreeGeneration";
@@ -199,10 +200,11 @@ export class MainGameScene extends Phaser.Scene {
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
+    world.addComponent(player, MovementState, new MovementState());
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
     world.addComponent(player, FocusTarget, new FocusTarget());
     world.addComponent(player, Position, new Position(spawnX, spawnY));
-    world.addComponent(player, Velocity, new Velocity(0, 0, 620));
+    world.addComponent(player, Velocity, new Velocity(0, 0, tileSize * 2.5));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
     world.addComponent(player, Hands, new Hands());
     world.addComponent(player, DiggingCapability, new DiggingCapability());
@@ -232,7 +234,7 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.H]: "fetch",
         [Phaser.Input.Keyboard.KeyCodes.C]: "cycle-seed",
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
-        [Phaser.Input.Keyboard.KeyCodes.R]: "sleep",
+        [Phaser.Input.Keyboard.KeyCodes.Z]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
         [Phaser.Input.Keyboard.KeyCodes.ONE]: "left-hand-toggle",
         [Phaser.Input.Keyboard.KeyCodes.TWO]: "left-hand-use",

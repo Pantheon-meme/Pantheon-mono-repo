@@ -3,8 +3,11 @@ import type { World } from "../../ecs/World";
 import { Hands, type HandId } from "../player/components/Hands";
 import { FocusTarget } from "../player/components/FocusTarget";
 import { HeldItem } from "../player/components/HeldItem";
+import { Energy } from "../energy/components/Energy";
 import { SeedDrop } from "../plants/components/SeedDrop";
 import { SeedPouch } from "../plants/components/SeedPouch";
+import { SleepState } from "../sleep/components/SleepState";
+import { Position } from "../shared/components/Position";
 import { Grabbable } from "../shared/components/Grabbable";
 import { ItemUseConstraints } from "../shared/components/ItemUseConstraints";
 import { WeightedObject } from "../shared/components/WeightedObject";
@@ -19,6 +22,9 @@ import {
   handLabel,
   seedLabel,
 } from "./ActionHelpers";
+
+const sleepTerrainLayerIds = new Set(["vibrant-grass", "dirt"]);
+const defaultSleepTerrainLayerId = "vibrant-grass";
 
 export type TargetActionEntry = {
   id: string;
@@ -126,6 +132,14 @@ function getTileActions(
     detail: "Search this ground",
   });
 
+  if (canRestoreEnergy(world, actor)) {
+    actions.push({
+      id: "sleep",
+      label: "Sleep",
+      detail: "Recover energy",
+    });
+  }
+
   for (const hand of ["left", "right"] as const) {
     if (canUseHandOnTile(world, actor, focus, hand)) {
       actions.push({
@@ -137,6 +151,31 @@ function getTileActions(
   }
 
   return actions;
+}
+
+function canRestoreEnergy(world: World, actor: Entity): boolean {
+  const energy = world.getComponent(actor, Energy);
+  const sleep = world.getComponent(actor, SleepState);
+  const position = world.getComponent(actor, Position);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+
+  if (
+    !energy ||
+    energy.current >= energy.max ||
+    sleep?.active ||
+    !position ||
+    !grid
+  ) {
+    return false;
+  }
+
+  const tileX = Math.floor(position.x / grid.tileSize);
+  const tileY = Math.floor(position.y / grid.tileSize);
+  const activeLayer =
+    getTopTerrainLayerAtCell(world, tileX, tileY)?.layer.id ??
+    defaultSleepTerrainLayerId;
+
+  return Boolean(activeLayer && sleepTerrainLayerIds.has(activeLayer));
 }
 
 function canGrabWithHand(
