@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { AutotileManifest, GeneratedImage, WorldAssetManifest } from "./schemas.js";
+import sharp from "sharp";
+
+import type { AutotileManifest, GeneratedImage, ObjectSpriteManifest, WorldAssetManifest } from "./schemas.js";
 
 const extensionByContentType: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -19,6 +21,13 @@ export async function writeManifest(outputDir: string, manifest: WorldAssetManif
 export async function writeAutotileManifest(outputDir: string, manifest: AutotileManifest): Promise<string> {
   await mkdir(outputDir, { recursive: true });
   const manifestPath = path.join(outputDir, "autotile-manifest.json");
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  return manifestPath;
+}
+
+export async function writeObjectSpriteManifest(outputDir: string, manifest: ObjectSpriteManifest): Promise<string> {
+  await mkdir(outputDir, { recursive: true });
+  const manifestPath = path.join(outputDir, "object-sprite-manifest.json");
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return manifestPath;
 }
@@ -55,6 +64,25 @@ export async function readImageAsDataUrl(filePath: string): Promise<string> {
   const data = await readFile(filePath);
 
   return `data:${contentType};base64,${data.toString("base64")}`;
+}
+
+export async function readImageCellAsDataUrl(args: {
+  filePath: string;
+  row: number;
+  column: number;
+  cellSize: number;
+}): Promise<string> {
+  const data = await sharp(args.filePath)
+    .extract({
+      left: args.column * args.cellSize,
+      top: args.row * args.cellSize,
+      width: args.cellSize,
+      height: args.cellSize,
+    })
+    .png()
+    .toBuffer();
+
+  return `data:image/png;base64,${data.toString("base64")}`;
 }
 
 function contentTypeFromExtension(extension: string): string {

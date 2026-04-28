@@ -6,7 +6,10 @@ import { PlantState } from "../plants/components/PlantState";
 import { Position } from "../shared/components/Position";
 import { WeightInspectable } from "../shared/components/WeightInspectable";
 import { WeightedObject } from "../shared/components/WeightedObject";
-import { plantDefinitions } from "../plants/PlantDefinitions";
+import {
+  plantDefinitions,
+  type PlantDefinition,
+} from "../plants/PlantDefinitions";
 
 export function formatLayerName(layerId: string): string {
   return layerId
@@ -79,7 +82,7 @@ export function createPlantEntity(
   tileSize: number,
   tileX: number,
   tileY: number,
-  definition: { id: string; label: string },
+  definition: PlantDefinition,
 ): Entity {
   const plant = world.createEntity();
 
@@ -96,12 +99,20 @@ export function createPlantEntity(
     PlantState,
     new PlantState(definition.id, tileX, tileY),
   );
-  world.addComponent(plant, Footprint, new Footprint(92, 92));
-  world.addComponent(plant, WeightedObject, new WeightedObject(0.08));
+  world.addComponent(
+    plant,
+    Footprint,
+    new Footprint(definition.footprint.width, definition.footprint.height),
+  );
+  world.addComponent(
+    plant,
+    WeightedObject,
+    new WeightedObject(definition.plantWeight),
+  );
   world.addComponent(
     plant,
     WeightInspectable,
-    new WeightInspectable(`${definition.label} plant`),
+    new WeightInspectable(`${definition.label} ${definition.kind}`),
   );
 
   return plant;

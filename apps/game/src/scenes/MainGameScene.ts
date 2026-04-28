@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import dirtAtlasUrl from "../assets/autotiles/dirt/autotile-blob-7x7.png?url";
 import grassAtlasUrl from "../assets/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import { objectSpriteAssets } from "../assets/object-sprites/ObjectSpriteAssets";
 import { World } from "../ecs/World";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
@@ -10,23 +11,30 @@ import { ActionProgress } from "../game/actions/components/ActionProgress";
 import { ActionQueue } from "../game/actions/components/ActionQueue";
 import { AutotileLayer } from "../game/terrain/components/AutotileLayer";
 import { DayNightOverlay } from "../game/ui/components/DayNightOverlay";
+import { DiggingCapability } from "../game/player/components/DiggingCapability";
 import { Energy } from "../game/energy/components/Energy";
 import { EnergyBar } from "../game/ui/components/EnergyBar";
 import { FacingDirection } from "../game/player/components/FacingDirection";
+import { Footprint } from "../game/shared/components/Footprint";
 import { FocusTarget } from "../game/player/components/FocusTarget";
 import { GameClock } from "../game/time/components/GameClock";
+import { Grabbable } from "../game/shared/components/Grabbable";
 import { HandHud } from "../game/ui/components/HandHud";
 import { Hands } from "../game/player/components/Hands";
 import { IdeaState } from "../game/ideas/components/IdeaState";
 import { GridTargetHighlight } from "../game/terrain/components/GridTargetHighlight";
 import { InputState } from "../game/player/components/InputState";
+import { ItemUseConstraints } from "../game/shared/components/ItemUseConstraints";
 import { JournalPanel } from "../game/ui/components/JournalPanel";
 import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
 import { NeedState } from "../game/needs/components/NeedState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
+import { plantDefinitions } from "../game/plants/PlantDefinitions";
+import { seedWorldTrees } from "../game/plants/WorldTreeGeneration";
 import { Position } from "../game/shared/components/Position";
 import { Renderable } from "../game/shared/components/Renderable";
 import { ActionProgressBar } from "../game/ui/components/ActionProgressBar";
+import { SeedDrop } from "../game/plants/components/SeedDrop";
 import { SeedHud } from "../game/ui/components/SeedHud";
 import { SeedPouch } from "../game/plants/components/SeedPouch";
 import { SkillSet } from "../game/ideas/components/SkillSet";
@@ -36,9 +44,18 @@ import { SleepVisual } from "../game/ui/components/SleepVisual";
 import { TargetActionMenu } from "../game/ui/components/TargetActionMenu";
 import { TerrainBackground } from "../game/terrain/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/terrain/components/TerrainBaseLayer";
+import { TerrainDigDepth } from "../game/terrain/components/TerrainDigDepth";
 import { TerrainGrid } from "../game/terrain/components/TerrainGrid";
+import { TerrainHardness } from "../game/terrain/components/TerrainHardness";
 import { TerrainLayer } from "../game/terrain/components/TerrainLayer";
 import { Velocity } from "../game/shared/components/Velocity";
+import { WeightInspectable } from "../game/shared/components/WeightInspectable";
+import { WeightedObject } from "../game/shared/components/WeightedObject";
+import { plantSpriteTextureKey } from "../game/plants/PlantSpriteAssets";
+import {
+  getPlayerSpriteAsset,
+  playerSpriteTextureKey,
+} from "../game/player/PlayerSpriteAssets";
 
 const grassAtlasKey = "main-vibrant-grass-blob-7x7";
 const dirtAtlasKey = "main-dirt-blob-7x7";
@@ -47,6 +64,7 @@ const gridWidth = 200;
 const gridHeight = 200;
 const worldWidth = gridWidth * tileSize;
 const worldHeight = gridHeight * tileSize;
+const seedDropWeight = 0.02;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
@@ -58,6 +76,13 @@ export class MainGameScene extends Phaser.Scene {
   preload(): void {
     this.load.image(grassAtlasKey, grassAtlasUrl);
     this.load.image(dirtAtlasKey, dirtAtlasUrl);
+
+    for (const [plantId, asset] of Object.entries(objectSpriteAssets)) {
+      this.load.spritesheet(plantSpriteTextureKey(plantId), asset.imageUrl, {
+        frameWidth: asset.manifest.cellSize,
+        frameHeight: asset.manifest.cellSize,
+      });
+    }
   }
 
   create(): void {
@@ -66,6 +91,7 @@ export class MainGameScene extends Phaser.Scene {
     const backgroundTerrain = world.createEntity();
     const atlasWarmupTerrain = world.createEntity();
     const dirtTerrain = world.createEntity();
+    const diggingTerrain = world.createEntity();
     const time = world.createEntity();
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
@@ -79,9 +105,7 @@ export class MainGameScene extends Phaser.Scene {
     const dirtGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const spawnX = worldWidth / 2;
     const spawnY = worldHeight / 2;
-    const playerSprite = this.add
-      .circle(spawnX, spawnY, 34, 0xf2c15f)
-      .setDepth(10);
+    const playerSprite = this.createPlayerSprite(spawnX, spawnY);
     const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
     const dayNightOverlay = this.createDayNightOverlay();
@@ -102,8 +126,6 @@ export class MainGameScene extends Phaser.Scene {
       urgency: 65,
       active: false,
     });
-
-    playerSprite.setStrokeStyle(5, 0x3a2514, 0.95);
 
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setZoom(0.7);
@@ -156,6 +178,8 @@ export class MainGameScene extends Phaser.Scene {
         blobAtlasCellSize,
       ),
     );
+    world.addComponent(diggingTerrain, TerrainHardness, new TerrainHardness());
+    world.addComponent(diggingTerrain, TerrainDigDepth, new TerrainDigDepth());
 
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
@@ -177,6 +201,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, Velocity, new Velocity(0, 0, 620));
     world.addComponent(player, Energy, new Energy(100, 100, 0));
     world.addComponent(player, Hands, new Hands());
+    world.addComponent(player, DiggingCapability, new DiggingCapability());
     world.addComponent(player, SeedPouch, new SeedPouch());
     world.addComponent(player, NeedState, needs);
     world.addComponent(player, IdeaState, new IdeaState());
@@ -222,6 +247,16 @@ export class MainGameScene extends Phaser.Scene {
       new GridTargetHighlight(this.add.graphics().setDepth(9)),
     );
 
+    if (shouldSpawnSeedTestRow()) {
+      spawnSeedTestRow(world, baseGrid, spawnX, spawnY);
+    }
+
+    seedWorldTrees(world, baseGrid, dirtGrid, {
+      seed: 872341,
+      spawnTileX: Math.floor(spawnX / tileSize),
+      spawnTileY: Math.floor(spawnY / tileSize),
+    });
+
     const keyboard = this.input.keyboard;
 
     if (!keyboard) {
@@ -241,6 +276,26 @@ export class MainGameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.world?.update(delta / 1000);
+  }
+
+  private createPlayerSprite(
+    x: number,
+    y: number,
+  ): Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform {
+    const spriteAsset = getPlayerSpriteAsset();
+
+    if (spriteAsset) {
+      return this.add
+        .sprite(x, y, playerSpriteTextureKey())
+        .setOrigin(0.5, 1)
+        .setDepth(10)
+        .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
+    }
+
+    return this.add
+      .circle(x, y, 34, 0xf2c15f)
+      .setDepth(10)
+      .setStrokeStyle(5, 0x3a2514, 0.95);
   }
 
   private createEnergyBar(): EnergyBar {
@@ -556,4 +611,58 @@ export class MainGameScene extends Phaser.Scene {
 
     return { section, background, label: text };
   }
+}
+
+function shouldSpawnSeedTestRow(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("seedTest") ?? params.get("testSeeds");
+
+  return value === "1" || value === "true" || value === "on";
+}
+
+function spawnSeedTestRow(
+  world: World,
+  grid: TerrainGrid,
+  spawnX: number,
+  spawnY: number,
+): void {
+  const definitions = Object.values(plantDefinitions);
+  const totalDrops = definitions.length * 2;
+  const startTileX =
+    Math.floor(spawnX / grid.tileSize) - Math.floor(totalDrops / 2);
+  const tileY = Math.floor(spawnY / grid.tileSize) + 2;
+
+  definitions.forEach((definition, definitionIndex) => {
+    for (let copyIndex = 0; copyIndex < 2; copyIndex += 1) {
+      const tileX = startTileX + definitionIndex * 2 + copyIndex;
+      const drop = world.createEntity();
+
+      world.addComponent(
+        drop,
+        Position,
+        new Position(
+          tileX * grid.tileSize + grid.tileSize / 2,
+          tileY * grid.tileSize + grid.tileSize / 2,
+        ),
+      );
+      world.addComponent(drop, SeedDrop, new SeedDrop(definition.seedId, 1));
+      world.addComponent(
+        drop,
+        ItemUseConstraints,
+        new ItemUseConstraints("dirt"),
+      );
+      world.addComponent(drop, Grabbable, new Grabbable());
+      world.addComponent(drop, WeightedObject, new WeightedObject(seedDropWeight));
+      world.addComponent(drop, Footprint, new Footprint(54, 54));
+      world.addComponent(
+        drop,
+        WeightInspectable,
+        new WeightInspectable(definition.seedLabel),
+      );
+    }
+  });
 }

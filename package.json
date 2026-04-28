@@ -12,6 +12,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "publish:game-assets": "pnpm --filter @pantheon/assets publish-game-assets",
+    "publish:object-sprites": "pnpm --filter @pantheon/assets publish-object-sprites",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

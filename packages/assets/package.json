@@ -15,8 +15,11 @@
     "dev": "tsx src/cli.ts",
     "generate": "tsx src/cli.ts",
     "generate-autotiles": "tsx src/autotile-cli.ts",
+    "generate-object-sprites": "tsx src/object-sprite-cli.ts",
+    "generate-tree-sprites": "tsx src/generate-tree-sprites.ts",
     "combine-autotile-atlas": "tsx src/combine-autotile-atlas.ts",
     "publish-game-assets": "tsx src/publish-game-assets.ts",
+    "publish-object-sprites": "tsx src/publish-object-sprites.ts",
     "lint": "tsc --noEmit -p tsconfig.json",
     "test": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"

@@ -18,9 +18,15 @@ export class PlantGrowthSystem implements System {
 
       plant.elapsedSeconds += deltaSeconds;
 
-      if (plant.elapsedSeconds >= definition.growthSeconds) {
+      if (
+        plant.elapsedSeconds >=
+        definition.growthSeconds * definition.growthThresholds.growing
+      ) {
         plant.stage = "grown";
-      } else if (plant.elapsedSeconds >= definition.growthSeconds * 0.25) {
+      } else if (
+        plant.elapsedSeconds >=
+        definition.growthSeconds * definition.growthThresholds.seed
+      ) {
         plant.stage = "growing";
       }
     }

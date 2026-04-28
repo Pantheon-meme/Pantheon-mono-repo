@@ -21,6 +21,7 @@ import { JournalSystem } from "../ui/systems/JournalSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
 import { PlantRenderSystem } from "../plants/systems/PlantRenderSystem";
+import { PlayerSpriteAnimationSystem } from "../player/systems/PlayerSpriteAnimationSystem";
 import { RenderSystem } from "../shared/systems/RenderSystem";
 import { SeedDropRenderSystem } from "../plants/systems/SeedDropRenderSystem";
 import { SeedHudSystem } from "../ui/systems/SeedHudSystem";
@@ -31,6 +32,7 @@ import { TargetActionMenuSystem } from "../ui/systems/TargetActionMenuSystem";
 import { TerrainBackgroundSystem } from "../terrain/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../terrain/systems/TerrainBaseRenderSystem";
 import { WeightDisplaySystem } from "../ui/systems/WeightDisplaySystem";
+import { WorldDepthSystem } from "../shared/systems/WorldDepthSystem";
 
 export function registerSystems(
   world: World,
@@ -66,9 +68,11 @@ export function registerSystems(
   world.addSystem(new BoundsSystem(bounds));
   world.addSystem(new GridTargetHighlightSystem());
   world.addSystem(new RenderSystem());
+  world.addSystem(new PlayerSpriteAnimationSystem());
   world.addSystem(new PlantRenderSystem(scene));
   world.addSystem(new HarvestedPlantRenderSystem(scene));
   world.addSystem(new SeedDropRenderSystem(scene));
+  world.addSystem(new WorldDepthSystem());
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());

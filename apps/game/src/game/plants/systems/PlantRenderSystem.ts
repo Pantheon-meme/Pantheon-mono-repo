@@ -5,6 +5,14 @@ import { PlantState, type PlantStage } from "../components/PlantState";
 import { PlantVisual } from "../components/PlantVisual";
 import { Position } from "../../shared/components/Position";
 import { plantDefinitions } from "../PlantDefinitions";
+import {
+  getPlantSpriteAsset,
+  getPlantSpriteFrameIndex,
+  plantSpriteTextureKey,
+} from "../PlantSpriteAssets";
+
+const cropSpriteGroundContactOriginY = 0.5;
+const treeSpriteGroundContactOriginY = 0.82;
 
 export class PlantRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
@@ -18,22 +26,30 @@ export class PlantRenderSystem implements System {
       }
 
       let visual = world.getComponent(entity, PlantVisual);
+      const spriteAsset = getPlantSpriteAsset(plant.plantId);
 
       if (!visual) {
-        visual = this.createVisual();
+        visual = this.createVisual(plant.plantId, Boolean(spriteAsset));
         world.addComponent(entity, PlantVisual, visual);
       }
 
       visual.container.setPosition(position.x, position.y);
 
-      if (visual.renderedStage !== plant.stage) {
+      if (spriteAsset) {
+        renderSpriteStage(visual, spriteAsset, plant, definition);
+      } else if (visual.renderedStage !== plant.stage) {
         renderStage(visual, plant.stage, definition.colors[plant.stage]);
       }
     }
   }
 
-  private createVisual(): PlantVisual {
+  private createVisual(plantId: string, useSprite: boolean): PlantVisual {
     const container = this.scene.add.container(0, 0).setDepth(8);
+    const sprite = useSprite
+      ? this.scene.add
+          .sprite(0, 0, plantSpriteTextureKey(plantId))
+          .setOrigin(0.5, 1)
+      : undefined;
     const stem = this.scene.add.rectangle(0, 0, 14, 46, 0x7dbd47, 1);
     const body = this.scene.add.ellipse(0, 0, 52, 52, 0xd8a541, 1);
     const marker = this.scene.add
@@ -46,10 +62,133 @@ export class PlantRenderSystem implements System {
       })
       .setOrigin(0.5);
 
-    container.add([stem, body, marker]);
+    stem.setVisible(!useSprite);
+    body.setVisible(!useSprite);
+    marker.setVisible(!useSprite);
+    container.add([...(sprite ? [sprite] : []), stem, body, marker]);
 
-    return new PlantVisual(container, body, stem, marker);
+    return new PlantVisual(container, sprite, body, stem, marker);
   }
+}
+
+function renderSpriteStage(
+  visual: PlantVisual,
+  spriteAsset: NonNullable<ReturnType<typeof getPlantSpriteAsset>>,
+  plant: PlantState,
+  definition: NonNullable<(typeof plantDefinitions)[string]>,
+): void {
+  if (!visual.sprite) {
+    return;
+  }
+
+  const frame = getStageFrame(
+    plant,
+    definition,
+    spriteAsset.manifest.columns,
+    visual.grownVariantFrame,
+  );
+  const frameIndex = getPlantSpriteFrameIndex(spriteAsset, plant.stage, frame);
+
+  if (frameIndex === undefined) {
+    return;
+  }
+
+  if (visual.renderedStage === plant.stage && visual.renderedFrame === frame) {
+    return;
+  }
+
+  visual.renderedStage = plant.stage;
+  visual.renderedFrame = frame;
+  const visualScale = getPlantStageVisualScale(definition, plant.stage);
+
+  visual.sprite
+    .setVisible(true)
+    .setPosition(0, 0)
+    .setOrigin(0.5, getSpriteGroundContactOriginY(definition))
+    .setFrame(frameIndex)
+    .setDisplaySize(
+      spriteAsset.manifest.cellSize * visualScale,
+      spriteAsset.manifest.cellSize * visualScale,
+    )
+    .setAlpha(plant.stage === "fetched" ? 0.82 : 1);
+}
+
+function getSpriteGroundContactOriginY(
+  definition: NonNullable<(typeof plantDefinitions)[string]>,
+): number {
+  return definition.kind === "tree"
+    ? treeSpriteGroundContactOriginY
+    : cropSpriteGroundContactOriginY;
+}
+
+function getPlantStageVisualScale(
+  definition: NonNullable<(typeof plantDefinitions)[string]>,
+  stage: PlantStage,
+): number {
+  if (definition.kind !== "tree") {
+    return definition.visualScale;
+  }
+
+  if (stage === "seed") {
+    return definition.visualScale * 0.45;
+  }
+
+  if (stage === "growing") {
+    return definition.visualScale * 0.72;
+  }
+
+  if (stage === "fetched") {
+    return definition.visualScale * 0.62;
+  }
+
+  return definition.visualScale;
+}
+
+function getStageFrame(
+  plant: PlantState,
+  definition: NonNullable<(typeof plantDefinitions)[string]>,
+  columns: number,
+  grownVariantFrame: number,
+): number {
+  if (plant.stage === "grown") {
+    return grownVariantFrame % columns;
+  }
+
+  if (plant.stage === "fetched") {
+    return 0;
+  }
+
+  if (plant.stage === "seed") {
+    const plantedColumns = Math.max(1, columns - 1);
+    const seedEnd = definition.growthSeconds * definition.growthThresholds.seed;
+    const stageProgress = Phaser.Math.Clamp(
+      plant.elapsedSeconds / Math.max(seedEnd, 0.001),
+      0,
+      0.999,
+    );
+
+    return Math.min(
+      columns - 1,
+      1 + Math.floor(stageProgress * plantedColumns),
+    );
+  }
+
+  const stageStart =
+    plant.stage === "growing"
+      ? definition.growthSeconds * definition.growthThresholds.seed
+      : 0;
+  const stageEnd =
+    plant.stage === "growing"
+      ? definition.growthSeconds * definition.growthThresholds.growing
+      : definition.growthSeconds * definition.growthThresholds.seed;
+  const stageProgress = Phaser.Math.Clamp(
+    (plant.elapsedSeconds - stageStart) /
+      Math.max(stageEnd - stageStart, 0.001),
+    0,
+    0.999,
+  );
+
+  return Math.min(columns - 1, Math.floor(stageProgress * columns));
 }
 
 function renderStage(

@@ -119,10 +119,78 @@ function pickForagedSeed(activeLayer: string): string {
   const roll = Math.random();
 
   if (activeLayer === "dirt") {
-    return roll < 0.68 ? "moonroot_seed" : "sungrain_seed";
+    if (roll < 0.26) {
+      return "frostbarley_seed";
+    }
+    if (roll < 0.48) {
+      return "duskmillet_seed";
+    }
+    if (roll < 0.66) {
+      return "silveroat_seed";
+    }
+    if (roll < 0.78) {
+      return "emberwheat_seed";
+    }
+    if (roll < 0.88) {
+      return "starrye_seed";
+    }
+
+    return "sungrain_seed";
   }
 
-  return roll < 0.72 ? "sungrain_seed" : "moonroot_seed";
+  if (roll > 0.92) {
+    return pickForagedTreeSeed((roll - 0.92) / 0.08);
+  }
+
+  if (roll < 0.3) {
+    return "sungrain_seed";
+  }
+  if (roll < 0.5) {
+    return "emberwheat_seed";
+  }
+  if (roll < 0.68) {
+    return "starrye_seed";
+  }
+  if (roll < 0.84) {
+    return "silveroat_seed";
+  }
+  if (roll < 0.92) {
+    return "frostbarley_seed";
+  }
+
+  return "duskmillet_seed";
+}
+
+function pickForagedTreeSeed(roll: number): string {
+  if (roll < 0.18) {
+    return "applewood_seed";
+  }
+  if (roll < 0.32) {
+    return "pinecrest_seed";
+  }
+  if (roll < 0.45) {
+    return "mapleflare_seed";
+  }
+  if (roll < 0.56) {
+    return "willowshade_seed";
+  }
+  if (roll < 0.66) {
+    return "ironbark_seed";
+  }
+  if (roll < 0.75) {
+    return "honeyfig_seed";
+  }
+  if (roll < 0.83) {
+    return "frostpine_seed";
+  }
+  if (roll < 0.9) {
+    return "emberoak_seed";
+  }
+  if (roll < 0.96) {
+    return "moonwillow_seed";
+  }
+
+  return "starblossom_seed";
 }
 
 function getForageAmount(quality: CheckQuality): number {

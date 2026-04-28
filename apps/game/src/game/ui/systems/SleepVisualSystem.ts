@@ -1,5 +1,6 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import Phaser from "phaser";
 import { Position } from "../../shared/components/Position";
 import { Renderable } from "../../shared/components/Renderable";
 import { SleepState } from "../../sleep/components/SleepState";
@@ -27,15 +28,19 @@ export class SleepVisualSystem implements System {
       if (!sleep.active) {
         visual.shadow.setVisible(false);
         visual.marker.setVisible(false);
-        sprite.setScale(1, 1);
-        sprite.setAlpha?.(1);
+        if (!(renderable.sprite instanceof Phaser.GameObjects.Sprite)) {
+          sprite.setScale(1, 1);
+          sprite.setAlpha?.(1);
+        }
         continue;
       }
 
       const bob = Math.sin(sleep.elapsedSeconds * 5) * 5;
 
-      sprite.setScale(1.35, 0.68);
-      sprite.setAlpha?.(0.82);
+      if (!(renderable.sprite instanceof Phaser.GameObjects.Sprite)) {
+        sprite.setScale(1.35, 0.68);
+        sprite.setAlpha?.(0.82);
+      }
       visual.shadow
         .setPosition(position.x, position.y + 18)
         .setScale(1 + Math.sin(sleep.elapsedSeconds * 3) * 0.04, 1)
