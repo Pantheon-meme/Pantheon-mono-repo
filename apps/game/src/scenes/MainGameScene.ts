@@ -30,6 +30,7 @@ import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
 import { NeedState } from "../game/needs/components/NeedState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { plantDefinitions } from "../game/plants/PlantDefinitions";
+import { seedWorldTrees } from "../game/plants/WorldTreeGeneration";
 import { Position } from "../game/shared/components/Position";
 import { Renderable } from "../game/shared/components/Renderable";
 import { ActionProgressBar } from "../game/ui/components/ActionProgressBar";
@@ -249,6 +250,12 @@ export class MainGameScene extends Phaser.Scene {
     if (shouldSpawnSeedTestRow()) {
       spawnSeedTestRow(world, baseGrid, spawnX, spawnY);
     }
+
+    seedWorldTrees(world, baseGrid, dirtGrid, {
+      seed: 872341,
+      spawnTileX: Math.floor(spawnX / tileSize),
+      spawnTileY: Math.floor(spawnY / tileSize),
+    });
 
     const keyboard = this.input.keyboard;
 
