@@ -32,6 +32,7 @@ import { TargetActionMenuSystem } from "../ui/systems/TargetActionMenuSystem";
 import { TerrainBackgroundSystem } from "../terrain/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../terrain/systems/TerrainBaseRenderSystem";
 import { WeightDisplaySystem } from "../ui/systems/WeightDisplaySystem";
+import { WorldDepthSystem } from "../shared/systems/WorldDepthSystem";
 
 export function registerSystems(
   world: World,
@@ -71,6 +72,7 @@ export function registerSystems(
   world.addSystem(new PlantRenderSystem(scene));
   world.addSystem(new HarvestedPlantRenderSystem(scene));
   world.addSystem(new SeedDropRenderSystem(scene));
+  world.addSystem(new WorldDepthSystem());
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
