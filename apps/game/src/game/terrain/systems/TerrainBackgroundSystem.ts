@@ -1,11 +1,9 @@
 import Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
-import { blobTextureKey } from "../autotile/BlobAutotile";
 import { TerrainBackground } from "../components/TerrainBackground";
 import { TerrainGrid } from "../components/TerrainGrid";
-
-const filledTileMask = 255;
+import { getCenterTextureKey } from "./AutotileRenderSystem";
 
 export class TerrainBackgroundSystem implements System {
   private readonly nextBackgroundKey?: Phaser.Input.Keyboard.Key;
@@ -58,12 +56,14 @@ export class TerrainBackgroundSystem implements System {
       return;
     }
 
-    const textureKey = blobTextureKey(background.activeMode, filledTileMask);
-
     for (let y = 0; y < grid.height; y += 1) {
       for (let x = 0; x < grid.width; x += 1) {
         const sprite = this.scene.add
-          .image(x * grid.tileSize, y * grid.tileSize, textureKey)
+          .image(
+            x * grid.tileSize,
+            y * grid.tileSize,
+            getCenterTextureKey(this.scene, background.activeMode, x, y),
+          )
           .setOrigin(0)
           .setDisplaySize(grid.tileSize, grid.tileSize);
 

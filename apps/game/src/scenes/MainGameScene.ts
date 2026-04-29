@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import {
   terrainAtlasAssets,
+  terrainCenterVariantTextureKey,
   terrainAtlasTextureKey,
 } from "../assets/autotiles/TerrainAtlasAssets";
 import { objectSpriteAssets } from "../assets/object-sprites/ObjectSpriteAssets";
@@ -87,6 +88,13 @@ export class MainGameScene extends Phaser.Scene {
   preload(): void {
     for (const atlas of Object.values(terrainAtlasAssets)) {
       this.load.image(terrainAtlasTextureKey(atlas.id), atlas.imageUrl);
+
+      if (atlas.centerVariantsUrl) {
+        this.load.image(
+          terrainCenterVariantTextureKey(atlas.id),
+          atlas.centerVariantsUrl,
+        );
+      }
     }
 
     for (const [plantId, asset] of Object.entries(objectSpriteAssets)) {
@@ -184,6 +192,9 @@ export class MainGameScene extends Phaser.Scene {
           terrainAtlasTextureKey(terrainDefinition.atlasId),
           terrainDefinition.texturePrefix,
           blobAtlasCellSize,
+          terrainAtlasAssets[terrainDefinition.atlasId].centerVariantsUrl
+            ? terrainCenterVariantTextureKey(terrainDefinition.atlasId)
+            : undefined,
         ),
       );
     }
@@ -228,6 +239,9 @@ export class MainGameScene extends Phaser.Scene {
           terrainAtlasTextureKey(terrainDefinition.atlasId),
           terrainDefinition.texturePrefix,
           blobAtlasCellSize,
+          terrainAtlasAssets[terrainDefinition.atlasId].centerVariantsUrl
+            ? terrainCenterVariantTextureKey(terrainDefinition.atlasId)
+            : undefined,
         ),
       );
     });

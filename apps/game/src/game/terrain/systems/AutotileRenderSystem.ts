@@ -3,6 +3,7 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import {
   buildBlobAtlasSlotLookup,
+  blobCenterVariantTextureKey,
   blobTextureKey,
 } from "../autotile/BlobAutotile";
 import { AutotileLayer } from "../components/AutotileLayer";
@@ -11,6 +12,8 @@ import { parseCellKey, TerrainGrid } from "../components/TerrainGrid";
 type NeighborMask = {
   mask: number;
 };
+
+const filledTileMask = 255;
 
 export class AutotileRenderSystem implements System {
   private readonly atlasSlots = buildBlobAtlasSlotLookup();
@@ -31,12 +34,12 @@ export class AutotileRenderSystem implements System {
       for (const key of grid.cells) {
         const { x, y } = parseCellKey(key);
         const { mask } = getNeighborMask(grid, x, y);
+        const textureKey =
+          mask === filledTileMask
+            ? getCenterTextureKey(this.scene, layer.texturePrefix, x, y)
+            : blobTextureKey(layer.texturePrefix, mask);
         const sprite = this.scene.add
-          .image(
-            x * grid.tileSize,
-            y * grid.tileSize,
-            blobTextureKey(layer.texturePrefix, mask),
-          )
+          .image(x * grid.tileSize, y * grid.tileSize, textureKey)
           .setOrigin(0)
           .setDisplaySize(grid.tileSize, grid.tileSize);
 
@@ -99,8 +102,65 @@ export class AutotileRenderSystem implements System {
       );
     }
 
+    this.ensureCenterVariantTextures(layer);
+
     this.initializedTexturePrefixes.add(layer.texturePrefix);
   }
+
+  private ensureCenterVariantTextures(layer: AutotileLayer): void {
+    if (!layer.centerVariantAtlasKey) {
+      return;
+    }
+
+    const source = this.scene.textures
+      .get(layer.centerVariantAtlasKey)
+      .getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const variantCount = layer.centerVariantColumns * layer.centerVariantRows;
+
+    for (let variant = 0; variant < variantCount; variant += 1) {
+      const column = variant % layer.centerVariantColumns;
+      const row = Math.floor(variant / layer.centerVariantColumns);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
+      canvas.width = layer.sourceTileSize;
+      canvas.height = layer.sourceTileSize;
+
+      if (!context) {
+        continue;
+      }
+
+      context.drawImage(
+        source,
+        column * layer.sourceTileSize,
+        row * layer.sourceTileSize,
+        layer.sourceTileSize,
+        layer.sourceTileSize,
+        0,
+        0,
+        layer.sourceTileSize,
+        layer.sourceTileSize,
+      );
+      this.scene.textures.addCanvas(
+        blobCenterVariantTextureKey(layer.texturePrefix, variant),
+        canvas,
+      );
+    }
+  }
+}
+
+export function getCenterTextureKey(
+  scene: Phaser.Scene,
+  texturePrefix: string,
+  x: number,
+  y: number,
+): string {
+  const variant = hashVariant(x, y, 16);
+  const variantKey = blobCenterVariantTextureKey(texturePrefix, variant);
+
+  return scene.textures.exists(variantKey)
+    ? variantKey
+    : blobTextureKey(texturePrefix, filledTileMask);
 }
 
 export function getNeighborMask(
@@ -135,4 +195,11 @@ function isSheetBackground(red: number, green: number, blue: number): boolean {
   const min = Math.min(red, green, blue);
 
   return max - min < 18 && red > 90 && green > 90 && blue > 90;
+}
+
+function hashVariant(x: number, y: number, variants: number): number {
+  const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+  const normalized = value - Math.floor(value);
+
+  return Math.floor(normalized * variants) % variants;
 }
