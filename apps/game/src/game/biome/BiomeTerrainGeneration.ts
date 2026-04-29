@@ -5,8 +5,11 @@ import type {
 import {
   createBiomeRegionPlan,
   getTerrainRegionScore,
-  tileDistance,
 } from "./BiomeRegionGeneration";
+import {
+  createBiomeSurfacePlan,
+  type BiomeSurfacePlan,
+} from "./BiomeSurfacePlan";
 import type { TerrainGrid } from "../terrain/components/TerrainGrid";
 
 export function seedBiomeTerrainGrid(
@@ -15,13 +18,19 @@ export function seedBiomeTerrainGrid(
   terrain: BiomeTerrainDefinition,
   spawnTileX: number,
   spawnTileY: number,
+  surfacePlan?: BiomeSurfacePlan,
 ): void {
   if (terrain.placement.kind !== "patches") {
     return;
   }
 
   if (biome.id === "uniswap") {
-    seedUniswapTerrainGrid(grid, biome, terrain, spawnTileX, spawnTileY);
+    seedPlannedTerrainGrid(
+      grid,
+      terrain,
+      surfacePlan ??
+        createBiomeSurfacePlan(grid, biome, spawnTileX, spawnTileY),
+    );
     return;
   }
 
@@ -71,178 +80,16 @@ function seedPatchTerrainGrid(
   }
 }
 
-function seedUniswapTerrainGrid(
+function seedPlannedTerrainGrid(
   grid: TerrainGrid,
-  biome: BiomeDefinition,
   terrain: BiomeTerrainDefinition,
-  spawnTileX: number,
-  spawnTileY: number,
+  surfacePlan: BiomeSurfacePlan,
 ): void {
-  const regionPlan = createBiomeRegionPlan(grid, biome);
-
   for (let y = 1; y < grid.height - 1; y += 1) {
     for (let x = 1; x < grid.width - 1; x += 1) {
-      grid.set(
-        x,
-        y,
-        pickUniswapSurfaceTerrain(
-          x,
-          y,
-          biome,
-          regionPlan,
-          spawnTileX,
-          spawnTileY,
-        ) === terrain.id,
-      );
+      grid.set(x, y, surfacePlan.getTile(x, y)?.terrainId === terrain.id);
     }
   }
-}
-
-function pickUniswapSurfaceTerrain(
-  x: number,
-  y: number,
-  biome: BiomeDefinition,
-  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
-  spawnTileX: number,
-  spawnTileY: number,
-): string {
-  const spawnDistance = tileDistance(x, y, spawnTileX, spawnTileY);
-
-  if (spawnDistance <= biome.worldGeneration.spawnClearingRadius) {
-    return "plain";
-  }
-
-  const height = octaveValueNoise(
-    x * 0.018 + 17,
-    y * 0.018 - 11,
-    biome.worldGeneration.seed + 211,
-  );
-  const moisture = octaveValueNoise(
-    x * 0.026 - 9,
-    y * 0.026 + 31,
-    biome.worldGeneration.seed + 307,
-  );
-  const temperature = octaveValueNoise(
-    x * 0.014 + 43,
-    y * 0.014 + 7,
-    biome.worldGeneration.seed + 401,
-  );
-  const roughness = getRoughness(x, y, biome.worldGeneration.seed + 211);
-  const detail = octaveValueNoise(
-    x * 0.09 + 5,
-    y * 0.09 - 3,
-    biome.worldGeneration.seed + 503,
-  );
-  const lake = getTerrainRegionScore(regionPlan, "water", x, y);
-  const swamp = getTerrainRegionScore(regionPlan, "swamp", x, y);
-  const forest = getTerrainRegionScore(regionPlan, "forest-floor", x, y);
-  const city = getTerrainRegionScore(regionPlan, "stone", x, y);
-  const route = getRouteCorridorScore(regionPlan, x, y);
-  const wetness =
-    moisture * 0.62 + (1 - height) * 0.24 + lake * 0.34 + swamp * 0.3;
-  const waterScore = lake * 0.82 + wetness * 0.5 - route * 0.6 - roughness * 0.28;
-  const swampScore = swamp * 0.82 + wetness * 0.34 - route * 0.48 - height * 0.2;
-  const shoreScore =
-    lake * 0.64 + Math.abs(wetness - 0.68) * -0.42 + detail * 0.18;
-  const routeAllowed = waterScore < 0.66 && swampScore < 0.72;
-
-  if (waterScore > 0.72) {
-    return "water";
-  }
-
-  if (swampScore > 0.76) {
-    return "swamp";
-  }
-
-  if (routeAllowed && route > 0.58) {
-    return "path";
-  }
-
-  if (shoreScore > 0.48 && lake > 0.08) {
-    return "sand";
-  }
-
-  if (city > 0.22 && height + roughness * 0.7 > 0.68) {
-    return "stone";
-  }
-
-  if (
-    forest > 0.32 &&
-    moisture + (1 - temperature) * 0.22 + detail * 0.2 > 0.72
-  ) {
-    return "forest-floor";
-  }
-
-  if (city > 0.12 && detail > 0.63 && moisture < 0.7) {
-    return "dirt";
-  }
-
-  if (forest > 0.12 || moisture > 0.48) {
-    return "grass";
-  }
-
-  return "plain";
-}
-
-function getRouteCorridorScore(
-  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
-  x: number,
-  y: number,
-): number {
-  let score = 0;
-
-  for (const connection of regionPlan.connections) {
-    const distance = distanceToSegment(
-      x,
-      y,
-      connection.from.tileX,
-      connection.from.tileY,
-      connection.to.tileX,
-      connection.to.tileY,
-    );
-
-    if (distance > 2.8) {
-      continue;
-    }
-
-    score = Math.max(score, 1 - distance / 2.8);
-  }
-
-  return score;
-}
-
-function getRoughness(x: number, y: number, seed: number): number {
-  const center = octaveValueNoise(x * 0.018 + 17, y * 0.018 - 11, seed);
-  const east = octaveValueNoise((x + 1) * 0.018 + 17, y * 0.018 - 11, seed);
-  const south = octaveValueNoise(x * 0.018 + 17, (y + 1) * 0.018 - 11, seed);
-
-  return Math.min(1, (Math.abs(center - east) + Math.abs(center - south)) * 12);
-}
-
-function distanceToSegment(
-  x: number,
-  y: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): number {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const lengthSquared = dx * dx + dy * dy;
-
-  if (lengthSquared === 0) {
-    return tileDistance(x, y, x1, y1);
-  }
-
-  const amount = Math.max(
-    0,
-    Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSquared),
-  );
-  const projectedX = x1 + amount * dx;
-  const projectedY = y1 + amount * dy;
-
-  return tileDistance(x, y, projectedX, projectedY);
 }
 
 function isNearSpawn(

@@ -5,6 +5,11 @@ import {
   createBiomeRegionPlan,
   getDominantRegion,
 } from "../biome/BiomeRegionGeneration";
+import {
+  isTreeAllowedOnSurface,
+  surfaceMatchesTerrainIds,
+  type BiomeSurfacePlan,
+} from "../biome/BiomeSurfacePlan";
 import type { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { PlantState, type PlantStage } from "./components/PlantState";
 import {
@@ -29,6 +34,7 @@ type WorldTreeGenerationOptions = {
   treePlantIds?: string[];
   biome?: BiomeDefinition;
   terrainGrids?: ReadonlyMap<string, TerrainGrid>;
+  surfacePlan?: BiomeSurfacePlan;
 };
 
 const groveCount = 18;
@@ -76,6 +82,7 @@ export function seedWorldTrees(
           options.spawnTileY,
           spawnClearingRadius,
         ) ||
+        !isTreeAllowedOnSurface(options.surfacePlan, x, y) ||
         isTooCloseToTree(x, y, occupied)
       ) {
         continue;
@@ -101,6 +108,7 @@ export function seedWorldTrees(
         x,
         y,
         options.terrainGrids,
+        options.surfacePlan,
       );
       if (region && regionTreeDefinitions.length === 0) {
         continue;
@@ -117,6 +125,7 @@ export function seedWorldTrees(
             random,
             region?.definition,
             options.terrainGrids,
+            options.surfacePlan,
           )
         : pickRegionWeightedSpecies(
             speciesPool,
@@ -124,6 +133,7 @@ export function seedWorldTrees(
             x,
             y,
             options.terrainGrids,
+            options.surfacePlan,
             random,
           );
       const plantEntity = createPlantEntity(
@@ -165,6 +175,7 @@ function getRegionTreeDefinitions(
   tileX: number,
   tileY: number,
   terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
 ): PlantDefinition[] {
   if (!region || region.plants.length === 0) {
     return [];
@@ -176,7 +187,13 @@ function getRegionTreeDefinitions(
 
   return region.plants
     .filter((plant) =>
-      matchesTerrainAffinity(plant.terrainIds, tileX, tileY, terrainGrids),
+      matchesTerrainAffinity(
+        plant.terrainIds,
+        tileX,
+        tileY,
+        terrainGrids,
+        surfacePlan,
+      ),
     )
     .map((plant) => plantDefinitions[plant.plantId])
     .filter(
@@ -237,6 +254,7 @@ function seedRegionGroundPlants(
               x,
               y,
               options.terrainGrids,
+              options.surfacePlan,
             ),
         );
 
@@ -356,6 +374,7 @@ function pickGroveSpecies(
   random: () => number,
   region: BiomeRegionDefinition | undefined,
   terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
 ): PlantDefinition {
   const noise = octaveValueNoise(x * 0.65 + 19, y * 0.65 - 7, seed + 91);
   const regionSpecies = pickRegionWeightedSpecies(
@@ -364,6 +383,7 @@ function pickGroveSpecies(
     x,
     y,
     terrainGrids,
+    surfacePlan,
     random,
   );
 
@@ -383,6 +403,7 @@ function pickRegionWeightedSpecies(
   tileX: number,
   tileY: number,
   terrainGrids: ReadonlyMap<string, TerrainGrid> | undefined,
+  surfacePlan: BiomeSurfacePlan | undefined,
   random: () => number,
 ): PlantDefinition {
   if (!region) {
@@ -395,7 +416,13 @@ function pickRegionWeightedSpecies(
 
       if (
         !regionPlant ||
-        !matchesTerrainAffinity(regionPlant.terrainIds, tileX, tileY, terrainGrids)
+        !matchesTerrainAffinity(
+          regionPlant.terrainIds,
+          tileX,
+          tileY,
+          terrainGrids,
+          surfacePlan,
+        )
       ) {
         return undefined;
       }
@@ -430,7 +457,19 @@ function matchesTerrainAffinity(
   tileX: number,
   tileY: number,
   terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
 ): boolean {
+  const surfaceMatch = surfaceMatchesTerrainIds(
+    surfacePlan,
+    tileX,
+    tileY,
+    terrainIds,
+  );
+
+  if (surfaceMatch !== undefined) {
+    return surfaceMatch;
+  }
+
   if (!terrainIds || !terrainGrids) {
     return true;
   }

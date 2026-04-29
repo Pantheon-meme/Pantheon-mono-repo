@@ -11,6 +11,12 @@ import { WeightedObject } from "../shared/components/WeightedObject";
 import { BiomeObject } from "./components/BiomeObject";
 import type { BiomeDefinition, BiomeObjectDefinition } from "./BiomeDefinitions";
 import {
+  getSurfacePlacementScore,
+  isObjectAllowedOnSurface,
+  surfaceMatchesTerrainIds,
+  type BiomeSurfacePlan,
+} from "./BiomeSurfacePlan";
+import {
   createBiomeRegionPlan,
   getDominantRegion,
   getObjectRegionScore,
@@ -22,6 +28,7 @@ type SeedBiomeObjectsOptions = {
   spawnTileX: number;
   spawnTileY: number;
   terrainGrids?: ReadonlyMap<string, TerrainGrid>;
+  surfacePlan?: BiomeSurfacePlan;
 };
 
 const maxPlacementAttempts = 500;
@@ -53,12 +60,12 @@ export function seedBiomeObjects(
     );
 
     for (const placement of placements) {
-      if (occupied.has(cellKey(placement.tileX, placement.tileY))) {
+      if (isFootprintOccupied(definition, placement.tileX, placement.tileY, occupied)) {
         continue;
       }
 
       createBiomeObjectEntity(world, grid, definition, placement.tileX, placement.tileY);
-      occupied.add(cellKey(placement.tileX, placement.tileY));
+      occupyFootprint(definition, placement.tileX, placement.tileY, occupied);
     }
   }
 }
@@ -137,11 +144,13 @@ function pickObjectPlacements(
     }
 
     if (
-      !matchesRegionObjectTerrain(
+      !matchesObjectFootprintTerrain(
+        definition,
         regionObject.terrainIds ?? definition.placement.terrainIds,
         tileX,
         tileY,
         options.terrainGrids,
+        options.surfacePlan,
       )
     ) {
       continue;
@@ -155,6 +164,7 @@ function pickObjectPlacements(
         random,
         regionPlan,
         region.definition.id,
+        options.surfacePlan,
       )
     ) {
       continue;
@@ -164,6 +174,33 @@ function pickObjectPlacements(
   }
 
   return placements;
+}
+
+function matchesObjectFootprintTerrain(
+  definition: BiomeObjectDefinition,
+  terrainIds: string[] | undefined,
+  tileX: number,
+  tileY: number,
+  terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
+): boolean {
+  for (let y = 0; y < definition.footprintTiles.height; y += 1) {
+    for (let x = 0; x < definition.footprintTiles.width; x += 1) {
+      if (
+        !matchesRegionObjectTerrain(
+          terrainIds,
+          tileX + x,
+          tileY + y,
+          terrainGrids,
+          surfacePlan,
+        )
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 function pickSpawnRingPlacements(
@@ -206,6 +243,7 @@ function matchesPlacementMotif(
   random: () => number,
   regionPlan: ReturnType<typeof createBiomeRegionPlan>,
   regionId: string,
+  surfacePlan?: BiomeSurfacePlan,
 ): boolean {
   const regionScore = getObjectRegionScore(
     regionPlan,
@@ -219,24 +257,35 @@ function matchesPlacementMotif(
     return false;
   }
 
+  const surfaceScore = getSurfacePlacementScore(
+    surfacePlan,
+    tileX,
+    tileY,
+    definition.placement.kind,
+  );
+
+  if (surfaceScore <= 0) {
+    return false;
+  }
+
   switch (definition.placement.kind) {
     case "path-edge":
       return (
         isNearRegionConnection(regionPlan, tileX, tileY, 3.2) &&
-        random() < Math.max(0.18, regionScore * 1.8)
+        random() < Math.max(0.18, regionScore * surfaceScore * 1.8)
       );
     case "pool-edge":
       return (
         octaveValueNoise(tileX * 0.08, tileY * 0.08, 911) > 0.56 &&
-        random() < Math.max(0.12, regionScore * 1.6)
+        random() < Math.max(0.12, regionScore * surfaceScore * 1.6)
       );
     case "grove-edge":
       return (
         octaveValueNoise(tileX * 0.06 + 9, tileY * 0.06 - 4, 1201) > 0.48 &&
-        random() < Math.max(0.14, regionScore * 1.7)
+        random() < Math.max(0.14, regionScore * surfaceScore * 1.7)
       );
     case "scattered":
-      return random() < Math.max(0.12, regionScore * 1.45);
+      return random() < Math.max(0.12, regionScore * surfaceScore * 1.45);
     case "spawn-ring":
       return true;
   }
@@ -247,7 +296,22 @@ function matchesRegionObjectTerrain(
   tileX: number,
   tileY: number,
   terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
 ): boolean {
+  const surfaceMatch = surfaceMatchesTerrainIds(
+    surfacePlan,
+    tileX,
+    tileY,
+    terrainIds,
+  );
+
+  if (surfaceMatch !== undefined) {
+    return (
+      surfaceMatch &&
+      isObjectAllowedOnSurface(surfacePlan, tileX, tileY, terrainIds)
+    );
+  }
+
   if (!terrainIds || !terrainGrids) {
     return true;
   }
@@ -265,6 +329,44 @@ function isWithinPlacementRange(
   const maxDistance = definition.placement.maxSpawnDistance ?? Number.POSITIVE_INFINITY;
 
   return distance >= minDistance && distance <= maxDistance;
+}
+
+function isFootprintOccupied(
+  definition: BiomeObjectDefinition,
+  tileX: number,
+  tileY: number,
+  occupied: ReadonlySet<string>,
+): boolean {
+  return footprintKeys(definition, tileX, tileY).some((key) =>
+    occupied.has(key),
+  );
+}
+
+function occupyFootprint(
+  definition: BiomeObjectDefinition,
+  tileX: number,
+  tileY: number,
+  occupied: Set<string>,
+): void {
+  for (const key of footprintKeys(definition, tileX, tileY)) {
+    occupied.add(key);
+  }
+}
+
+function footprintKeys(
+  definition: BiomeObjectDefinition,
+  tileX: number,
+  tileY: number,
+): string[] {
+  const keys: string[] = [];
+
+  for (let y = 0; y < definition.footprintTiles.height; y += 1) {
+    for (let x = 0; x < definition.footprintTiles.width; x += 1) {
+      keys.push(cellKey(tileX + x, tileY + y));
+    }
+  }
+
+  return keys;
 }
 
 function clampTile(value: number, max: number): number {

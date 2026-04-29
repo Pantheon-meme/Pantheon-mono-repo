@@ -12,6 +12,7 @@ import {
   getBiomeTerrain,
 } from "../game/biome/BiomeDefinitions";
 import { seedBiomeTerrainGrid } from "../game/biome/BiomeTerrainGeneration";
+import { createBiomeSurfacePlan } from "../game/biome/BiomeSurfacePlan";
 import { seedBiomeObjects } from "../game/biome/BiomeObjectGeneration";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
@@ -203,6 +204,12 @@ export class MainGameScene extends Phaser.Scene {
       .filter((terrain) => terrain.placement.kind !== "background")
       .sort((a, b) => a.stackOrder - b.stackOrder);
     const terrainGrids = new Map<string, TerrainGrid>();
+    const spawnTileX = Math.floor(spawnX / tileSize);
+    const spawnTileY = Math.floor(spawnY / tileSize);
+    const surfacePlan =
+      biome.id === "uniswap"
+        ? createBiomeSurfacePlan(baseGrid, biome, spawnTileX, spawnTileY)
+        : undefined;
 
     visibleTerrainDefinitions.forEach((terrainDefinition, terrainIndex) => {
       if (terrainDefinition.placement.kind === "background") {
@@ -220,8 +227,9 @@ export class MainGameScene extends Phaser.Scene {
         terrainGrid,
         biome,
         terrainDefinition,
-        Math.floor(spawnX / tileSize),
-        Math.floor(spawnY / tileSize),
+        spawnTileX,
+        spawnTileY,
+        surfacePlan,
       );
       terrainGrids.set(terrainDefinition.id, terrainGrid);
       world.addComponent(terrain, TerrainGrid, terrainGrid);
@@ -331,17 +339,19 @@ export class MainGameScene extends Phaser.Scene {
 
     seedWorldTrees(world, baseGrid, dirtGrid, {
       seed: biome.worldGeneration.seed,
-      spawnTileX: Math.floor(spawnX / tileSize),
-      spawnTileY: Math.floor(spawnY / tileSize),
+      spawnTileX,
+      spawnTileY,
       spawnClearingRadius: biome.worldGeneration.spawnClearingRadius,
       treePlantIds: biome.worldGeneration.treePlantIds,
       biome,
       terrainGrids,
+      surfacePlan,
     });
     seedBiomeObjects(world, baseGrid, biome, {
-      spawnTileX: Math.floor(spawnX / tileSize),
-      spawnTileY: Math.floor(spawnY / tileSize),
+      spawnTileX,
+      spawnTileY,
       terrainGrids,
+      surfacePlan,
     });
 
     const keyboard = this.input.keyboard;
