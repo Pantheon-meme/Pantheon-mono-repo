@@ -10,6 +10,7 @@ library PantheonConstants {
   uint32 internal constant DEFAULT_MOVE_SPEED = 2500;
   uint32 internal constant SLEEP_GRASS_ENERGY_PER_SECOND = 4;
   uint32 internal constant SLEEP_DIRT_ENERGY_PER_SECOND = 7;
+  uint32 internal constant SLEEP_ROUGH_ENERGY_PER_SECOND = 2;
   uint64 internal constant SLEEP_DURATION = 6;
   uint64 internal constant DEFAULT_DAY_LENGTH = 300;
   uint8 internal constant PLANT_STAGE_GROWING = 0;

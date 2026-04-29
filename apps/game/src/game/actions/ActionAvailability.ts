@@ -23,9 +23,6 @@ import {
   seedLabel,
 } from "./ActionHelpers";
 
-const sleepTerrainLayerIds = new Set(["vibrant-grass", "dirt"]);
-const defaultSleepTerrainLayerId = "vibrant-grass";
-
 export type TargetActionEntry = {
   id: string;
   label: string;
@@ -169,13 +166,7 @@ function canRestoreEnergy(world: World, actor: Entity): boolean {
     return false;
   }
 
-  const tileX = Math.floor(position.x / grid.tileSize);
-  const tileY = Math.floor(position.y / grid.tileSize);
-  const activeLayer =
-    getTopTerrainLayerAtCell(world, tileX, tileY)?.layer.id ??
-    defaultSleepTerrainLayerId;
-
-  return Boolean(activeLayer && sleepTerrainLayerIds.has(activeLayer));
+  return true;
 }
 
 function canGrabWithHand(

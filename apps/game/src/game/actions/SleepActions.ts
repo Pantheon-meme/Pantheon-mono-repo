@@ -12,11 +12,11 @@ import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 
 const sleepDurationSeconds = 6;
 const defaultSleepTerrainLayerId = "vibrant-grass";
+const fallbackSleepEnergyPerSecond = 2;
 const sleepEnergyRates: Record<string, number> = {
   "vibrant-grass": 4,
   dirt: 7,
 };
-const sleepTerrainLayerIds = new Set(Object.keys(sleepEnergyRates));
 
 export const sleepActionDefinitions: Record<string, ActionDefinition> = {
   sleep: {
@@ -48,12 +48,6 @@ function canSleep(world: World, actor: Entity): ActionEffectResult {
     return { message: "Sleep: energy already full", applied: false };
   }
 
-  const terrainLayerId = getSleepTerrainLayerId(world, position, grid);
-
-  if (!terrainLayerId) {
-    return { message: "Sleep: needs grass or dirt", applied: false };
-  }
-
   return {};
 }
 
@@ -73,15 +67,9 @@ function sleep(world: World, actor: Entity): ActionEffectResult {
     return { message: "Sleep: unavailable", applied: false };
   }
 
-  const activeLayer = getSleepTerrainLayerId(world, position, grid);
+  const { layerId, energyPerSecond } = getSleepTerrain(world, position, grid);
 
-  if (!activeLayer) {
-    return { message: "Sleep: needs grass or dirt", applied: false };
-  }
-
-  const energyPerSecond = sleepEnergyRates[activeLayer];
-
-  sleepState.start(sleepDurationSeconds, energyPerSecond, activeLayer);
+  sleepState.start(sleepDurationSeconds, energyPerSecond, layerId);
 
   const mud = world.query(MudWorld)[0]?.[1];
   const submitted = mud?.bridge.submitSleep({
@@ -102,22 +90,26 @@ function sleep(world: World, actor: Entity): ActionEffectResult {
   }
 
   return {
-    message: `Sleep: ${formatLayerName(activeLayer)}, +${energyPerSecond}/sec (syncing)`,
+    message: `Sleep: ${formatLayerName(layerId)}, +${energyPerSecond}/sec (syncing)`,
   };
 }
 
-function getSleepTerrainLayerId(
+export function getSleepTerrain(
   world: World,
   position: Position,
   grid: TerrainGrid,
-): string | undefined {
+): { layerId: string; energyPerSecond: number } {
   const tileX = Math.floor(position.x / grid.tileSize);
   const tileY = Math.floor(position.y / grid.tileSize);
   const activeLayer =
     getTopTerrainLayerAtCell(world, tileX, tileY)?.layer.id ??
     defaultSleepTerrainLayerId;
 
-  return sleepTerrainLayerIds.has(activeLayer) ? activeLayer : undefined;
+  return {
+    layerId: activeLayer,
+    energyPerSecond:
+      sleepEnergyRates[activeLayer] ?? fallbackSleepEnergyPerSecond,
+  };
 }
 
 export function submitSleepEnergy(

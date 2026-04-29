@@ -27,7 +27,10 @@ library SleepActionLib {
       return PantheonConstants.SLEEP_GRASS_ENERGY_PER_SECOND;
     }
 
-    require(material == PantheonConstants.TERRAIN_DIRT, "sleep needs grass or dirt");
-    return PantheonConstants.SLEEP_DIRT_ENERGY_PER_SECOND;
+    if (material == PantheonConstants.TERRAIN_DIRT) {
+      return PantheonConstants.SLEEP_DIRT_ENERGY_PER_SECOND;
+    }
+
+    return PantheonConstants.SLEEP_ROUGH_ENERGY_PER_SECOND;
   }
 }
