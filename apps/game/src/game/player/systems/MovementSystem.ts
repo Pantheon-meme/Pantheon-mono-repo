@@ -2,6 +2,7 @@ import type { System } from "../../../ecs/System";
 import type { Entity } from "../../../ecs/World";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
+import { Energy } from "../../energy/components/Energy";
 import { MudWorld } from "../../mud/components/MudWorld";
 import type { MudMoveCallbacks } from "../../mud/MudWorldBridge";
 import { InputState } from "../components/InputState";
@@ -30,8 +31,9 @@ export class MovementSystem implements System {
       }
 
       const movement = world.getComponent(entity, MovementState);
+      const energy = world.getComponent(entity, Energy);
 
-      if (grid && mud && movement) {
+      if (grid && mud && movement && energy) {
         this.updateOnchainMovement(
           world,
           entity,
@@ -39,6 +41,7 @@ export class MovementSystem implements System {
           velocity,
           input,
           movement,
+          energy,
           grid,
           mud,
           deltaSeconds,
@@ -63,6 +66,7 @@ export class MovementSystem implements System {
     velocity: Velocity,
     input: InputState,
     movement: MovementState,
+    energy: Energy,
     grid: TerrainGrid,
     mud: MudWorld,
     deltaSeconds: number,
@@ -81,15 +85,89 @@ export class MovementSystem implements System {
         this.queueDropPointMove(world, entity, position, movement, grid);
       }
 
-      this.submitQueuedMove(world, entity, position, velocity, movement, grid, mud);
+      this.submitQueuedMove(
+        world,
+        entity,
+        position,
+        velocity,
+        movement,
+        energy,
+        grid,
+        mud,
+      );
       return;
     }
 
     movement.wasMoving = true;
     velocity.x = direction.x * velocity.maxSpeed;
     velocity.y = direction.y * velocity.maxSpeed;
-    position.x += velocity.x * deltaSeconds;
-    position.y += velocity.y * deltaSeconds;
+    this.applyEnergyLimitedMovement(
+      world,
+      entity,
+      position,
+      velocity,
+      movement,
+      energy,
+      grid,
+      deltaSeconds,
+    );
+  }
+
+  private applyEnergyLimitedMovement(
+    world: World,
+    entity: Entity,
+    position: Position,
+    velocity: Velocity,
+    movement: MovementState,
+    energy: Energy,
+    grid: TerrainGrid,
+    deltaSeconds: number,
+  ): void {
+    const confirmedTileX = movement.confirmedTileX;
+    const confirmedTileY = movement.confirmedTileY;
+
+    if (confirmedTileX === undefined || confirmedTileY === undefined) {
+      position.x += velocity.x * deltaSeconds;
+      position.y += velocity.y * deltaSeconds;
+      return;
+    }
+
+    const nextX = position.x + velocity.x * deltaSeconds;
+    const nextY = position.y + velocity.y * deltaSeconds;
+    const nextTileX = clampTile(Math.floor(nextX / grid.tileSize), grid.width);
+    const nextTileY = clampTile(Math.floor(nextY / grid.tileSize), grid.height);
+    const reachableTiles = Math.floor(energy.current);
+    const distance = manhattanDistance(
+      confirmedTileX,
+      confirmedTileY,
+      nextTileX,
+      nextTileY,
+    );
+
+    if (distance <= reachableTiles) {
+      position.x = nextX;
+      position.y = nextY;
+      return;
+    }
+
+    const currentTileX = clampTile(Math.floor(position.x / grid.tileSize), grid.width);
+    const currentTileY = clampTile(
+      Math.floor(position.y / grid.tileSize),
+      grid.height,
+    );
+
+    if (
+      manhattanDistance(confirmedTileX, confirmedTileY, currentTileX, currentTileY) >=
+      reachableTiles
+    ) {
+      velocity.x = 0;
+      velocity.y = 0;
+      updateActionLog(world, entity, "Move: not enough energy");
+      return;
+    }
+
+    position.x = nextX;
+    position.y = nextY;
   }
 
   private queueDropPointMove(
@@ -125,6 +203,7 @@ export class MovementSystem implements System {
     position: Position,
     velocity: Velocity,
     movement: MovementState,
+    energy: Energy,
     grid: TerrainGrid,
     mud: MudWorld,
   ): void {
@@ -163,6 +242,17 @@ export class MovementSystem implements System {
       return;
     }
 
+    const energyCost = distance;
+
+    if (energy.current < energyCost) {
+      movement.queuedTileX = undefined;
+      movement.queuedTileY = undefined;
+      position.x = previousTileX * grid.tileSize + grid.tileSize / 2;
+      position.y = previousTileY * grid.tileSize + grid.tileSize / 2;
+      updateActionLog(world, entity, `Move: needs ${energyCost} energy`);
+      return;
+    }
+
     const path = buildOrthogonalPath(
       previousTileX,
       previousTileY,
@@ -173,6 +263,8 @@ export class MovementSystem implements System {
     movement.pending = true;
     movement.queuedTileX = undefined;
     movement.queuedTileY = undefined;
+    const previousEnergy = energy.current;
+    energy.current = Math.max(0, energy.current - energyCost);
     updateActionLog(
       world,
       entity,
@@ -182,15 +274,20 @@ export class MovementSystem implements System {
     );
 
     const callbacks: MudMoveCallbacks = {
-      onConfirmed: ({ x, y }) => {
+      onConfirmed: ({ x, y, playerEnergy }) => {
         movement.confirmedTileX = x;
         movement.confirmedTileY = y;
         movement.lastConfirmedAtMs = Date.now();
         movement.pending = false;
+        if (playerEnergy) {
+          energy.max = playerEnergy.maxEnergy;
+          energy.current = playerEnergy.energy;
+        }
         updateActionLog(world, entity, `Move: confirmed ${x},${y}`);
       },
       onRejected: (message) => {
         movement.pending = false;
+        energy.current = previousEnergy;
 
         if (previousTileX !== undefined && previousTileY !== undefined) {
           const currentTileX = clampTile(
@@ -237,6 +334,7 @@ export class MovementSystem implements System {
       movement.pending = false;
       movement.queuedTileX = targetTileX;
       movement.queuedTileY = targetTileY;
+      energy.current = previousEnergy;
       updateActionLog(world, entity, "Move: waiting on previous move");
     }
   }

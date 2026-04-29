@@ -105,6 +105,7 @@ export type ConfirmedDig = {
 export type ConfirmedMove = {
   x: number;
   y: number;
+  playerEnergy?: PlayerEnergy;
 };
 
 export type MovePathStep = {
@@ -370,7 +371,11 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed({ x, y });
+      callbacks.onConfirmed({
+        x,
+        y,
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
@@ -394,7 +399,10 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed(target);
+      callbacks.onConfirmed({
+        ...target,
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
