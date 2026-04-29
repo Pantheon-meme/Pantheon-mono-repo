@@ -10,9 +10,13 @@ import { World } from "../ecs/World";
 import {
   getActiveBiome,
   getBiomeTerrain,
+  type BiomeDefinition,
 } from "../game/biome/BiomeDefinitions";
 import { seedBiomeTerrainGrid } from "../game/biome/BiomeTerrainGeneration";
-import { createBiomeSurfacePlan } from "../game/biome/BiomeSurfacePlan";
+import {
+  createBiomeSurfacePlan,
+  type BiomeSurfacePlan,
+} from "../game/biome/BiomeSurfacePlan";
 import { seedBiomeObjects } from "../game/biome/BiomeObjectGeneration";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
@@ -25,6 +29,7 @@ import { DayNightOverlay } from "../game/ui/components/DayNightOverlay";
 import { DiggingCapability } from "../game/player/components/DiggingCapability";
 import { Energy } from "../game/energy/components/Energy";
 import { EnergyBar } from "../game/ui/components/EnergyBar";
+import { BiomeMinimap } from "../game/ui/components/BiomeMinimap";
 import { FacingDirection } from "../game/player/components/FacingDirection";
 import { Footprint } from "../game/shared/components/Footprint";
 import { FocusTarget } from "../game/player/components/FocusTarget";
@@ -125,6 +130,7 @@ export class MainGameScene extends Phaser.Scene {
     const journal = world.createEntity();
     const handHud = world.createEntity();
     const targetActionMenu = world.createEntity();
+    const minimap = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const dirtGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -210,6 +216,7 @@ export class MainGameScene extends Phaser.Scene {
       biome.id === "uniswap"
         ? createBiomeSurfacePlan(baseGrid, biome, spawnTileX, spawnTileY)
         : undefined;
+    const minimapDisplay = this.createBiomeMinimap(biome, surfacePlan);
 
     visibleTerrainDefinitions.forEach((terrainDefinition, terrainIndex) => {
       if (terrainDefinition.placement.kind === "background") {
@@ -270,6 +277,7 @@ export class MainGameScene extends Phaser.Scene {
       TargetActionMenu,
       targetActionMenuDisplay,
     );
+    world.addComponent(minimap, BiomeMinimap, minimapDisplay);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -420,6 +428,56 @@ export class MainGameScene extends Phaser.Scene {
     background.setStrokeStyle(2, 0xe8f0e8, 0.55);
 
     return new EnergyBar(background, fill, label, width, height, x, y);
+  }
+
+  private createBiomeMinimap(
+    biome: BiomeDefinition,
+    surfacePlan: BiomeSurfacePlan | undefined,
+  ): BiomeMinimap {
+    const width = 184;
+    const height = 184;
+    const legendWidth = 132;
+    const x = this.scale.width - width - legendWidth - 18;
+    const y = 18;
+    const container = this.add.container(0, 0).setDepth(103);
+    const background = this.add
+      .rectangle(
+        -10,
+        -10,
+        width + legendWidth + 20,
+        height + 20,
+        0x101821,
+        0.78,
+      )
+      .setOrigin(0)
+      .setStrokeStyle(2, 0xe8f0e8, 0.45);
+    const terrainLayer = this.add.graphics();
+    const regionLayer = this.add.graphics();
+    const overlayLayer = this.add.graphics();
+    const labelLayer = this.add.container(0, 0);
+
+    container.add([
+      background,
+      terrainLayer,
+      regionLayer,
+      overlayLayer,
+      labelLayer,
+    ]);
+
+    return new BiomeMinimap(
+      container,
+      background,
+      terrainLayer,
+      regionLayer,
+      overlayLayer,
+      labelLayer,
+      biome,
+      surfacePlan,
+      width,
+      height,
+      x,
+      y,
+    );
   }
 
   private createActionProgressBar(): ActionProgressBar {

@@ -6,6 +6,7 @@ import { ActionSystem } from "../actions/systems/ActionSystem";
 import { AutotileRenderSystem } from "../terrain/systems/AutotileRenderSystem";
 import { BiomeObjectRenderSystem } from "../biome/systems/BiomeObjectRenderSystem";
 import { BiomeRegionAwarenessSystem } from "../biome/systems/BiomeRegionAwarenessSystem";
+import { BiomeMinimapSystem } from "../ui/systems/BiomeMinimapSystem";
 import { BoundsSystem } from "../shared/systems/BoundsSystem";
 import { DayNightRenderSystem } from "../ui/systems/DayNightRenderSystem";
 import { EnergyBarSystem } from "../ui/systems/EnergyBarSystem";
@@ -83,6 +84,7 @@ export function registerSystems(
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new BiomeMinimapSystem());
   world.addSystem(new ActionProgressBarSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new HandHudSystem());
