@@ -87,8 +87,37 @@ export function isTreeAllowedOnSurface(
     tile.terrainId === "forest-floor" ||
     tile.terrainId === "grass" ||
     (tile.terrainId === "sand" && tile.moisture > 0.46) ||
-    (tile.terrainId === "swamp" && tile.canopy > 0.42)
+    (tile.terrainId === "swamp" && tile.canopy > 0.34)
   );
+}
+
+export function getSurfaceTreePlacementChance(
+  surfacePlan: BiomeSurfacePlan | undefined,
+  tileX: number,
+  tileY: number,
+): number | undefined {
+  if (!surfacePlan || surfacePlan.biomeId !== "uniswap") {
+    return undefined;
+  }
+
+  const tile = surfacePlan.getTile(tileX, tileY);
+
+  if (!tile || tile.route > 0.5 || tile.terrainId === "path") {
+    return 0;
+  }
+
+  switch (tile.terrainId) {
+    case "forest-floor":
+      return 0.08 + tile.canopy * 0.28;
+    case "swamp":
+      return 0.12 + tile.canopy * 0.34 + tile.wetness * 0.06;
+    case "sand":
+      return tile.shore > 0.18 ? 0.04 + tile.moisture * 0.12 : 0.02;
+    case "grass":
+      return 0.025 + tile.fertility * 0.08;
+    default:
+      return 0;
+  }
 }
 
 export function isObjectAllowedOnSurface(
@@ -244,13 +273,39 @@ function createUniswapSurfaceTile(
   const forest = getTerrainRegionScore(regionPlan, "forest-floor", x, y);
   const city = getTerrainRegionScore(regionPlan, "stone", x, y);
   const route = getRouteCorridorScore(regionPlan, x, y);
+  const oraclePattern = octaveValueNoise(
+    x * 0.052 - 31,
+    y * 0.052 + 19,
+    biome.worldGeneration.seed + 911,
+  );
+  const islandPattern = octaveValueNoise(
+    x * 0.085 + 29,
+    y * 0.085 - 37,
+    biome.worldGeneration.seed + 1217,
+  );
   const wetness =
     moisture * 0.62 + (1 - height) * 0.24 + lake * 0.34 + swamp * 0.3;
-  const waterScore = lake * 0.82 + wetness * 0.5 - route * 0.6 - roughness * 0.28;
-  const swampScore = swamp * 0.82 + wetness * 0.34 - route * 0.48 - height * 0.2;
+  const waterScore =
+    lake * 0.82 +
+    wetness * 0.5 +
+    swamp * Math.max(0, oraclePattern - 0.54) * 0.58 -
+    route * 0.6 -
+    roughness * 0.28;
+  const swampScore =
+    swamp * 0.94 +
+    wetness * 0.34 +
+    oraclePattern * swamp * 0.18 -
+    route * 0.48 -
+    height * 0.2;
   const shore =
-    lake * 0.64 + Math.abs(wetness - 0.68) * -0.42 + detail * 0.18;
-  const canopy = Math.max(0, forest * 0.74 + moisture * 0.25 - route * 0.36);
+    lake * 0.64 +
+    swamp * 0.36 +
+    Math.abs(wetness - 0.68) * -0.42 +
+    detail * 0.18;
+  const canopy = Math.max(
+    0,
+    forest * 0.74 + swamp * 0.42 + moisture * 0.25 - route * 0.36,
+  );
   const fertility = Math.max(
     0,
     Math.min(1, moisture * 0.42 + canopy * 0.42 + (1 - roughness) * 0.16),
@@ -259,9 +314,23 @@ function createUniswapSurfaceTile(
 
   if (spawnDistance <= biome.worldGeneration.spawnClearingRadius) {
     terrainId = "plain";
+  } else if (
+    swamp > 0.2 &&
+    islandPattern > 0.72 &&
+    waterScore < 0.86 &&
+    route < 0.42
+  ) {
+    terrainId = height + roughness > 0.96 ? "stone" : "forest-floor";
+  } else if (
+    swamp > 0.22 &&
+    islandPattern > 0.62 &&
+    wetness < 0.82 &&
+    route < 0.42
+  ) {
+    terrainId = "sand";
   } else if (waterScore > 0.72) {
     terrainId = "water";
-  } else if (swampScore > 0.76) {
+  } else if (swampScore > 0.7) {
     terrainId = "swamp";
   } else if (waterScore < 0.66 && swampScore < 0.72 && route > 0.58) {
     terrainId = "path";

@@ -6,6 +6,7 @@ import {
   getDominantRegion,
 } from "../biome/BiomeRegionGeneration";
 import {
+  getSurfaceTreePlacementChance,
   isTreeAllowedOnSurface,
   surfaceMatchesTerrainIds,
   type BiomeSurfacePlan,
@@ -91,9 +92,18 @@ export function seedWorldTrees(
       const grove = pickDominantGrove(x, y, groves);
       const noise = octaveValueNoise(x, y, options.seed);
       const wildChance = noise > 0.76 ? sparseWildChance : 0;
-      const placeChance = grove
+      const groveChance = grove
         ? grove.density * groveFalloff(x, y, grove) * (0.48 + noise * 0.92)
         : wildChance;
+      const surfaceChance = getSurfaceTreePlacementChance(
+        options.surfacePlan,
+        x,
+        y,
+      );
+      const placeChance =
+        surfaceChance === undefined
+          ? groveChance
+          : Math.max(groveChance, surfaceChance * (0.55 + noise * 0.65));
 
       if (random() > placeChance) {
         continue;
