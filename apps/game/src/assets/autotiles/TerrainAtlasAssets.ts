@@ -1,32 +1,26 @@
-import dirtAtlasUrl from "./dirt/autotile-blob-7x7.png?url";
-import uniswapFeeTierMossAtlasUrl from "./uniswap-fee-tier-moss/autotile-blob-7x7.png?url";
-import uniswapFeeTierMossCenterVariantsUrl from "./uniswap-fee-tier-moss/center-variants-4x4.png?url";
-import uniswapGovernanceStoneAtlasUrl from "./uniswap-governance-stone/autotile-blob-7x7.png?url";
-import uniswapGovernanceStoneCenterVariantsUrl from "./uniswap-governance-stone/center-variants-4x4.png?url";
-import uniswapLiquidityPoolAtlasUrl from "./uniswap-liquidity-pool/autotile-blob-7x7.png?url";
-import uniswapLiquidityPoolCenterVariantsUrl from "./uniswap-liquidity-pool/center-variants-4x4.png?url";
-import uniswapOracleGlassAtlasUrl from "./uniswap-oracle-glass/autotile-blob-7x7.png?url";
-import uniswapOracleGlassCenterVariantsUrl from "./uniswap-oracle-glass/center-variants-4x4.png?url";
-import uniswapRouteSilkAtlasUrl from "./uniswap-route-silk/autotile-blob-7x7.png?url";
-import uniswapRouteSilkCenterVariantsUrl from "./uniswap-route-silk/center-variants-4x4.png?url";
-import uniswapSwapstoneDustAtlasUrl from "./uniswap-swapstone-dust/autotile-blob-7x7.png?url";
-import uniswapSwapstoneDustCenterVariantsUrl from "./uniswap-swapstone-dust/center-variants-4x4.png?url";
-import uniswapV3CloverAtlasUrl from "./uniswap-v3-clover/autotile-blob-7x7.png?url";
-import uniswapV3CloverCenterVariantsUrl from "./uniswap-v3-clover/center-variants-4x4.png?url";
-import vibrantGrassAtlasUrl from "./vibrant-grass/autotile-blob-7x7.png?url";
-import waterAtlasUrl from "./water/autotile-blob-7x7.png?url";
+import dirtTerrainAtlasUrl from "./dirt/autotile-blob-7x7.png?url";
+import uniswapDirtTerrainAtlasUrl from "./uniswap-dirt/autotile-blob-7x7.png?url";
+import uniswapDirtTerrainCenterVariantsUrl from "./uniswap-dirt/center-variants-4x4.png?url";
+import uniswapForestFloorTerrainAtlasUrl from "./uniswap-forest-floor/autotile-blob-7x7.png?url";
+import uniswapForestFloorTerrainCenterVariantsUrl from "./uniswap-forest-floor/center-variants-4x4.png?url";
+import uniswapGrassTerrainAtlasUrl from "./uniswap-grass/autotile-blob-7x7.png?url";
+import uniswapGrassTerrainCenterVariantsUrl from "./uniswap-grass/center-variants-4x4.png?url";
+import uniswapPathTerrainAtlasUrl from "./uniswap-path/autotile-blob-7x7.png?url";
+import uniswapPathTerrainCenterVariantsUrl from "./uniswap-path/center-variants-4x4.png?url";
+import uniswapPlainTerrainAtlasUrl from "./uniswap-plain/autotile-blob-7x7.png?url";
+import uniswapPlainTerrainCenterVariantsUrl from "./uniswap-plain/center-variants-4x4.png?url";
+import uniswapSandTerrainAtlasUrl from "./uniswap-sand/autotile-blob-7x7.png?url";
+import uniswapSandTerrainCenterVariantsUrl from "./uniswap-sand/center-variants-4x4.png?url";
+import uniswapStoneTerrainAtlasUrl from "./uniswap-stone/autotile-blob-7x7.png?url";
+import uniswapStoneTerrainCenterVariantsUrl from "./uniswap-stone/center-variants-4x4.png?url";
+import uniswapSwampTerrainAtlasUrl from "./uniswap-swamp/autotile-blob-7x7.png?url";
+import uniswapSwampTerrainCenterVariantsUrl from "./uniswap-swamp/center-variants-4x4.png?url";
+import uniswapWaterTerrainAtlasUrl from "./uniswap-water/autotile-blob-7x7.png?url";
+import uniswapWaterTerrainCenterVariantsUrl from "./uniswap-water/center-variants-4x4.png?url";
+import vibrantGrassTerrainAtlasUrl from "./vibrant-grass/autotile-blob-7x7.png?url";
+import waterTerrainAtlasUrl from "./water/autotile-blob-7x7.png?url";
 
-export type TerrainAtlasAssetId =
-  | "dirt"
-  | "uniswap-fee-tier-moss"
-  | "uniswap-governance-stone"
-  | "uniswap-liquidity-pool"
-  | "uniswap-oracle-glass"
-  | "uniswap-route-silk"
-  | "uniswap-swapstone-dust"
-  | "uniswap-v3-clover"
-  | "vibrant-grass"
-  | "water";
+export type TerrainAtlasAssetId = string;
 
 export type TerrainAtlasAsset = {
   id: TerrainAtlasAssetId;
@@ -34,58 +28,75 @@ export type TerrainAtlasAsset = {
   centerVariantsUrl?: string;
 };
 
-export const terrainAtlasAssets: Record<
-  TerrainAtlasAssetId,
-  TerrainAtlasAsset
-> = {
-  dirt: {
+export const terrainAtlasAssets: Record<TerrainAtlasAssetId, TerrainAtlasAsset> = {
+  "dirt": {
     id: "dirt",
-    imageUrl: dirtAtlasUrl,
+    imageUrl: dirtTerrainAtlasUrl,
   },
-  "uniswap-fee-tier-moss": {
-    id: "uniswap-fee-tier-moss",
-    imageUrl: uniswapFeeTierMossAtlasUrl,
-    centerVariantsUrl: uniswapFeeTierMossCenterVariantsUrl,
+  "uniswap-dirt": {
+    id: "uniswap-dirt",
+    imageUrl: uniswapDirtTerrainAtlasUrl,
+    centerVariantsUrl: uniswapDirtTerrainCenterVariantsUrl,
   },
-  "uniswap-governance-stone": {
-    id: "uniswap-governance-stone",
-    imageUrl: uniswapGovernanceStoneAtlasUrl,
-    centerVariantsUrl: uniswapGovernanceStoneCenterVariantsUrl,
+  "uniswap-forest-floor": {
+    id: "uniswap-forest-floor",
+    imageUrl: uniswapForestFloorTerrainAtlasUrl,
+    centerVariantsUrl: uniswapForestFloorTerrainCenterVariantsUrl,
   },
-  "uniswap-liquidity-pool": {
-    id: "uniswap-liquidity-pool",
-    imageUrl: uniswapLiquidityPoolAtlasUrl,
-    centerVariantsUrl: uniswapLiquidityPoolCenterVariantsUrl,
+  "uniswap-grass": {
+    id: "uniswap-grass",
+    imageUrl: uniswapGrassTerrainAtlasUrl,
+    centerVariantsUrl: uniswapGrassTerrainCenterVariantsUrl,
   },
-  "uniswap-oracle-glass": {
-    id: "uniswap-oracle-glass",
-    imageUrl: uniswapOracleGlassAtlasUrl,
-    centerVariantsUrl: uniswapOracleGlassCenterVariantsUrl,
+  "uniswap-path": {
+    id: "uniswap-path",
+    imageUrl: uniswapPathTerrainAtlasUrl,
+    centerVariantsUrl: uniswapPathTerrainCenterVariantsUrl,
   },
-  "uniswap-route-silk": {
-    id: "uniswap-route-silk",
-    imageUrl: uniswapRouteSilkAtlasUrl,
-    centerVariantsUrl: uniswapRouteSilkCenterVariantsUrl,
+  "uniswap-plain": {
+    id: "uniswap-plain",
+    imageUrl: uniswapPlainTerrainAtlasUrl,
+    centerVariantsUrl: uniswapPlainTerrainCenterVariantsUrl,
   },
-  "uniswap-swapstone-dust": {
-    id: "uniswap-swapstone-dust",
-    imageUrl: uniswapSwapstoneDustAtlasUrl,
-    centerVariantsUrl: uniswapSwapstoneDustCenterVariantsUrl,
+  "uniswap-sand": {
+    id: "uniswap-sand",
+    imageUrl: uniswapSandTerrainAtlasUrl,
+    centerVariantsUrl: uniswapSandTerrainCenterVariantsUrl,
   },
-  "uniswap-v3-clover": {
-    id: "uniswap-v3-clover",
-    imageUrl: uniswapV3CloverAtlasUrl,
-    centerVariantsUrl: uniswapV3CloverCenterVariantsUrl,
+  "uniswap-stone": {
+    id: "uniswap-stone",
+    imageUrl: uniswapStoneTerrainAtlasUrl,
+    centerVariantsUrl: uniswapStoneTerrainCenterVariantsUrl,
+  },
+  "uniswap-swamp": {
+    id: "uniswap-swamp",
+    imageUrl: uniswapSwampTerrainAtlasUrl,
+    centerVariantsUrl: uniswapSwampTerrainCenterVariantsUrl,
+  },
+  "uniswap-water": {
+    id: "uniswap-water",
+    imageUrl: uniswapWaterTerrainAtlasUrl,
+    centerVariantsUrl: uniswapWaterTerrainCenterVariantsUrl,
   },
   "vibrant-grass": {
     id: "vibrant-grass",
-    imageUrl: vibrantGrassAtlasUrl,
+    imageUrl: vibrantGrassTerrainAtlasUrl,
   },
-  water: {
+  "water": {
     id: "water",
-    imageUrl: waterAtlasUrl,
+    imageUrl: waterTerrainAtlasUrl,
   },
 };
+
+export function getTerrainAtlasAsset(
+  assetId: TerrainAtlasAssetId,
+): TerrainAtlasAsset {
+  return (
+    terrainAtlasAssets[assetId] ??
+    terrainAtlasAssets["uniswap-plain"] ??
+    terrainAtlasAssets["vibrant-grass"]
+  );
+}
 
 export function terrainAtlasTextureKey(assetId: TerrainAtlasAssetId): string {
   return `terrain-atlas-${assetId}`;

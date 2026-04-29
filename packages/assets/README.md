@@ -53,9 +53,9 @@ When you want the texture itself generated too, use `generate-terrain-autotiles`
 
 ```sh
 pnpm --filter @pantheon/assets generate-terrain-autotiles -- \
-  --terrain-id "uniswap-v3-clover" \
-  --material "Uniswap violet clover meadow" \
-  --texture "dense violet and mint clover, tiny pearl dew drops, subtle unicorn-pink flower sparks, cozy playable top-down meadow" \
+  --terrain-id "uniswap-grass" \
+  --material "Uniswap grass terrain" \
+  --texture "soft mint grass with violet clover flecks, tiny pearl dew drops, cozy playable top-down meadow" \
   --style "cozy hand-painted 2D game terrain, three-quarter top-down, crisp terrain readability, no logos, no text"
 ```
 

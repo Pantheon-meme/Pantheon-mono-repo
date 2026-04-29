@@ -4,6 +4,7 @@ export type TerrainBackgroundMode = "flat" | string;
 
 export class TerrainBackground {
   renderedVersion = -1;
+  renderedWindowKey = "";
 
   constructor(
     public readonly container: Phaser.GameObjects.Container,

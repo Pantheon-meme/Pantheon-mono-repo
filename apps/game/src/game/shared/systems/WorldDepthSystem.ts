@@ -1,6 +1,7 @@
 import type Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import { BiomeObjectVisual } from "../../biome/components/BiomeObjectVisual";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { PlantVisual } from "../../plants/components/PlantVisual";
 import { TerrainGrid } from "../../terrain/components/TerrainGrid";
@@ -31,6 +32,10 @@ export class WorldDepthSystem implements System {
 
     for (const [, position, visual] of world.query(Position, PlantVisual)) {
       visual.container.setDepth(getWorldDepth(position.y));
+    }
+
+    for (const [, position, visual] of world.query(Position, BiomeObjectVisual)) {
+      visual.sprite.setDepth(getWorldDepth(position.y));
     }
   }
 }

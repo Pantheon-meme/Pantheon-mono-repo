@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  getTerrainAtlasAsset,
   terrainAtlasAssets,
   terrainCenterVariantTextureKey,
   terrainAtlasTextureKey,
@@ -11,6 +12,7 @@ import {
   getBiomeTerrain,
 } from "../game/biome/BiomeDefinitions";
 import { seedBiomeTerrainGrid } from "../game/biome/BiomeTerrainGeneration";
+import { seedBiomeObjects } from "../game/biome/BiomeObjectGeneration";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
 import { ActionBindings } from "../game/actions/components/ActionBindings";
@@ -47,7 +49,6 @@ import { Position } from "../game/shared/components/Position";
 import { Renderable } from "../game/shared/components/Renderable";
 import { ActionProgressBar } from "../game/ui/components/ActionProgressBar";
 import { SeedDrop } from "../game/plants/components/SeedDrop";
-import { SeedHud } from "../game/ui/components/SeedHud";
 import { SeedPouch } from "../game/plants/components/SeedPouch";
 import { SkillSet } from "../game/ideas/components/SkillSet";
 import { SleepProgressBar } from "../game/ui/components/SleepProgressBar";
@@ -121,7 +122,6 @@ export class MainGameScene extends Phaser.Scene {
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
     const journal = world.createEntity();
-    const seedHud = world.createEntity();
     const handHud = world.createEntity();
     const targetActionMenu = world.createEntity();
     const player = world.createEntity();
@@ -136,7 +136,6 @@ export class MainGameScene extends Phaser.Scene {
     const sleepProgressBar = this.createSleepProgressBar();
     const sleepVisual = this.createSleepVisual();
     const journalPanel = this.createJournalPanel();
-    const seedHudDisplay = this.createSeedHud();
     const handHudDisplay = this.createHandHud();
     const targetActionMenuDisplay = this.createTargetActionMenu();
     const weightLabel = this.createWeightLabel();
@@ -153,7 +152,7 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-    this.cameras.main.setZoom(freeExplore ? 0.38 : 0.7);
+    this.cameras.main.setZoom(freeExplore ? 0.7 : 0.7);
     this.cameras.main.startFollow(playerSprite, true, 0.12, 0.12);
 
     world.addComponent(baseTerrain, TerrainGrid, baseGrid);
@@ -182,6 +181,7 @@ export class MainGameScene extends Phaser.Scene {
     for (const terrainDefinition of biome.terrains) {
       const atlasWarmupTerrain = world.createEntity();
       const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
+      const terrainAtlas = getTerrainAtlasAsset(terrainDefinition.atlasId);
 
       world.addComponent(atlasWarmupTerrain, TerrainGrid, warmupGrid);
       world.addComponent(
@@ -189,11 +189,11 @@ export class MainGameScene extends Phaser.Scene {
         AutotileLayer,
         new AutotileLayer(
           this.add.container(0, 0).setDepth(-1),
-          terrainAtlasTextureKey(terrainDefinition.atlasId),
+          terrainAtlasTextureKey(terrainAtlas.id),
           terrainDefinition.texturePrefix,
           blobAtlasCellSize,
-          terrainAtlasAssets[terrainDefinition.atlasId].centerVariantsUrl
-            ? terrainCenterVariantTextureKey(terrainDefinition.atlasId)
+          terrainAtlas.centerVariantsUrl
+            ? terrainCenterVariantTextureKey(terrainAtlas.id)
             : undefined,
         ),
       );
@@ -202,6 +202,7 @@ export class MainGameScene extends Phaser.Scene {
     const visibleTerrainDefinitions = biome.terrains
       .filter((terrain) => terrain.placement.kind !== "background")
       .sort((a, b) => a.stackOrder - b.stackOrder);
+    const terrainGrids = new Map<string, TerrainGrid>();
 
     visibleTerrainDefinitions.forEach((terrainDefinition, terrainIndex) => {
       if (terrainDefinition.placement.kind === "background") {
@@ -209,6 +210,7 @@ export class MainGameScene extends Phaser.Scene {
       }
 
       const terrain = world.createEntity();
+      const terrainAtlas = getTerrainAtlasAsset(terrainDefinition.atlasId);
       const terrainGrid =
         terrainDefinition.id === digTerrainDefinition.id
           ? dirtGrid
@@ -221,6 +223,7 @@ export class MainGameScene extends Phaser.Scene {
         Math.floor(spawnX / tileSize),
         Math.floor(spawnY / tileSize),
       );
+      terrainGrids.set(terrainDefinition.id, terrainGrid);
       world.addComponent(terrain, TerrainGrid, terrainGrid);
       world.addComponent(
         terrain,
@@ -236,11 +239,11 @@ export class MainGameScene extends Phaser.Scene {
             .setDepth(
               terrainLayerDepthBase + terrainIndex * terrainLayerDepthStep,
             ),
-          terrainAtlasTextureKey(terrainDefinition.atlasId),
+          terrainAtlasTextureKey(terrainAtlas.id),
           terrainDefinition.texturePrefix,
           blobAtlasCellSize,
-          terrainAtlasAssets[terrainDefinition.atlasId].centerVariantsUrl
-            ? terrainCenterVariantTextureKey(terrainDefinition.atlasId)
+          terrainAtlas.centerVariantsUrl
+            ? terrainCenterVariantTextureKey(terrainAtlas.id)
             : undefined,
         ),
       );
@@ -253,7 +256,6 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
     world.addComponent(journal, JournalPanel, journalPanel);
-    world.addComponent(seedHud, SeedHud, seedHudDisplay);
     world.addComponent(handHud, HandHud, handHudDisplay);
     world.addComponent(
       targetActionMenu,
@@ -333,6 +335,13 @@ export class MainGameScene extends Phaser.Scene {
       spawnTileY: Math.floor(spawnY / tileSize),
       spawnClearingRadius: biome.worldGeneration.spawnClearingRadius,
       treePlantIds: biome.worldGeneration.treePlantIds,
+      biome,
+      terrainGrids,
+    });
+    seedBiomeObjects(world, baseGrid, biome, {
+      spawnTileX: Math.floor(spawnX / tileSize),
+      spawnTileY: Math.floor(spawnY / tileSize),
+      terrainGrids,
     });
 
     const keyboard = this.input.keyboard;
@@ -347,6 +356,7 @@ export class MainGameScene extends Phaser.Scene {
       keyboard,
       new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
       weightLabel,
+      biome,
     );
 
     this.world = world;
@@ -497,26 +507,6 @@ export class MainGameScene extends Phaser.Scene {
     label.setVisible(false);
 
     return new SleepProgressBar(background, fill, label, width, height, x, y);
-  }
-
-  private createSeedHud(): SeedHud {
-    const label = this.add
-      .text(18, 128, "", {
-        color: "#eef7f4",
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: "15px",
-        lineSpacing: 4,
-        shadow: {
-          color: "#071018",
-          blur: 4,
-          fill: true,
-          offsetX: 1,
-          offsetY: 1,
-        },
-      })
-      .setDepth(101);
-
-    return new SeedHud(label, 18, 128);
   }
 
   private createHandHud(): HandHud {

@@ -2,6 +2,7 @@ import Phaser from "phaser";
 
 export class AutotileLayer {
   renderedVersion = -1;
+  renderedWindowKey = "";
 
   constructor(
     public readonly container: Phaser.GameObjects.Container,

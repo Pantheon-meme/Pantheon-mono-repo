@@ -18,7 +18,7 @@ type CliOptions = {
   playerId?: string;
   playerName?: string;
   playerPrompt?: string;
-  spriteKind?: "object" | "plant" | "tree" | "player";
+  spriteKind?: "object" | "object-batch" | "plant" | "tree" | "player";
   objectId?: string;
   objectName?: string;
   objectPrompt?: string;

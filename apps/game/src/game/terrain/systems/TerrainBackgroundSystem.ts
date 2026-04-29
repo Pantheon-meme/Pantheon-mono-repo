@@ -3,7 +3,10 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { TerrainBackground } from "../components/TerrainBackground";
 import { TerrainGrid } from "../components/TerrainGrid";
-import { getCenterTextureKey } from "./AutotileRenderSystem";
+import {
+  getCameraTileWindow,
+  getCenterTextureKey,
+} from "./AutotileRenderSystem";
 
 export class TerrainBackgroundSystem implements System {
   private readonly nextBackgroundKey?: Phaser.Input.Keyboard.Key;
@@ -22,13 +25,19 @@ export class TerrainBackgroundSystem implements System {
       this.updateMode(background);
 
       const version = background.modes.indexOf(background.activeMode);
+      const window = getCameraTileWindow(this.scene.cameras.main, grid);
+      const windowKey = `${window.minX},${window.minY},${window.maxX},${window.maxY}`;
 
-      if (background.renderedVersion === version) {
+      if (
+        background.renderedVersion === version &&
+        background.renderedWindowKey === windowKey
+      ) {
         continue;
       }
 
-      this.renderBackground(grid, background);
+      this.renderBackground(grid, background, window);
       background.renderedVersion = version;
+      background.renderedWindowKey = windowKey;
     }
   }
 
@@ -49,6 +58,7 @@ export class TerrainBackgroundSystem implements System {
   private renderBackground(
     grid: TerrainGrid,
     background: TerrainBackground,
+    window: ReturnType<typeof getCameraTileWindow>,
   ): void {
     background.container.removeAll(true);
 
@@ -56,8 +66,8 @@ export class TerrainBackgroundSystem implements System {
       return;
     }
 
-    for (let y = 0; y < grid.height; y += 1) {
-      for (let x = 0; x < grid.width; x += 1) {
+    for (let y = window.minY; y <= window.maxY; y += 1) {
+      for (let x = window.minX; x <= window.maxX; x += 1) {
         const sprite = this.scene.add
           .image(
             x * grid.tileSize,

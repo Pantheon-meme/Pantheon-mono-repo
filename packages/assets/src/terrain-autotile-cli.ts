@@ -209,9 +209,9 @@ function printHelp(): void {
 
 Usage:
   pnpm --filter @pantheon/assets generate-terrain-autotiles -- \\
-    --terrain-id uniswap-v3-clover \\
-    --material "Uniswap violet clover meadow" \\
-    --texture "dense violet and mint clover, tiny pearl dew drops, subtle unicorn-pink flower sparks" \\
+    --terrain-id uniswap-grass \\
+    --material "Uniswap grass terrain" \\
+    --texture "soft mint grass with violet clover flecks and pearl dew highlights" \\
     --style "cozy hand-painted 2D game terrain, top-down, no logos, no text"
 
 Options:

@@ -109,7 +109,9 @@ export const objectSpriteStateSchema = z.object({
 });
 
 export const objectSpriteRequestSchema = z.object({
-  spriteKind: z.enum(["object", "plant", "tree", "player"]).default("object"),
+  spriteKind: z
+    .enum(["object", "object-batch", "plant", "tree", "player"])
+    .default("object"),
   objectId: z.string().min(1),
   objectName: z.string().min(1),
   objectPrompt: z.string().min(1),

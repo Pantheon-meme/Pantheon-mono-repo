@@ -2,6 +2,10 @@ import type {
   BiomeDefinition,
   BiomeTerrainDefinition,
 } from "./BiomeDefinitions";
+import {
+  createBiomeRegionPlan,
+  getTerrainRegionScore,
+} from "./BiomeRegionGeneration";
 import type { TerrainGrid } from "../terrain/components/TerrainGrid";
 
 export function seedBiomeTerrainGrid(
@@ -16,6 +20,7 @@ export function seedBiomeTerrainGrid(
   }
 
   const placement = terrain.placement;
+  const regionPlan = createBiomeRegionPlan(grid, biome);
 
   for (let y = 1; y < grid.height - 1; y += 1) {
     for (let x = 1; x < grid.width - 1; x += 1) {
@@ -31,8 +36,17 @@ export function seedBiomeTerrainGrid(
         y * placement.frequency,
         biome.worldGeneration.seed + placement.seedOffset,
       );
+      const regionScore = getTerrainRegionScore(regionPlan, terrain.id, x, y);
+      const regionThreshold = Math.max(0.12, placement.threshold - 0.32);
+      const texturedScore = regionScore + (noise - 0.5) * 0.3;
 
-      grid.set(x, y, noise >= placement.threshold);
+      grid.set(
+        x,
+        y,
+        regionScore > 0
+          ? texturedScore >= regionThreshold
+          : noise >= placement.threshold,
+      );
     }
   }
 }

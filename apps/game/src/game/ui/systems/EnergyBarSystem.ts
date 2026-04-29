@@ -1,12 +1,21 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
+import { BiomeRegionAwareness } from "../../biome/components/BiomeRegionAwareness";
 import { Energy } from "../../energy/components/Energy";
+import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { EnergyBar } from "../components/EnergyBar";
 
 export class EnergyBarSystem implements System {
   update(world: World): void {
     const actionLog = world.query(ActionLog)[0]?.[1];
+    const regionAwareness = world.query(
+      PlayerControlled,
+      BiomeRegionAwareness,
+    )[0]?.[2];
+    const regionLine = regionAwareness?.currentRegionLabel
+      ? `Region ${regionAwareness.currentRegionLabel}\n`
+      : "";
 
     for (const [, energy, bar] of world.query(Energy, EnergyBar)) {
       const ratio = energy.max === 0 ? 0 : energy.current / energy.max;
@@ -24,7 +33,7 @@ export class EnergyBarSystem implements System {
       bar.label.setScale(scale);
       bar.fill.width = fillWidth;
       bar.label.setText(
-        `Energy ${Math.round(energy.current)} / ${energy.max}\n${actionLog?.lastMessage ?? ""}`,
+        `${regionLine}Energy ${Math.round(energy.current)} / ${energy.max}\n${actionLog?.lastMessage ?? ""}`,
       );
 
       if (ratio > 0.55) {

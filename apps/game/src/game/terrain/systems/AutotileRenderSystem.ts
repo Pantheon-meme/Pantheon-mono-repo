@@ -7,13 +7,14 @@ import {
   blobTextureKey,
 } from "../autotile/BlobAutotile";
 import { AutotileLayer } from "../components/AutotileLayer";
-import { parseCellKey, TerrainGrid } from "../components/TerrainGrid";
+import { TerrainGrid } from "../components/TerrainGrid";
 
 type NeighborMask = {
   mask: number;
 };
 
 const filledTileMask = 255;
+const renderBufferTiles = 3;
 
 export class AutotileRenderSystem implements System {
   private readonly atlasSlots = buildBlobAtlasSlotLookup();
@@ -25,28 +26,40 @@ export class AutotileRenderSystem implements System {
     for (const [, grid, layer] of world.query(TerrainGrid, AutotileLayer)) {
       this.ensureTileTextures(layer);
 
-      if (layer.renderedVersion === grid.version) {
+      const window = getCameraTileWindow(this.scene.cameras.main, grid);
+      const windowKey = `${window.minX},${window.minY},${window.maxX},${window.maxY}`;
+
+      if (
+        layer.renderedVersion === grid.version &&
+        layer.renderedWindowKey === windowKey
+      ) {
         continue;
       }
 
       layer.container.removeAll(true);
 
-      for (const key of grid.cells) {
-        const { x, y } = parseCellKey(key);
-        const { mask } = getNeighborMask(grid, x, y);
-        const textureKey =
-          mask === filledTileMask
-            ? getCenterTextureKey(this.scene, layer.texturePrefix, x, y)
-            : blobTextureKey(layer.texturePrefix, mask);
-        const sprite = this.scene.add
-          .image(x * grid.tileSize, y * grid.tileSize, textureKey)
-          .setOrigin(0)
-          .setDisplaySize(grid.tileSize, grid.tileSize);
+      for (let y = window.minY; y <= window.maxY; y += 1) {
+        for (let x = window.minX; x <= window.maxX; x += 1) {
+          if (!grid.has(x, y)) {
+            continue;
+          }
 
-        layer.container.add(sprite);
+          const { mask } = getNeighborMask(grid, x, y);
+          const textureKey =
+            mask === filledTileMask
+              ? getCenterTextureKey(this.scene, layer.texturePrefix, x, y)
+              : blobTextureKey(layer.texturePrefix, mask);
+          const sprite = this.scene.add
+            .image(x * grid.tileSize, y * grid.tileSize, textureKey)
+            .setOrigin(0)
+            .setDisplaySize(grid.tileSize, grid.tileSize);
+
+          layer.container.add(sprite);
+        }
       }
 
       layer.renderedVersion = grid.version;
+      layer.renderedWindowKey = windowKey;
     }
   }
 
@@ -167,6 +180,37 @@ export class AutotileRenderSystem implements System {
       this.scene.textures.addCanvas(textureKey, canvas);
     }
   }
+}
+
+type CameraTileWindow = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
+
+export function getCameraTileWindow(
+  camera: Phaser.Cameras.Scene2D.Camera,
+  grid: TerrainGrid,
+): CameraTileWindow {
+  const minX = Math.max(
+    0,
+    Math.floor(camera.worldView.x / grid.tileSize) - renderBufferTiles,
+  );
+  const minY = Math.max(
+    0,
+    Math.floor(camera.worldView.y / grid.tileSize) - renderBufferTiles,
+  );
+  const maxX = Math.min(
+    grid.width - 1,
+    Math.ceil(camera.worldView.right / grid.tileSize) + renderBufferTiles,
+  );
+  const maxY = Math.min(
+    grid.height - 1,
+    Math.ceil(camera.worldView.bottom / grid.tileSize) + renderBufferTiles,
+  );
+
+  return { minX, minY, maxX, maxY };
 }
 
 export function getCenterTextureKey(
