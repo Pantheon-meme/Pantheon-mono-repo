@@ -26,6 +26,37 @@ export default defineWorld({
       },
       key: ["x", "y"],
     },
+    TerrainAdmin: {
+      schema: {
+        id: "bytes32",
+        admin: "address",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
+    TerrainType: {
+      schema: {
+        terrainId: "bytes32",
+        walkable: "bool",
+        diggable: "bool",
+        plantable: "bool",
+        sleepModifier: "uint32",
+        moveCost: "uint32",
+        exists: "bool",
+        label: "string",
+      },
+      key: ["terrainId"],
+    },
+    TerrainTile: {
+      schema: {
+        x: "int32",
+        y: "int32",
+        terrainId: "bytes32",
+        biomeId: "bytes32",
+        exists: "bool",
+      },
+      key: ["x", "y"],
+    },
     PlantState: {
       schema: {
         x: "int32",

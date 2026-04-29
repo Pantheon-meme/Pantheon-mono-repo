@@ -22,6 +22,15 @@ library PantheonConstants {
   bytes32 internal constant ACTION_PLANT = bytes32("plant");
   bytes32 internal constant ACTION_SLEEP = bytes32("sleep");
   bytes32 internal constant ACTION_SPAWN = bytes32("spawn");
+  bytes32 internal constant TERRAIN_ADMIN_ID = bytes32("terrainAdmin");
   bytes32 internal constant TERRAIN_DIRT = bytes32("dirt");
+  bytes32 internal constant TERRAIN_FOREST_FLOOR = bytes32("forest-floor");
+  bytes32 internal constant TERRAIN_GRASS = bytes32("grass");
+  bytes32 internal constant TERRAIN_PATH = bytes32("path");
+  bytes32 internal constant TERRAIN_PLAIN = bytes32("plain");
+  bytes32 internal constant TERRAIN_SAND = bytes32("sand");
+  bytes32 internal constant TERRAIN_STONE = bytes32("stone");
+  bytes32 internal constant TERRAIN_SWAMP = bytes32("swamp");
+  bytes32 internal constant TERRAIN_WATER = bytes32("water");
   bytes32 internal constant WORLD_TIME_ID = bytes32("world");
 }

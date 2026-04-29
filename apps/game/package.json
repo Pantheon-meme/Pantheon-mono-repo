@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
+    "export-terrain-seed": "../../packages/assets/node_modules/.bin/tsx scripts/export-terrain-seed.ts",
+    "seed-terrain": "../../packages/assets/node_modules/.bin/tsx scripts/seed-terrain.ts",
     "lint": "tsc --noEmit",
     "test": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
