@@ -86,6 +86,6 @@ export function registerSystems(
   world.addSystem(new ActionProgressBarSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new HandHudSystem());
-  world.addSystem(new EnergyBarSystem());
+  world.addSystem(new EnergyBarSystem(biome));
   world.addSystem(new WeightDisplaySystem(weightLabel));
 }

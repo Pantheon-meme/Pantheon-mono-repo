@@ -152,7 +152,7 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-    this.cameras.main.setZoom(freeExplore ? 0.7 : 0.7);
+    this.cameras.main.setZoom(freeExplore ? 0.37 : 0.7);
     this.cameras.main.startFollow(playerSprite, true, 0.12, 0.12);
 
     world.addComponent(baseTerrain, TerrainGrid, baseGrid);
