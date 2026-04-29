@@ -15,6 +15,7 @@ const gameAutotileAtlases = [
   "water",
 ] as const;
 const atlasFileName = "autotile-blob-7x7.png";
+const centerVariantsFileName = "center-variants-4x4.png";
 
 const currentFilePath = fileURLToPath(import.meta.url);
 const packageRoot = path.resolve(path.dirname(currentFilePath), "..");
@@ -33,11 +34,28 @@ async function publishGameAssets(): Promise<void> {
     await fs.mkdir(path.dirname(destinationPath), { recursive: true });
     await fs.copyFile(sourcePath, destinationPath);
     copiedAssets.push(path.relative(repoRoot, destinationPath));
+
+    const centerVariantsSourcePath = path.join(generatedAutotileRoot, atlasName, centerVariantsFileName);
+    const centerVariantsDestinationPath = path.join(gameAutotileRoot, atlasName, centerVariantsFileName);
+
+    if (await fileExists(centerVariantsSourcePath)) {
+      await fs.copyFile(centerVariantsSourcePath, centerVariantsDestinationPath);
+      copiedAssets.push(path.relative(repoRoot, centerVariantsDestinationPath));
+    }
   }
 
   console.log(`Published ${copiedAssets.length} game asset(s):`);
   for (const copiedAsset of copiedAssets) {
     console.log(`- ${copiedAsset}`);
+  }
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    const stats = await fs.stat(filePath);
+    return stats.isFile();
+  } catch {
+    return false;
   }
 }
 

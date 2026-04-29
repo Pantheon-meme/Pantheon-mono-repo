@@ -112,14 +112,32 @@ export class AutotileRenderSystem implements System {
       return;
     }
 
+    const expectedWidth = layer.sourceTileSize * layer.centerVariantColumns;
+    const expectedHeight = layer.sourceTileSize * layer.centerVariantRows;
     const source = this.scene.textures
       .get(layer.centerVariantAtlasKey)
       .getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+
+    if (
+      !source ||
+      source.width < expectedWidth ||
+      source.height < expectedHeight
+    ) {
+      console.warn(
+        `[terrain] Skipping center variants for ${layer.texturePrefix}; expected ${expectedWidth}x${expectedHeight}, got ${source?.width ?? 0}x${source?.height ?? 0}.`,
+      );
+      return;
+    }
+
     const variantCount = layer.centerVariantColumns * layer.centerVariantRows;
 
     for (let variant = 0; variant < variantCount; variant += 1) {
       const column = variant % layer.centerVariantColumns;
       const row = Math.floor(variant / layer.centerVariantColumns);
+      const textureKey = blobCenterVariantTextureKey(
+        layer.texturePrefix,
+        variant,
+      );
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -141,10 +159,12 @@ export class AutotileRenderSystem implements System {
         layer.sourceTileSize,
         layer.sourceTileSize,
       );
-      this.scene.textures.addCanvas(
-        blobCenterVariantTextureKey(layer.texturePrefix, variant),
-        canvas,
-      );
+
+      if (this.scene.textures.exists(textureKey)) {
+        this.scene.textures.remove(textureKey);
+      }
+
+      this.scene.textures.addCanvas(textureKey, canvas);
     }
   }
 }
