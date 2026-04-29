@@ -2,6 +2,7 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
+import { FreeExploreMode } from "../../player/components/FreeExploreMode";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { MovementState } from "../../player/components/MovementState";
 import { Position } from "../../shared/components/Position";
@@ -39,6 +40,13 @@ export class MudHydrationSystem implements System {
     }
 
     const [entity, , position, energy, movement] = player;
+
+    if (world.getComponent(entity, FreeExploreMode)) {
+      this.completed = true;
+      this.writeLog(world, entity, "Explore: local movement enabled");
+      return;
+    }
+
     this.requested = true;
 
     void mud.bridge.readPlayerSnapshot().then((snapshot) => {

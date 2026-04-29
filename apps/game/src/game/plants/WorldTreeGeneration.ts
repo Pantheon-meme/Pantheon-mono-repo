@@ -21,6 +21,7 @@ type WorldTreeGenerationOptions = {
   spawnTileX: number;
   spawnTileY: number;
   spawnClearingRadius?: number;
+  treePlantIds?: string[];
 };
 
 const groveCount = 18;
@@ -35,8 +36,13 @@ export function seedWorldTrees(
   dirtGrid: TerrainGrid,
   options: WorldTreeGenerationOptions,
 ): void {
+  const allowedTreePlantIds = options.treePlantIds
+    ? new Set(options.treePlantIds)
+    : undefined;
   const treeDefinitions = Object.values(plantDefinitions).filter(
-    (definition) => definition.kind === "tree",
+    (definition) =>
+      definition.kind === "tree" &&
+      (!allowedTreePlantIds || allowedTreePlantIds.has(definition.id)),
   );
 
   if (treeDefinitions.length === 0) {

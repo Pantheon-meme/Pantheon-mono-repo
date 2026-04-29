@@ -2,7 +2,18 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const gameAutotileAtlases = ["dirt", "vibrant-grass", "water"] as const;
+const gameAutotileAtlases = [
+  "dirt",
+  "uniswap-fee-tier-moss",
+  "uniswap-governance-stone",
+  "uniswap-liquidity-pool",
+  "uniswap-oracle-glass",
+  "uniswap-route-silk",
+  "uniswap-swapstone-dust",
+  "uniswap-v3-clover",
+  "vibrant-grass",
+  "water",
+] as const;
 const atlasFileName = "autotile-blob-7x7.png";
 
 const currentFilePath = fileURLToPath(import.meta.url);

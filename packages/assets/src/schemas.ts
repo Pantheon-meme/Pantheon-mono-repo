@@ -82,7 +82,7 @@ export const autotileRequestSchema = z.object({
     )
     .optional(),
   outputDir: z.string().default("generated/autotiles"),
-  concurrency: z.number().int().min(1).max(4).default(4),
+  concurrency: z.number().int().min(1).max(5).default(4),
 });
 
 export const autotileSegmentSchema = z.object({

@@ -1,8 +1,15 @@
 import Phaser from "phaser";
-import dirtAtlasUrl from "../assets/autotiles/dirt/autotile-blob-7x7.png?url";
-import grassAtlasUrl from "../assets/autotiles/vibrant-grass/autotile-blob-7x7.png?url";
+import {
+  terrainAtlasAssets,
+  terrainAtlasTextureKey,
+} from "../assets/autotiles/TerrainAtlasAssets";
 import { objectSpriteAssets } from "../assets/object-sprites/ObjectSpriteAssets";
 import { World } from "../ecs/World";
+import {
+  getActiveBiome,
+  getBiomeTerrain,
+} from "../game/biome/BiomeDefinitions";
+import { seedBiomeTerrainGrid } from "../game/biome/BiomeTerrainGeneration";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
 import { registerSystems } from "../game/bootstrap/registerSystems";
 import { ActionBindings } from "../game/actions/components/ActionBindings";
@@ -17,6 +24,7 @@ import { EnergyBar } from "../game/ui/components/EnergyBar";
 import { FacingDirection } from "../game/player/components/FacingDirection";
 import { Footprint } from "../game/shared/components/Footprint";
 import { FocusTarget } from "../game/player/components/FocusTarget";
+import { FreeExploreMode } from "../game/player/components/FreeExploreMode";
 import { GameClock } from "../game/time/components/GameClock";
 import { Grabbable } from "../game/shared/components/Grabbable";
 import { HandHud } from "../game/ui/components/HandHud";
@@ -60,14 +68,14 @@ import {
   playerSpriteTextureKey,
 } from "../game/player/PlayerSpriteAssets";
 
-const grassAtlasKey = "main-vibrant-grass-blob-7x7";
-const dirtAtlasKey = "main-dirt-blob-7x7";
 const tileSize = 256;
 const gridWidth = 200;
 const gridHeight = 200;
 const worldWidth = gridWidth * tileSize;
 const worldHeight = gridHeight * tileSize;
 const seedDropWeight = 0.02;
+const terrainLayerDepthBase = 2;
+const terrainLayerDepthStep = 0.1;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
@@ -77,8 +85,9 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image(grassAtlasKey, grassAtlasUrl);
-    this.load.image(dirtAtlasKey, dirtAtlasUrl);
+    for (const atlas of Object.values(terrainAtlasAssets)) {
+      this.load.image(terrainAtlasTextureKey(atlas.id), atlas.imageUrl);
+    }
 
     for (const [plantId, asset] of Object.entries(objectSpriteAssets)) {
       this.load.spritesheet(plantSpriteTextureKey(plantId), asset.imageUrl, {
@@ -89,11 +98,15 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   create(): void {
+    const biome = getActiveBiome();
+    const backgroundTerrainDefinition = getBiomeTerrain(
+      biome,
+      biome.backgroundTerrainId,
+    );
+    const digTerrainDefinition = getBiomeTerrain(biome, biome.digTerrainId);
     const world = new World();
     const baseTerrain = world.createEntity();
     const backgroundTerrain = world.createEntity();
-    const atlasWarmupTerrain = world.createEntity();
-    const dirtTerrain = world.createEntity();
     const diggingTerrain = world.createEntity();
     const mudWorld = world.createEntity();
     const time = world.createEntity();
@@ -105,7 +118,6 @@ export class MainGameScene extends Phaser.Scene {
     const targetActionMenu = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
-    const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const dirtGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const spawnX = worldWidth / 2;
     const spawnY = worldHeight / 2;
@@ -121,6 +133,7 @@ export class MainGameScene extends Phaser.Scene {
     const targetActionMenuDisplay = this.createTargetActionMenu();
     const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
+    const freeExplore = isFreeExploreMode();
 
     needs.addNeed({
       id: "carry_more",
@@ -132,7 +145,7 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-    this.cameras.main.setZoom(0.7);
+    this.cameras.main.setZoom(freeExplore ? 0.38 : 0.7);
     this.cameras.main.startFollow(playerSprite, true, 0.12, 0.12);
 
     world.addComponent(baseTerrain, TerrainGrid, baseGrid);
@@ -141,9 +154,9 @@ export class MainGameScene extends Phaser.Scene {
       TerrainBaseLayer,
       new TerrainBaseLayer(
         this.add.graphics().setDepth(0),
-        0x496f50,
-        0x547a59,
-        0x213d2a,
+        biome.baseLayer.baseColor,
+        biome.baseLayer.variantColor,
+        biome.baseLayer.shadowColor,
       ),
     );
 
@@ -153,35 +166,71 @@ export class MainGameScene extends Phaser.Scene {
       TerrainBackground,
       new TerrainBackground(
         this.add.container(0, 0).setDepth(1),
-        ["vibrant-grass"],
-        "vibrant-grass",
+        biome.terrains.map((terrain) => terrain.texturePrefix),
+        backgroundTerrainDefinition.texturePrefix,
       ),
     );
 
-    world.addComponent(atlasWarmupTerrain, TerrainGrid, warmupGrid);
-    world.addComponent(
-      atlasWarmupTerrain,
-      AutotileLayer,
-      new AutotileLayer(
-        this.add.container(0, 0).setDepth(-1),
-        grassAtlasKey,
-        "vibrant-grass",
-        blobAtlasCellSize,
-      ),
-    );
+    for (const terrainDefinition of biome.terrains) {
+      const atlasWarmupTerrain = world.createEntity();
+      const warmupGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
 
-    world.addComponent(dirtTerrain, TerrainGrid, dirtGrid);
-    world.addComponent(dirtTerrain, TerrainLayer, new TerrainLayer("dirt", 20));
-    world.addComponent(
-      dirtTerrain,
-      AutotileLayer,
-      new AutotileLayer(
-        this.add.container(0, 0).setDepth(2),
-        dirtAtlasKey,
-        "main-dirt",
-        blobAtlasCellSize,
-      ),
-    );
+      world.addComponent(atlasWarmupTerrain, TerrainGrid, warmupGrid);
+      world.addComponent(
+        atlasWarmupTerrain,
+        AutotileLayer,
+        new AutotileLayer(
+          this.add.container(0, 0).setDepth(-1),
+          terrainAtlasTextureKey(terrainDefinition.atlasId),
+          terrainDefinition.texturePrefix,
+          blobAtlasCellSize,
+        ),
+      );
+    }
+
+    const visibleTerrainDefinitions = biome.terrains
+      .filter((terrain) => terrain.placement.kind !== "background")
+      .sort((a, b) => a.stackOrder - b.stackOrder);
+
+    visibleTerrainDefinitions.forEach((terrainDefinition, terrainIndex) => {
+      if (terrainDefinition.placement.kind === "background") {
+        return;
+      }
+
+      const terrain = world.createEntity();
+      const terrainGrid =
+        terrainDefinition.id === digTerrainDefinition.id
+          ? dirtGrid
+          : new TerrainGrid(gridWidth, gridHeight, tileSize);
+
+      seedBiomeTerrainGrid(
+        terrainGrid,
+        biome,
+        terrainDefinition,
+        Math.floor(spawnX / tileSize),
+        Math.floor(spawnY / tileSize),
+      );
+      world.addComponent(terrain, TerrainGrid, terrainGrid);
+      world.addComponent(
+        terrain,
+        TerrainLayer,
+        new TerrainLayer(terrainDefinition.id, terrainDefinition.stackOrder),
+      );
+      world.addComponent(
+        terrain,
+        AutotileLayer,
+        new AutotileLayer(
+          this.add
+            .container(0, 0)
+            .setDepth(
+              terrainLayerDepthBase + terrainIndex * terrainLayerDepthStep,
+            ),
+          terrainAtlasTextureKey(terrainDefinition.atlasId),
+          terrainDefinition.texturePrefix,
+          blobAtlasCellSize,
+        ),
+      );
+    });
     world.addComponent(diggingTerrain, TerrainHardness, new TerrainHardness());
     world.addComponent(diggingTerrain, TerrainDigDepth, new TerrainDigDepth());
     world.addComponent(mudWorld, MudWorld, new MudWorld(MudWorldBridge.fromEnv()));
@@ -204,8 +253,15 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
     world.addComponent(player, FocusTarget, new FocusTarget());
     world.addComponent(player, Position, new Position(spawnX, spawnY));
-    world.addComponent(player, Velocity, new Velocity(0, 0, tileSize * 2.5));
+    world.addComponent(
+      player,
+      Velocity,
+      new Velocity(0, 0, tileSize * (freeExplore ? 7 : 2.5)),
+    );
     world.addComponent(player, Energy, new Energy(100, 100, 0));
+    if (freeExplore) {
+      world.addComponent(player, FreeExploreMode, new FreeExploreMode());
+    }
     world.addComponent(player, Hands, new Hands());
     world.addComponent(player, DiggingCapability, new DiggingCapability());
     world.addComponent(player, SeedPouch, new SeedPouch());
@@ -258,9 +314,11 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     seedWorldTrees(world, baseGrid, dirtGrid, {
-      seed: 872341,
+      seed: biome.worldGeneration.seed,
       spawnTileX: Math.floor(spawnX / tileSize),
       spawnTileY: Math.floor(spawnY / tileSize),
+      spawnClearingRadius: biome.worldGeneration.spawnClearingRadius,
+      treePlantIds: biome.worldGeneration.treePlantIds,
     });
 
     const keyboard = this.input.keyboard;
@@ -626,6 +684,20 @@ function shouldSpawnSeedTestRow(): boolean {
 
   const params = new URLSearchParams(window.location.search);
   const value = params.get("seedTest") ?? params.get("testSeeds");
+
+  return value === "1" || value === "true" || value === "on";
+}
+
+function isFreeExploreMode(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const value =
+    params.get("freeExplore") ??
+    params.get("freePlayer") ??
+    params.get("explore");
 
   return value === "1" || value === "true" || value === "on";
 }

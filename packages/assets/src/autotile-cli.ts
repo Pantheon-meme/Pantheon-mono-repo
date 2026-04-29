@@ -129,7 +129,7 @@ Options:
       --mask-dir <dir>      Directory containing the autotile mask PNGs. Default: masks.
       --mask <id>           Generate only one mask: left-top, right-top-a, right-top-b, left-bottom, right-bottom.
                              Can be provided more than once.
-      --concurrency <n>     Parallel image mask requests, 1-4. Default: 4.
+      --concurrency <n>     Parallel image mask requests, 1-5. Default: 4.
   -o, --out <dir>           Output directory. Default: generated/autotiles.
   -h, --help                Show this help.`);
 }

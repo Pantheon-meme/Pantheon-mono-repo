@@ -5,6 +5,7 @@ import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
 import { MudWorld } from "../../mud/components/MudWorld";
 import type { MudMoveCallbacks } from "../../mud/MudWorldBridge";
+import { FreeExploreMode } from "../components/FreeExploreMode";
 import { InputState } from "../components/InputState";
 import { MovementState } from "../components/MovementState";
 import { Position } from "../../shared/components/Position";
@@ -33,6 +34,11 @@ export class MovementSystem implements System {
       const movement = world.getComponent(entity, MovementState);
       const energy = world.getComponent(entity, Energy);
 
+      if (world.getComponent(entity, FreeExploreMode)) {
+        this.updateLocalMovement(position, velocity, input, deltaSeconds);
+        continue;
+      }
+
       if (grid && mud && movement && energy) {
         this.updateOnchainMovement(
           world,
@@ -49,14 +55,23 @@ export class MovementSystem implements System {
         continue;
       }
 
-      const direction = chooseOrthogonalDirection(input.directionX, input.directionY);
-
-      velocity.x = direction.x * velocity.maxSpeed;
-      velocity.y = direction.y * velocity.maxSpeed;
-
-      position.x += velocity.x * deltaSeconds;
-      position.y += velocity.y * deltaSeconds;
+      this.updateLocalMovement(position, velocity, input, deltaSeconds);
     }
+  }
+
+  private updateLocalMovement(
+    position: Position,
+    velocity: Velocity,
+    input: InputState,
+    deltaSeconds: number,
+  ): void {
+    const direction = chooseOrthogonalDirection(input.directionX, input.directionY);
+
+    velocity.x = direction.x * velocity.maxSpeed;
+    velocity.y = direction.y * velocity.maxSpeed;
+
+    position.x += velocity.x * deltaSeconds;
+    position.y += velocity.y * deltaSeconds;
   }
 
   private updateOnchainMovement(
