@@ -1,5 +1,19 @@
 # Agent Instructions
 
+## Verification Cost Rule
+
+Do not run heavyweight build commands by default. Prefer the narrowest useful
+check for the files changed, such as package-local `tsc --noEmit`, focused
+tests, or lint/typecheck commands that do not bundle or install production
+artifacts.
+
+Only run full builds, production bundles, long-running generation tasks, or
+commands that may install/download dependencies when they are absolutely
+necessary to validate the work, or when the user explicitly asks for them.
+If a build starts doing dependency installation, network fetches, or other
+slow setup unrelated to the code change, stop and report the lighter
+verification that was completed instead.
+
 ## MUD System Migration Rule
 
 When migrating any Phaser gameplay system or action into MUD, treat the MUD
