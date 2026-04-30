@@ -65,7 +65,7 @@ export class MovementSystem implements System {
     input: InputState,
     deltaSeconds: number,
   ): void {
-    const direction = chooseOrthogonalDirection(input.directionX, input.directionY);
+    const direction = getMovementDirection(input.directionX, input.directionY);
 
     velocity.x = direction.x * velocity.maxSpeed;
     velocity.y = direction.y * velocity.maxSpeed;
@@ -89,7 +89,7 @@ export class MovementSystem implements System {
     movement.confirmedTileX ??= Math.floor(position.x / grid.tileSize);
     movement.confirmedTileY ??= Math.floor(position.y / grid.tileSize);
 
-    const direction = chooseOrthogonalDirection(input.directionX, input.directionY);
+    const direction = getMovementDirection(input.directionX, input.directionY);
 
     if (direction.x === 0 && direction.y === 0) {
       velocity.x = 0;
@@ -378,19 +378,19 @@ function buildOrthogonalPath(
   return [{ x: targetTileX, y: targetTileY }];
 }
 
-function chooseOrthogonalDirection(
+function getMovementDirection(
   directionX: number,
   directionY: number,
 ): { x: number; y: number } {
-  if (directionX === 0 && directionY === 0) {
+  const magnitude = Math.hypot(directionX, directionY);
+
+  if (magnitude === 0) {
     return { x: 0, y: 0 };
   }
 
-  if (Math.abs(directionX) >= Math.abs(directionY)) {
-    return { x: Math.sign(directionX), y: 0 };
-  }
+  const scale = magnitude > 1 ? 1 / magnitude : 1;
 
-  return { x: 0, y: Math.sign(directionY) };
+  return { x: directionX * scale, y: directionY * scale };
 }
 
 function clampTile(tile: number, size: number): number {
