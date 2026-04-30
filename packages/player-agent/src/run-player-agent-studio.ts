@@ -4,7 +4,7 @@ const mastraUrl = stripTrailingSlash(
 );
 const turnDelayMs = readIntegerEnv('PLAYER_AGENT_TURN_DELAY_MS', 5000);
 const maxTurns = readIntegerEnv('PLAYER_AGENT_MAX_TURNS', 0);
-const maxSteps = readIntegerEnv('PLAYER_AGENT_MAX_STEPS', 8);
+const maxSteps = readIntegerEnv('PLAYER_AGENT_MAX_STEPS', 6);
 const threadId = process.env.PLAYER_AGENT_THREAD_ID ?? 'pantheon-autoplayer';
 const resourceId = process.env.PLAYER_AGENT_RESOURCE_ID ?? 'pantheon-player';
 
@@ -59,6 +59,7 @@ async function generateViaMastra(turn: number): Promise<MastraGenerateResponse> 
     body: JSON.stringify({
       messages: nextTurnPrompt(turn),
       maxSteps,
+      toolCallConcurrency: 1,
       memory: {
         thread: threadId,
         resource: resourceId,
@@ -95,15 +96,12 @@ function logToolActivity(response: MastraGenerateResponse) {
 }
 
 function nextTurnPrompt(turn: number): string {
-  return `Autonomous Pantheon turn ${turn}.
+  return `Autonomous Pantheon expedition ${turn}.
 
-Take exactly one useful game turn:
-- Read player state.
-- Spawn if missing.
-- Resolve ready pending actions before anything else.
-- If energy is low, start or wait on sleep.
-- Otherwise scan nearby lands, move toward the best forage opportunity, and forage when close enough.
-- Learn from forage results and explain the next intended move briefly.
+Choose one mid-term tactical batch, then execute it with run-forage-expedition.
+- Use primitive tools only if the batch result shows a specific blocker that needs inspection.
+- Prefer one batched call with radius 4-6, maxForages 3-6, and sleepWhenLowEnergy true.
+- Summarize resources gained, current energy/position, and the next strategic goal briefly.
 
 Do not ask me for input. Use tools to act.`;
 }

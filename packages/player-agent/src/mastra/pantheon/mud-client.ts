@@ -168,6 +168,42 @@ export type TerrainTileSnapshot = {
   observation: ReturnType<typeof getForageObservation>;
 };
 
+export type ForageExpeditionOptions = {
+  radius?: number;
+  maxForages?: number;
+  maxMoveStepsPerTarget?: number;
+  minEnergy?: number;
+  sleepWhenLowEnergy?: boolean;
+  spawnIfMissing?: boolean;
+};
+
+export type ForageExpeditionResult = {
+  status:
+    | 'completed'
+    | 'spawned'
+    | 'pending-action'
+    | 'low-energy'
+    | 'no-targets'
+    | 'blocked';
+  summary: string;
+  actions: string[];
+  forages: Array<{
+    x: number;
+    y: number;
+    terrainId?: string;
+    itemId: string;
+    amount: number;
+  }>;
+  tilesConsidered: number;
+  player?: PlayerSnapshot;
+  error?: string;
+  memory?: {
+    stored: boolean;
+    note?: string;
+    reason?: string;
+  };
+};
+
 export class PantheonMudClient {
   private readonly publicClient;
   private readonly walletClient;
@@ -385,6 +421,132 @@ export class PantheonMudClient {
     return tiles.sort((a, b) => b.expectedAmount - a.expectedAmount);
   }
 
+  async runForageExpedition(
+    options: ForageExpeditionOptions = {},
+  ): Promise<ForageExpeditionResult> {
+    const radius = clampInteger(options.radius ?? 5, 1, 8);
+    const maxForages = clampInteger(options.maxForages ?? 4, 1, 10);
+    const maxMoveStepsPerTarget = clampInteger(options.maxMoveStepsPerTarget ?? 8, 1, 16);
+    const minEnergy = clampInteger(options.minEnergy ?? 20, 0, 10_000);
+    const sleepWhenLowEnergy = options.sleepWhenLowEnergy ?? true;
+    const spawnIfMissing = options.spawnIfMissing ?? true;
+    const actions: string[] = [];
+    const forages: ForageExpeditionResult['forages'] = [];
+    let tilesConsidered = 0;
+    let player = await this.getPlayer();
+
+    try {
+      if (!player) {
+        if (!spawnIfMissing) {
+          return {
+            status: 'blocked',
+            summary: 'Player does not exist yet.',
+            actions,
+            forages,
+            tilesConsidered,
+          };
+        }
+
+        const spawned = await this.spawn();
+        actions.push(`spawn(${defaultSpawnX},${defaultSpawnY})`);
+        player = spawned.player;
+
+        return {
+          status: 'spawned',
+          summary: 'Spawned player; run another expedition after state is indexed.',
+          actions,
+          forages,
+          tilesConsidered,
+          player,
+        };
+      }
+
+      const pending = await this.resolveReadyPendingAction(player, actions);
+      if (pending.status === 'pending-action') {
+        return {
+          status: 'pending-action',
+          summary: pending.summary,
+          actions,
+          forages,
+          tilesConsidered,
+          player: pending.player,
+        };
+      }
+      player = pending.player;
+
+      for (let forageCount = 0; forageCount < maxForages; forageCount += 1) {
+        if (player.energy <= minEnergy) {
+          return await this.finishLowEnergyExpedition({
+            player,
+            actions,
+            forages,
+            tilesConsidered,
+            sleepWhenLowEnergy,
+            minEnergy,
+          });
+        }
+
+        const tiles = await this.scanNearby(radius);
+        tilesConsidered += tiles.length;
+        const target = chooseForageTarget(player, tiles, maxMoveStepsPerTarget);
+
+        if (!target) {
+          return {
+            status: forages.length > 0 ? 'completed' : 'no-targets',
+            summary:
+              forages.length > 0
+                ? `Foraged ${forages.length} tile(s); no more reachable productive targets.`
+                : 'No reachable productive forage targets found nearby.',
+            actions,
+            forages,
+            tilesConsidered,
+            player,
+          };
+        }
+
+        if (target.path.length > 0) {
+          await this.movePath(target.path);
+          actions.push(
+            `movePath(${target.path.map((step) => `${step.x},${step.y}`).join(' -> ')})`,
+          );
+          player = await this.requirePlayer();
+        }
+
+        const forage = await this.forage(target.tile.x, target.tile.y);
+        const itemId = forage.result.itemId;
+        const amount = Number(forage.result.amount);
+        actions.push(`forage(${target.tile.x},${target.tile.y})=${amount} ${itemId}`);
+        forages.push({
+          x: target.tile.x,
+          y: target.tile.y,
+          terrainId: target.tile.terrainId,
+          itemId,
+          amount,
+        });
+        player = forage.player ?? (await this.requirePlayer());
+      }
+
+      return {
+        status: 'completed',
+        summary: `Foraged ${forages.length} tile(s) in one batched expedition.`,
+        actions,
+        forages,
+        tilesConsidered,
+        player,
+      };
+    } catch (error) {
+      return {
+        status: 'blocked',
+        summary: `Expedition stopped: ${formatError(error)}`,
+        actions,
+        forages,
+        tilesConsidered,
+        player: await this.getPlayer(),
+        error: formatError(error),
+      };
+    }
+  }
+
   getKnownForageLands() {
     return terrainForageDefinitions
       .map((definition) => ({
@@ -406,6 +568,70 @@ export class PantheonMudClient {
     }
 
     return player;
+  }
+
+  private async resolveReadyPendingAction(
+    player: PlayerSnapshot,
+    actions: string[],
+  ): Promise<
+    | { status: 'ready' | 'none'; player: PlayerSnapshot }
+    | { status: 'pending-action'; player: PlayerSnapshot; summary: string }
+  > {
+    if (!player.pendingAction) {
+      return { status: 'none', player };
+    }
+
+    if (player.pendingAction.readyAt <= nowSeconds()) {
+      await this.resolveAction();
+      actions.push(`resolveAction(${player.pendingAction.action})`);
+
+      return { status: 'ready', player: await this.requirePlayer() };
+    }
+
+    return {
+      status: 'pending-action',
+      player,
+      summary: `${player.pendingAction.action} is pending until ${player.pendingAction.readyAt}.`,
+    };
+  }
+
+  private async finishLowEnergyExpedition({
+    player,
+    actions,
+    forages,
+    tilesConsidered,
+    sleepWhenLowEnergy,
+    minEnergy,
+  }: {
+    player: PlayerSnapshot;
+    actions: string[];
+    forages: ForageExpeditionResult['forages'];
+    tilesConsidered: number;
+    sleepWhenLowEnergy: boolean;
+    minEnergy: number;
+  }): Promise<ForageExpeditionResult> {
+    if (!sleepWhenLowEnergy || player.pendingAction) {
+      return {
+        status: 'low-energy',
+        summary: `Energy ${player.energy} is at or below minimum ${minEnergy}.`,
+        actions,
+        forages,
+        tilesConsidered,
+        player,
+      };
+    }
+
+    await this.sleep();
+    actions.push('sleep()');
+
+    return {
+      status: 'low-energy',
+      summary: `Energy ${player.energy} is low; started sleep after ${forages.length} forage(s).`,
+      actions,
+      forages,
+      tilesConsidered,
+      player: await this.getPlayer(),
+    };
   }
 
   private async getTerrainTile(
@@ -545,6 +771,75 @@ function makeManhattanPath(
   return path;
 }
 
+function chooseForageTarget(
+  player: PlayerSnapshot,
+  tiles: TerrainTileSnapshot[],
+  maxMoveSteps: number,
+): { tile: TerrainTileSnapshot; path: Array<{ x: number; y: number }> } | undefined {
+  return tiles
+    .filter((tile) => tile.forageable && !tile.recovering && tile.expectedAmount > 0)
+    .map((tile) => {
+      const path = makePathIntoForageRange(player, tile, maxMoveSteps);
+
+      return path ? { tile, path } : undefined;
+    })
+    .filter((target): target is { tile: TerrainTileSnapshot; path: Array<{ x: number; y: number }> } =>
+      Boolean(target),
+    )
+    .sort((a, b) => {
+      const expectedDelta = b.tile.expectedAmount - a.tile.expectedAmount;
+      if (expectedDelta !== 0) return expectedDelta;
+
+      return a.path.length - b.path.length;
+    })[0];
+}
+
+function makePathIntoForageRange(
+  player: PlayerSnapshot,
+  tile: TerrainTileSnapshot,
+  maxMoveSteps: number,
+): Array<{ x: number; y: number }> | undefined {
+  const distance = manhattanDistance(player.x, player.y, tile.x, tile.y);
+
+  if (distance <= 1) {
+    return [];
+  }
+
+  const endpoints = [
+    { x: tile.x, y: tile.y },
+    { x: tile.x + 1, y: tile.y },
+    { x: tile.x - 1, y: tile.y },
+    { x: tile.x, y: tile.y + 1 },
+    { x: tile.x, y: tile.y - 1 },
+  ]
+    .map((endpoint) => ({
+      endpoint,
+      distance: manhattanDistance(player.x, player.y, endpoint.x, endpoint.y),
+    }))
+    .sort((a, b) => a.distance - b.distance);
+
+  for (const { endpoint } of endpoints) {
+    const path = makeManhattanPath(player.x, player.y, endpoint.x, endpoint.y, maxMoveSteps);
+    const lastStep = path[path.length - 1] ?? { x: player.x, y: player.y };
+
+    if (manhattanDistance(lastStep.x, lastStep.y, tile.x, tile.y) <= 1) {
+      return path;
+    }
+  }
+
+  return undefined;
+}
+
+function manhattanDistance(startX: number, startY: number, targetX: number, targetY: number): number {
+  return Math.abs(startX - targetX) + Math.abs(startY - targetY);
+}
+
+function clampInteger(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+
+  return Math.max(min, Math.min(max, Math.trunc(value)));
+}
+
 function addressToBytes32(address: Hex): Hex {
   return `0x${address.slice(2).padStart(64, '0')}`;
 }
@@ -581,6 +876,14 @@ function decodeBytes32String(value: Hex): string {
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
 
 export function bytes32(value: string): Hex {

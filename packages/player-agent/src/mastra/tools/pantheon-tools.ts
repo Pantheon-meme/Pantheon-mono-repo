@@ -1,5 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
+import { rememberForageExpedition } from '../agents/player-memory';
 import { makePantheonMudClient } from '../pantheon/mud-client';
 
 const client = makePantheonMudClient();
@@ -41,6 +42,48 @@ export const scanNearbyLandsTool = createTool({
     tiles: await client.scanNearby(radius ?? 4),
     knownForageLands: client.getKnownForageLands(),
   }),
+});
+
+export const runForageExpeditionTool = createTool({
+  id: 'run-forage-expedition',
+  description:
+    'Run a batched Pantheon forage expedition without extra LLM calls: resolve ready actions, scan, choose productive nearby forage tiles, move paths, forage several targets, and optionally start sleep when energy is low.',
+  inputSchema: z.object({
+    radius: z.number().int().min(1).max(8).default(5),
+    maxForages: z.number().int().min(1).max(10).default(4),
+    maxMoveStepsPerTarget: z.number().int().min(1).max(16).default(8),
+    minEnergy: z.number().int().min(0).default(20),
+    sleepWhenLowEnergy: z.boolean().default(true),
+    spawnIfMissing: z.boolean().default(true),
+  }),
+  outputSchema: z.unknown(),
+  execute: async (
+    {
+      radius,
+      maxForages,
+      maxMoveStepsPerTarget,
+      minEnergy,
+      sleepWhenLowEnergy,
+      spawnIfMissing,
+    },
+    context,
+  ) => {
+    const result = await client.runForageExpedition({
+      radius,
+      maxForages,
+      maxMoveStepsPerTarget,
+      minEnergy,
+      sleepWhenLowEnergy,
+      spawnIfMissing,
+    });
+
+    result.memory = await rememberForageExpedition(result, {
+      threadId: context.agent?.threadId,
+      resourceId: context.agent?.resourceId,
+    });
+
+    return result;
+  },
 });
 
 export const movePlayerTool = createTool({
@@ -98,6 +141,7 @@ export const pantheonTools = {
   getPlayerStateTool,
   spawnPlayerTool,
   scanNearbyLandsTool,
+  runForageExpeditionTool,
   movePlayerTool,
   moveTowardTool,
   forageTileTool,
