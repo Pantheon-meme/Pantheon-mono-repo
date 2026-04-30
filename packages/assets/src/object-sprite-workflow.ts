@@ -293,6 +293,17 @@ function buildColumnBehaviorPrompt(request: ObjectSpriteRequest): string[] {
     ];
   }
 
+  if (request.spriteKind === "object-batch") {
+    return [
+      "This is a batch sheet of separate static world props, not animation frames.",
+      "Each cell must contain the specific prop named by its row and column.",
+      "Do not evolve, transform, or animate objects across columns.",
+      "Keep perspective, lighting, palette, shadow softness, and scale language consistent across all cells.",
+      "Small props may leave more transparent space inside their cell; large landmarks should still fit fully inside their cell.",
+      "Every prop must be isolated on a transparent background and usable as an independent in-world object.",
+    ];
+  }
+
   return [
     "Within each row, columns should be coherent frames or variants for that same state, not different unrelated designs.",
     "Frame-to-frame changes should be readable but modest, suitable for stepping through in a 2D game.",

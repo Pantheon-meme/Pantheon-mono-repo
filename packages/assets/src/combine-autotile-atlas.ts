@@ -66,9 +66,9 @@ Options:
 
 Current layout:
   - left-top: 4x4, copied to output columns 1-4 and rows 1-4.
-  - right-top-a: 3x3, copied to output columns 5-7 and rows 1-3.
-  - right-top-b: 3x3, center row only, copied to output columns 5-7 and row 4.
+  - right-top-a: 3x3 embedded in a 4x4 sheet with an empty left column; copied from columns 2-4 and rows 1-3 to output columns 5-7 and rows 1-3.
+  - right-top-b: 3x3 embedded in a 4x4 sheet with an empty left column; copied from columns 2-4 and row 2 to output columns 5-7 and row 4.
   - left-bottom: 4x4, last row dropped, copied to output columns 1-4 and rows 5-7.
-  - right-bottom: 3x3, copied to output columns 5-7 and rows 5-7.
+  - right-bottom: 3x3 embedded in a 4x4 sheet with an empty left column and top row; copied from columns 2-4 and rows 2-4 to output columns 5-7 and rows 5-7.
 `);
 }

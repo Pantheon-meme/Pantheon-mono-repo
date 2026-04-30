@@ -1,9 +1,10 @@
 import Phaser from "phaser";
 
-export type TerrainBackgroundMode = "flat" | "dirt" | "vibrant-grass" | "water";
+export type TerrainBackgroundMode = "flat" | string;
 
 export class TerrainBackground {
   renderedVersion = -1;
+  renderedWindowKey = "";
 
   constructor(
     public readonly container: Phaser.GameObjects.Container,

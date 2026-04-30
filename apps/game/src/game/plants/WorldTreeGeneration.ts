@@ -1,5 +1,16 @@
 import type { World } from "../../ecs/World";
 import { createPlantEntity } from "../actions/ActionHelpers";
+import type { BiomeDefinition, BiomeRegionDefinition } from "../biome/BiomeDefinitions";
+import {
+  createBiomeRegionPlan,
+  getDominantRegion,
+} from "../biome/BiomeRegionGeneration";
+import {
+  getSurfaceTreePlacementChance,
+  isTreeAllowedOnSurface,
+  surfaceMatchesTerrainIds,
+  type BiomeSurfacePlan,
+} from "../biome/BiomeSurfacePlan";
 import type { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { PlantState, type PlantStage } from "./components/PlantState";
 import {
@@ -21,6 +32,10 @@ type WorldTreeGenerationOptions = {
   spawnTileX: number;
   spawnTileY: number;
   spawnClearingRadius?: number;
+  treePlantIds?: string[];
+  biome?: BiomeDefinition;
+  terrainGrids?: ReadonlyMap<string, TerrainGrid>;
+  surfacePlan?: BiomeSurfacePlan;
 };
 
 const groveCount = 18;
@@ -35,8 +50,13 @@ export function seedWorldTrees(
   dirtGrid: TerrainGrid,
   options: WorldTreeGenerationOptions,
 ): void {
+  const allowedTreePlantIds = options.treePlantIds
+    ? new Set(options.treePlantIds)
+    : undefined;
   const treeDefinitions = Object.values(plantDefinitions).filter(
-    (definition) => definition.kind === "tree",
+    (definition) =>
+      definition.kind === "tree" &&
+      (!allowedTreePlantIds || allowedTreePlantIds.has(definition.id)),
   );
 
   if (treeDefinitions.length === 0) {
@@ -45,6 +65,9 @@ export function seedWorldTrees(
 
   const random = createMulberry32(options.seed);
   const groves = createGroves(grassGrid, treeDefinitions, random);
+  const regionPlan = options.biome
+    ? createBiomeRegionPlan(grassGrid, options.biome)
+    : undefined;
   const occupied = new Set<string>();
   const spawnClearingRadius =
     options.spawnClearingRadius ?? spawnClearingRadiusDefault;
@@ -60,6 +83,7 @@ export function seedWorldTrees(
           options.spawnTileY,
           spawnClearingRadius,
         ) ||
+        !isTreeAllowedOnSurface(options.surfacePlan, x, y) ||
         isTooCloseToTree(x, y, occupied)
       ) {
         continue;
@@ -68,17 +92,60 @@ export function seedWorldTrees(
       const grove = pickDominantGrove(x, y, groves);
       const noise = octaveValueNoise(x, y, options.seed);
       const wildChance = noise > 0.76 ? sparseWildChance : 0;
-      const placeChance = grove
+      const groveChance = grove
         ? grove.density * groveFalloff(x, y, grove) * (0.48 + noise * 0.92)
         : wildChance;
+      const surfaceChance = getSurfaceTreePlacementChance(
+        options.surfacePlan,
+        x,
+        y,
+      );
+      const placeChance =
+        surfaceChance === undefined
+          ? groveChance
+          : Math.max(groveChance, surfaceChance * (0.55 + noise * 0.65));
 
       if (random() > placeChance) {
         continue;
       }
 
-      const species = grove
-        ? pickGroveSpecies(grove, x, y, options.seed, random)
-        : pickRandom(treeDefinitions, random);
+      const region = regionPlan
+        ? getDominantRegion(regionPlan, x, y)
+        : undefined;
+      const regionTreeDefinitions = getRegionTreeDefinitions(
+        region?.definition,
+        treeDefinitions,
+        x,
+        y,
+        options.terrainGrids,
+        options.surfacePlan,
+      );
+      if (region && regionTreeDefinitions.length === 0) {
+        continue;
+      }
+      const speciesPool =
+        regionTreeDefinitions.length > 0 ? regionTreeDefinitions : treeDefinitions;
+      const regionGrove = grove ? { ...grove, species: speciesPool } : undefined;
+      const species = regionGrove
+        ? pickGroveSpecies(
+            regionGrove,
+            x,
+            y,
+            options.seed,
+            random,
+            region?.definition,
+            options.terrainGrids,
+            options.surfacePlan,
+          )
+        : pickRegionWeightedSpecies(
+            speciesPool,
+            region?.definition,
+            x,
+            y,
+            options.terrainGrids,
+            options.surfacePlan,
+            random,
+          );
       const plantEntity = createPlantEntity(
         world,
         grassGrid.tileSize,
@@ -98,6 +165,160 @@ export function seedWorldTrees(
       occupied.add(cellKey(x, y));
     }
   }
+
+  if (regionPlan && options.biome) {
+    seedRegionGroundPlants(
+      world,
+      grassGrid,
+      options.biome,
+      regionPlan,
+      occupied,
+      options,
+      createMulberry32(options.seed + 719),
+    );
+  }
+}
+
+function getRegionTreeDefinitions(
+  region: BiomeRegionDefinition | undefined,
+  fallbackDefinitions: PlantDefinition[],
+  tileX: number,
+  tileY: number,
+  terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
+): PlantDefinition[] {
+  if (!region || region.plants.length === 0) {
+    return [];
+  }
+
+  const allowedFallbackIds = new Set(
+    fallbackDefinitions.map((definition) => definition.id),
+  );
+
+  return region.plants
+    .filter((plant) =>
+      matchesTerrainAffinity(
+        plant.terrainIds,
+        tileX,
+        tileY,
+        terrainGrids,
+        surfacePlan,
+      ),
+    )
+    .map((plant) => plantDefinitions[plant.plantId])
+    .filter(
+      (definition): definition is PlantDefinition =>
+        Boolean(definition) &&
+        definition.kind === "tree" &&
+        allowedFallbackIds.has(definition.id),
+    );
+}
+
+function seedRegionGroundPlants(
+  world: World,
+  grid: TerrainGrid,
+  biome: BiomeDefinition,
+  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
+  occupied: Set<string>,
+  options: WorldTreeGenerationOptions,
+  random: () => number,
+): void {
+  const spawnClearingRadius =
+    options.spawnClearingRadius ?? spawnClearingRadiusDefault;
+
+  for (let y = 1; y < grid.height - 1; y += 1) {
+    for (let x = 1; x < grid.width - 1; x += 1) {
+      if (
+        occupied.has(cellKey(x, y)) ||
+        isNearSpawn(
+          x,
+          y,
+          options.spawnTileX,
+          options.spawnTileY,
+          spawnClearingRadius,
+        )
+      ) {
+        continue;
+      }
+
+      const region = getDominantRegion(regionPlan, x, y);
+
+      if (!region) {
+        continue;
+      }
+
+      const groundPlants = region.definition.plants
+        .map((plant) => ({
+          regionPlant: plant,
+          definition: plantDefinitions[plant.plantId],
+        }))
+        .filter(
+          (entry): entry is {
+            regionPlant: BiomeRegionDefinition["plants"][number];
+            definition: PlantDefinition;
+          } =>
+            Boolean(entry.definition) &&
+            entry.definition.kind !== "tree" &&
+            matchesTerrainAffinity(
+              entry.regionPlant.terrainIds,
+              x,
+              y,
+              options.terrainGrids,
+              options.surfacePlan,
+            ),
+        );
+
+      if (groundPlants.length === 0) {
+        continue;
+      }
+
+      const noise = octaveValueNoise(x + 83, y - 47, biome.worldGeneration.seed + 809);
+      const totalWeight = groundPlants.reduce(
+        (total, entry) => total + entry.regionPlant.weight,
+        0,
+      );
+      const placeChance = Math.min(0.18, 0.012 + totalWeight * 0.035);
+
+      if (noise < 0.58 || random() > placeChance) {
+        continue;
+      }
+
+      const species = pickWeightedGroundPlant(groundPlants, random);
+      const plantEntity = createPlantEntity(world, grid.tileSize, x, y, species);
+      const plant = world.getComponent(plantEntity, PlantState);
+
+      if (plant) {
+        plant.stage = random() < 0.72 ? "grown" : "growing";
+        plant.elapsedSeconds = elapsedForStage(species, plant.stage, random);
+      }
+
+      occupied.add(cellKey(x, y));
+    }
+  }
+}
+
+function pickWeightedGroundPlant(
+  entries: Array<{
+    regionPlant: BiomeRegionDefinition["plants"][number];
+    definition: PlantDefinition;
+  }>,
+  random: () => number,
+): PlantDefinition {
+  const totalWeight = entries.reduce(
+    (total, entry) => total + entry.regionPlant.weight,
+    0,
+  );
+  let roll = random() * totalWeight;
+
+  for (const entry of entries) {
+    roll -= entry.regionPlant.weight;
+
+    if (roll <= 0) {
+      return entry.definition;
+    }
+  }
+
+  return entries[entries.length - 1].definition;
 }
 
 function createGroves(
@@ -161,14 +382,111 @@ function pickGroveSpecies(
   y: number,
   seed: number,
   random: () => number,
+  region: BiomeRegionDefinition | undefined,
+  terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
 ): PlantDefinition {
   const noise = octaveValueNoise(x * 0.65 + 19, y * 0.65 - 7, seed + 91);
-  const index =
-    noise > 0.68 && grove.species.length > 1
-      ? 1 + Math.floor(random() * (grove.species.length - 1))
-      : 0;
+  const regionSpecies = pickRegionWeightedSpecies(
+    grove.species,
+    region,
+    x,
+    y,
+    terrainGrids,
+    surfacePlan,
+    random,
+  );
 
-  return grove.species[index] ?? grove.species[0];
+  if (noise <= 0.68 || grove.species.length <= 1) {
+    return regionSpecies;
+  }
+
+  return pickRandom(
+    grove.species.filter((species) => species.id !== regionSpecies.id),
+    random,
+  );
+}
+
+function pickRegionWeightedSpecies(
+  speciesPool: PlantDefinition[],
+  region: BiomeRegionDefinition | undefined,
+  tileX: number,
+  tileY: number,
+  terrainGrids: ReadonlyMap<string, TerrainGrid> | undefined,
+  surfacePlan: BiomeSurfacePlan | undefined,
+  random: () => number,
+): PlantDefinition {
+  if (!region) {
+    return pickRandom(speciesPool, random);
+  }
+
+  const weighted = speciesPool
+    .map((species) => {
+      const regionPlant = region.plants.find((plant) => plant.plantId === species.id);
+
+      if (
+        !regionPlant ||
+        !matchesTerrainAffinity(
+          regionPlant.terrainIds,
+          tileX,
+          tileY,
+          terrainGrids,
+          surfacePlan,
+        )
+      ) {
+        return undefined;
+      }
+
+      return { species, weight: regionPlant.weight };
+    })
+    .filter(
+      (entry): entry is { species: PlantDefinition; weight: number } =>
+        entry !== undefined && entry.weight > 0,
+    );
+
+  if (weighted.length === 0) {
+    return pickRandom(speciesPool, random);
+  }
+
+  const totalWeight = weighted.reduce((total, entry) => total + entry.weight, 0);
+  let roll = random() * totalWeight;
+
+  for (const entry of weighted) {
+    roll -= entry.weight;
+
+    if (roll <= 0) {
+      return entry.species;
+    }
+  }
+
+  return weighted[weighted.length - 1].species;
+}
+
+function matchesTerrainAffinity(
+  terrainIds: string[] | undefined,
+  tileX: number,
+  tileY: number,
+  terrainGrids?: ReadonlyMap<string, TerrainGrid>,
+  surfacePlan?: BiomeSurfacePlan,
+): boolean {
+  const surfaceMatch = surfaceMatchesTerrainIds(
+    surfacePlan,
+    tileX,
+    tileY,
+    terrainIds,
+  );
+
+  if (surfaceMatch !== undefined) {
+    return surfaceMatch;
+  }
+
+  if (!terrainIds || !terrainGrids) {
+    return true;
+  }
+
+  return terrainIds.some(
+    (terrainId) => terrainGrids.get(terrainId)?.has(tileX, tileY) ?? false,
+  );
 }
 
 function pickTreeStage(

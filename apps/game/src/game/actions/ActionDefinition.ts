@@ -2,7 +2,7 @@ import { forageActionDefinitions } from "./ForageActions";
 import { handActionDefinitions } from "./HandActions";
 import { plantActionDefinitions } from "./PlantActions";
 import { reflectionActionDefinitions } from "./ReflectionActions";
-import { restActionDefinitions } from "./RestActions";
+import { sleepActionDefinitions } from "./SleepActions";
 import { terrainActionDefinitions } from "./TerrainActions";
 import type { ActionDefinition } from "./ActionTypes";
 
@@ -12,7 +12,7 @@ export const actionDefinitions: Record<string, ActionDefinition> = {
   ...forageActionDefinitions,
   ...plantActionDefinitions,
   ...handActionDefinitions,
-  ...restActionDefinitions,
+  ...sleepActionDefinitions,
   ...reflectionActionDefinitions,
   ...terrainActionDefinitions,
 };

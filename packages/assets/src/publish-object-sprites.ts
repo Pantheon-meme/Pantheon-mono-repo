@@ -18,6 +18,12 @@ const photoroomSegmentEndpoint = "https://sdk.photoroom.com/v1/segment";
 
 loadNearestEnvFile();
 
+type CliOptions = {
+  objectId?: string;
+  objectIds?: string[];
+  help?: boolean;
+};
+
 type PublishedObjectSprite = {
   id: string;
   importName: string;
@@ -26,13 +32,25 @@ type PublishedObjectSprite = {
 };
 
 async function publishObjectSprites(): Promise<void> {
+  const options = parseArgs(process.argv.slice(2));
+
+  if (options.help) {
+    printHelp();
+    return;
+  }
+
   await assertDirectoryExists(generatedObjectSpriteRoot);
 
   const generatedEntries = await fs.readdir(generatedObjectSpriteRoot, {
     withFileTypes: true,
   });
-  const publishedSprites: PublishedObjectSprite[] = [];
   const publishedObjectIds = new Set<string>();
+  const selectedObjectIds = options.objectIds?.length
+    ? new Set(options.objectIds)
+    : options.objectId
+      ? new Set([options.objectId])
+      : undefined;
+  const publishedNow: PublishedObjectSprite[] = [];
 
   for (const entry of generatedEntries) {
     if (!entry.isDirectory()) {
@@ -50,6 +68,10 @@ async function publishObjectSprites(): Promise<void> {
     }
 
     const objectId = manifest.request.objectId;
+
+    if (selectedObjectIds && !selectedObjectIds.has(objectId)) {
+      continue;
+    }
 
     if (publishedObjectIds.has(objectId)) {
       console.warn(
@@ -71,7 +93,7 @@ async function publishObjectSprites(): Promise<void> {
     );
     await fs.copyFile(manifestPath, destinationManifestPath);
 
-    publishedSprites.push({
+    publishedNow.push({
       id: objectId,
       importName: toImportName(objectId),
       imageFileName,
@@ -80,18 +102,74 @@ async function publishObjectSprites(): Promise<void> {
     publishedObjectIds.add(objectId);
   }
 
-  if (publishedSprites.length === 0) {
-    throw new Error(`No generated object sprite directories found in ${path.relative(repoRoot, generatedObjectSpriteRoot)}.`);
+  if (selectedObjectIds && publishedNow.length === 0) {
+    throw new Error(
+      `No generated object sprite found for ${formatSelectedObjectIds(selectedObjectIds)}.`,
+    );
+  }
+
+  if (!selectedObjectIds && publishedNow.length === 0) {
+    throw new Error(
+      `No generated object sprite directories found in ${path.relative(repoRoot, generatedObjectSpriteRoot)}.`,
+    );
   }
 
   await fs.mkdir(gameObjectSpriteRoot, { recursive: true });
+  const publishedSprites = await readPublishedObjectSprites();
+
   await fs.writeFile(generatedRegistryPath, buildRegistryModule(publishedSprites), "utf8");
 
-  console.log(`Published ${publishedSprites.length} object sprite asset(s):`);
-  for (const sprite of publishedSprites) {
+  console.log(`Published ${publishedNow.length} object sprite asset(s):`);
+  for (const sprite of publishedNow) {
     console.log(`- apps/game/src/assets/object-sprites/${sprite.id}/${sprite.imageFileName}`);
   }
+  console.log(`Rebuilt registry with ${publishedSprites.length} object sprite asset(s).`);
   console.log(`- ${path.relative(repoRoot, generatedRegistryPath)}`);
+}
+
+async function readPublishedObjectSprites(): Promise<PublishedObjectSprite[]> {
+  const entries = await fs.readdir(gameObjectSpriteRoot, {
+    withFileTypes: true,
+  });
+  const sprites: PublishedObjectSprite[] = [];
+
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const sourceDir = path.join(gameObjectSpriteRoot, entry.name);
+    const manifestPath = path.join(sourceDir, "object-sprite-manifest.json");
+
+    if (!(await pathExists(manifestPath))) {
+      continue;
+    }
+
+    const manifest = objectSpriteManifestSchema.parse(
+      JSON.parse(await fs.readFile(manifestPath, "utf8")),
+    );
+
+    if (!manifest.image.filePath) {
+      continue;
+    }
+
+    const imageFileName = path.basename(manifest.image.filePath);
+    const imagePath = path.join(sourceDir, imageFileName);
+    const metadata = await sharp(imagePath).metadata();
+
+    if (!metadata.width || !metadata.height) {
+      throw new Error(`Could not read published image dimensions for ${imagePath}.`);
+    }
+
+    sprites.push({
+      id: manifest.request.objectId,
+      importName: toImportName(manifest.request.objectId),
+      imageFileName,
+      manifest: toRuntimeManifest(manifest, metadata.width, metadata.height),
+    });
+  }
+
+  return sprites;
 }
 
 async function assertDirectoryExists(directoryPath: string): Promise<void> {
@@ -110,6 +188,16 @@ async function assertDirectoryExists(directoryPath: string): Promise<void> {
       directoryPath,
     )}. Run generate-object-sprites before publishing.`,
   );
+}
+
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function writeRuntimeSpriteSheet(
@@ -265,6 +353,65 @@ function toImportName(value: string): string {
     .join("");
 
   return `${name || "objectSprite"}Sprite`;
+}
+
+function parseArgs(args: string[]): CliOptions {
+  const parsed: CliOptions = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    const next = args[index + 1];
+
+    switch (arg) {
+      case "--":
+        break;
+      case "--object-id":
+        parsed.objectId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--object-ids":
+        parsed.objectIds = readValue(arg, next)
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        index += 1;
+        break;
+      case "--help":
+      case "-h":
+        parsed.help = true;
+        break;
+      default:
+        throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+
+  return parsed;
+}
+
+function formatSelectedObjectIds(objectIds: Set<string>): string {
+  return [...objectIds].join(", ");
+}
+
+function readValue(flag: string, value: string | undefined): string {
+  if (!value || value.startsWith("-")) {
+    throw new Error(`Missing value for ${flag}.`);
+  }
+
+  return value.trim();
+}
+
+function printHelp(): void {
+  console.log(`Publish generated object sprite sheets into the game asset registry.
+
+Usage:
+  pnpm --filter @pantheon/assets publish-object-sprites
+  pnpm --filter @pantheon/assets publish-object-sprites -- --object-id uniswap-nature-props
+  pnpm --filter @pantheon/assets publish-object-sprites -- --object-ids uniswap-nature-props,uniswap-lake-props
+
+Options:
+      --object-id <id>   Publish only one generated object id, preserving the rest of the registry.
+      --object-ids <ids> Publish a comma-separated list of generated object ids.
+  -h, --help           Show this help.`);
 }
 
 function loadNearestEnvFile(): void {

@@ -10,6 +10,18 @@ pnpm --filter @pantheon/game dev
 
 The game uses checked-in runtime assets from `src/assets`, so new devs do not need to run the asset generator before starting the client.
 
+## MUD Localnet
+
+Digging is submitted to the local MUD world. By default the client uses Anvil at
+`http://127.0.0.1:8545`, the default Anvil private key, and the latest local
+world address from the current MUD scaffold. Override these when needed:
+
+```sh
+VITE_MUD_RPC_URL=http://127.0.0.1:8545
+VITE_MUD_WORLD_ADDRESS=0x...
+VITE_MUD_PRIVATE_KEY=0x...
+```
+
 ## Refresh Assets
 
 After regenerating autotiles in `packages/assets/generated`, publish the atlases used by the game:

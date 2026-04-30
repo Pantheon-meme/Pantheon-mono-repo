@@ -1,11 +1,15 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
+import { ActionLog } from "./components/ActionLog";
 import { DiggingCapability } from "../player/components/DiggingCapability";
+import { Energy } from "../energy/components/Energy";
+import { MudWorld } from "../mud/components/MudWorld";
 import { FacingDirection } from "../player/components/FacingDirection";
 import { FocusTarget } from "../player/components/FocusTarget";
 import { NeedState } from "../needs/components/NeedState";
 import { Position } from "../shared/components/Position";
 import { TerrainDigDepth } from "../terrain/components/TerrainDigDepth";
+import type { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { TerrainHardness } from "../terrain/components/TerrainHardness";
 import { getFacingTargetCell } from "../terrain/GridTargeting";
 import {
@@ -76,14 +80,10 @@ function dig(world: World, actor: Entity): ActionEffectResult {
 
   const dirtLayer = getTerrainLayer(world, "dirt");
   const targetCell = getDigTargetCell(world, actor);
+  const mud = world.query(MudWorld)[0]?.[1];
 
-  if (!targetCell || !dirtLayer) {
-    return { message: "Dig: no target", applied: false };
-  }
-
-  if (!dirtLayer.grid.has(targetCell.x, targetCell.y)) {
-    dirtLayer.grid.set(targetCell.x, targetCell.y, true);
-    return { message: `Dig: loosened soil at ${targetCell.x},${targetCell.y}` };
+  if (!targetCell || !dirtLayer || !mud) {
+    return { message: "Dig: MUD world unavailable", applied: false };
   }
 
   const digDepth = world.query(TerrainDigDepth)[0]?.[1];
@@ -92,11 +92,49 @@ function dig(world: World, actor: Entity): ActionEffectResult {
     return { message: "Dig: no target", applied: false };
   }
 
-  const depth = digDepth.increment(targetCell.x, targetCell.y);
-
-  return {
-    message: `Dig: depth ${depth} at ${targetCell.x},${targetCell.y}`,
+  const previousState = {
+    hadDirt: dirtLayer.grid.has(targetCell.x, targetCell.y),
+    depth: digDepth.get(targetCell.x, targetCell.y),
   };
+  const optimisticMessage = applyOptimisticDig(
+    dirtLayer.grid,
+    digDepth,
+    targetCell.x,
+    targetCell.y,
+  );
+  const submitted = mud.bridge.submitDig(targetCell.x, targetCell.y, {
+    onConfirmed: ({ x, y }) => {
+      updateActionLog(world, actor, `Dig: confirmed at ${x},${y}`);
+    },
+    onRejected: (message) => {
+      rollbackOptimisticDig(
+        dirtLayer.grid,
+        digDepth,
+        targetCell.x,
+        targetCell.y,
+        previousState,
+      );
+      refundEnergy(world, actor, digEnergyCost);
+      updateActionLog(world, actor, `Dig: ${message}`);
+    },
+  });
+
+  if (!submitted) {
+    rollbackOptimisticDig(
+      dirtLayer.grid,
+      digDepth,
+      targetCell.x,
+      targetCell.y,
+      previousState,
+    );
+
+    return {
+      message: `Dig: waiting on ${targetCell.x},${targetCell.y}`,
+      applied: false,
+    };
+  }
+
+  return { message: `${optimisticMessage} (syncing)` };
 }
 
 function getDigTargetCell(
@@ -131,4 +169,49 @@ function discoverDiggingToolNeed(
     urgency: Math.min(100, 50 + requiredPower * 8),
     active: true,
   });
+}
+
+function updateActionLog(world: World, actor: Entity, message: string): void {
+  const log = world.getComponent(actor, ActionLog);
+
+  if (log) {
+    log.lastMessage = message;
+  }
+}
+
+function applyOptimisticDig(
+  dirtGrid: Pick<TerrainGrid, "has" | "set">,
+  digDepth: TerrainDigDepth,
+  x: number,
+  y: number,
+): string {
+  if (!dirtGrid.has(x, y)) {
+    dirtGrid.set(x, y, true);
+    return `Dig: loosened soil at ${x},${y}`;
+  }
+
+  const depth = digDepth.increment(x, y);
+
+  return `Dig: depth ${depth} at ${x},${y}`;
+}
+
+function rollbackOptimisticDig(
+  dirtGrid: Pick<TerrainGrid, "set">,
+  digDepth: TerrainDigDepth,
+  x: number,
+  y: number,
+  previousState: { hadDirt: boolean; depth: number },
+): void {
+  dirtGrid.set(x, y, previousState.hadDirt);
+  digDepth.set(x, y, previousState.depth);
+}
+
+function refundEnergy(world: World, actor: Entity, amount: number): void {
+  const energy = world.getComponent(actor, Energy);
+
+  if (!energy) {
+    return;
+  }
+
+  energy.current = Math.min(energy.max, energy.current + amount);
 }

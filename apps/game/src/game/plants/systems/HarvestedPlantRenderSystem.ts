@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import { isNearCameraView } from "../../shared/CameraCulling";
 import { Position } from "../../shared/components/Position";
 import { HarvestedPlant } from "../components/HarvestedPlant";
 import { HarvestedPlantVisual } from "../components/HarvestedPlantVisual";
@@ -17,6 +18,8 @@ export class HarvestedPlantRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
 
   update(world: World, deltaSeconds: number): void {
+    const camera = this.scene.cameras.main;
+
     for (const [entity, position, harvested] of world.query(
       Position,
       HarvestedPlant,
@@ -29,6 +32,12 @@ export class HarvestedPlantRenderSystem implements System {
 
       let visual = world.getComponent(entity, HarvestedPlantVisual);
       const spriteAsset = getPlantSpriteAsset(harvested.plantId);
+      const visible = isNearCameraView(camera, position.x, position.y);
+
+      if (!visible) {
+        visual?.container.setVisible(false);
+        continue;
+      }
 
       if (!visual) {
         visual = this.createVisual(
@@ -39,6 +48,7 @@ export class HarvestedPlantRenderSystem implements System {
         world.addComponent(entity, HarvestedPlantVisual, visual);
       }
 
+      visual.container.setVisible(true);
       visual.container.setPosition(position.x, position.y);
 
       if (spriteAsset) {

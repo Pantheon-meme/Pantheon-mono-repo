@@ -1,18 +1,23 @@
-import Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
+import { submitSleepEnergy } from "../../actions/SleepActions";
 import { Energy } from "../../energy/components/Energy";
 import { SleepState } from "../components/SleepState";
 
 export class SleepSystem implements System {
   update(world: World, deltaSeconds: number): void {
-    for (const [, sleep, energy, log] of world.query(
+    for (const [entity, sleep, energy, log] of world.query(
       SleepState,
       Energy,
       ActionLog,
     )) {
       if (!sleep.active) {
+        continue;
+      }
+
+      if (!sleep.onchainStarted) {
+        log.lastMessage = "Sleep: syncing";
         continue;
       }
 
@@ -30,13 +35,16 @@ export class SleepSystem implements System {
         continue;
       }
 
-      const energyGain = sleep.finish();
-      energy.current = Phaser.Math.Clamp(
-        energy.current + energyGain,
-        0,
-        energy.max,
-      );
-      log.lastMessage = `Woke up: +${energyGain} energy`;
+      const energyGain = Math.floor(sleep.pendingEnergy);
+      const result = submitSleepEnergy(world, entity, energyGain);
+
+      log.lastMessage = result.message ?? `Sleep: +${energyGain} energy`;
+
+      if (result.applied === false) {
+        continue;
+      }
+
+      sleep.finish();
     }
   }
 }

@@ -47,7 +47,21 @@ Use OpenRouter models with image output modalities for `--image-model`.
 
 ## Generate 47 Dual-Grid Autotiles From Masks
 
-Provide a texture reference image. The workflow uses the PNG masks in `packages/assets/masks`, sends the texture plus one mask to the OpenRouter image model for each request, and generates the full 47-tile set as mask sheets.
+Generate or paint a square texture reference image first, then provide that texture reference image to the autotile generator. Do not ask the autotile generator to invent the material from text alone. The texture is the source of truth for palette, brushwork, feature size, and density; the text `--material` value should describe the texture, not replace it.
+
+When you want the texture itself generated too, use `generate-terrain-autotiles`. It creates and stores the source texture first, then feeds that stored texture into the 47-tile autotile workflow:
+
+```sh
+pnpm --filter @pantheon/assets generate-terrain-autotiles -- \
+  --terrain-id "uniswap-grass" \
+  --material "Uniswap grass terrain" \
+  --texture "soft mint grass with violet clover flecks, tiny pearl dew drops, cozy playable top-down meadow" \
+  --style "cozy hand-painted 2D game terrain, three-quarter top-down, crisp terrain readability, no logos, no text"
+```
+
+The command writes the generated source texture to `generated/terrain-textures/<terrain-id>` and the generated autotile atlas/manifest to `generated/autotiles/<terrain-id>`.
+
+The workflow uses the PNG masks in `packages/assets/masks`, sends the texture plus one mask to the OpenRouter image model for each request, and generates the full 47-tile set as mask sheets.
 
 ```sh
 pnpm --filter @pantheon/assets generate-autotiles -- \
@@ -55,7 +69,7 @@ pnpm --filter @pantheon/assets generate-autotiles -- \
   --material "leafy grass with small purple flowers" \
   --image-model "openai/gpt-5.4-image-2" \
   --reasoning-effort high \
-  --concurrency 4 \
+      --concurrency 5 \
   --out "generated/autotiles/grass"
 ```
 
@@ -69,7 +83,16 @@ The command writes:
   - `Land Grid Map_Left Bottom.png`
   - `Land Grid Map_Right Bottom.png`
 
-The prompt for each mask asks the image model to replace the red mask regions with the provided texture, preserve the macro silhouette, and make only small texture-aware edge deviations so the border blends naturally.
+The prompt for each mask asks the image model to replace the red mask regions with the provided texture, preserve the macro silhouette, and make only small texture-aware edge deviations so the border blends naturally. It also instructs the model to match the source texture density exactly: stones, grass blades, flowers, ripples, cracks, glow marks, and other repeated details should appear at the same amount per tile-sized area across every generated sheet.
+
+For biome terrain, the recommended sequence is:
+
+1. Generate one square material texture per terrain from the biome's `texturePrompt` and `stylePrompt`.
+2. Review the texture for density against neighboring terrain textures.
+3. Run `generate-autotiles` using that reviewed texture.
+4. Publish or copy the resulting `autotile-blob-7x7.png` into the game.
+
+If a tile sheet comes back too busy or too sparse, regenerate the source texture first, then rerun the autotile workflow from that texture.
 
 To test one mask without regenerating every sheet:
 
@@ -91,7 +114,7 @@ Environment defaults:
 ```sh
 PANTHEON_AUTOTILE_MATERIAL="leafy grass"
 PANTHEON_AUTOTILE_MASK_DIR=masks
-PANTHEON_AUTOTILE_CONCURRENCY=4
+PANTHEON_AUTOTILE_CONCURRENCY=5
 OPENROUTER_REASONING_EFFORT=high
 ```
 

@@ -1,0 +1,242 @@
+{
+  "generatedAt": "2026-04-30T10:28:37.069Z",
+  "request": {
+    "spriteKind": "object-batch",
+    "objectId": "forage-resources-a",
+    "objectName": "Forage Resources A",
+    "objectPrompt": "A batch sheet of separate static forage resource item pickups for a cozy top-down onchain farming/adventure game.\nEach cell is one independent inventory/resource pickup, not an animation frame.\nEvery item should be readable as a small 32px world drop while still painted at high resolution.\nUse the row and column map exactly.\nRow 0 column 0: Wild fiber (wild_fiber) - loose bundle of mint-green wild grass fiber tied by a tiny violet strand.\nRow 0 column 1: Violet clover (violet_clover) - small violet clover sprig with three rounded leaves and pearl dew.\nRow 0 column 2: Pearl dew (pearl_dew) - single luminous pearl dew droplet cupped in two tiny mint leaves.\nRow 0 column 3: Unicorn petal (unicorn_petal) - soft unicorn-pink petal with a pale mint vein and subtle sparkle.\nRow 1 column 0: Forest root (forest_root) - curled dark violet-brown forest root with moss tips.\nRow 1 column 1: Fee moss mushroom (fee_moss_mushroom) - small mint moss mushroom cap with lavender underside.\nRow 1 column 2: Fallen unicorn branch (fallen_unicorn_branch) - short pale branch with pink fronds and pearl buds.\nRow 1 column 3: Bubble moss (bubble_moss) - teal moss clump with round pink pool bubbles.\nRow 2 column 0: Oracle silt (oracle_silt) - small pinch of dark teal oracle mud with cyan glass flecks.\nRow 2 column 1: Glassy spore (glassy_spore) - transparent cyan spore pod with violet shadow.\nRow 2 column 2: Pearl shell (pearl_shell) - small pale pearl shell with lavender inner shine.\nRow 2 column 3: Lake glass pebble (lake_glass_pebble) - smooth translucent teal lake-glass pebble.\nRow 3 column 0: Swapstone dust (swapstone_dust) - tiny mound of pink-lavender quartz dust with spark glints.\nRow 3 column 1: Swapstone pebble (swapstone_pebble) - rounded rose swapstone pebble with violet edge.\nRow 3 column 2: Governance stone chip (governance_stone_chip) - flat lavender-gray civic stone chip with mint moss seam.\nRow 3 column 3: Route silk fiber (route_silk_fiber) - thin pearly route-silk thread curled into a small loop.",
+    "stylePrompt": "cozy hand-painted 2D game item pickups, three-quarter top-down view, transparent background, crisp readable silhouettes at 32 pixel gameplay size, small isolated resource icons centered in each cell, Uniswap-inspired violet, mint, pearl, pink, cyan, teal, and lavender-gray palette, soft natural edges, warm but balanced highlights, no readable text, no logos, no UI",
+    "styleReferencePath": "/Users/ajand/Projects/Pantheon/apps/game/src/assets/autotiles/uniswap-grass/autotile-blob-7x7.png",
+    "styleReferenceCell": {
+      "row": 1,
+      "column": 1,
+      "cellSize": 256
+    },
+    "imageModel": "openai/gpt-5.4-image-2",
+    "reasoningEffort": "high",
+    "states": [
+      {
+        "id": "row-0",
+        "title": "Forage Item Row 0",
+        "prompt": "column 0: Wild fiber (wild_fiber) - loose bundle of mint-green wild grass fiber tied by a tiny violet strand; column 1: Violet clover (violet_clover) - small violet clover sprig with three rounded leaves and pearl dew; column 2: Pearl dew (pearl_dew) - single luminous pearl dew droplet cupped in two tiny mint leaves; column 3: Unicorn petal (unicorn_petal) - soft unicorn-pink petal with a pale mint vein and subtle sparkle"
+      },
+      {
+        "id": "row-1",
+        "title": "Forage Item Row 1",
+        "prompt": "column 0: Forest root (forest_root) - curled dark violet-brown forest root with moss tips; column 1: Fee moss mushroom (fee_moss_mushroom) - small mint moss mushroom cap with lavender underside; column 2: Fallen unicorn branch (fallen_unicorn_branch) - short pale branch with pink fronds and pearl buds; column 3: Bubble moss (bubble_moss) - teal moss clump with round pink pool bubbles"
+      },
+      {
+        "id": "row-2",
+        "title": "Forage Item Row 2",
+        "prompt": "column 0: Oracle silt (oracle_silt) - small pinch of dark teal oracle mud with cyan glass flecks; column 1: Glassy spore (glassy_spore) - transparent cyan spore pod with violet shadow; column 2: Pearl shell (pearl_shell) - small pale pearl shell with lavender inner shine; column 3: Lake glass pebble (lake_glass_pebble) - smooth translucent teal lake-glass pebble"
+      },
+      {
+        "id": "row-3",
+        "title": "Forage Item Row 3",
+        "prompt": "column 0: Swapstone dust (swapstone_dust) - tiny mound of pink-lavender quartz dust with spark glints; column 1: Swapstone pebble (swapstone_pebble) - rounded rose swapstone pebble with violet edge; column 2: Governance stone chip (governance_stone_chip) - flat lavender-gray civic stone chip with mint moss seam; column 3: Route silk fiber (route_silk_fiber) - thin pearly route-silk thread curled into a small loop"
+      }
+    ],
+    "columns": 4,
+    "columnLabels": [
+      "slot 1",
+      "slot 2",
+      "slot 3",
+      "slot 4"
+    ],
+    "cellSize": 128,
+    "background": "transparent",
+    "outputDir": "generated/object-sprites/forage-resources-a"
+  },
+  "imageModel": "openai/gpt-5.4-image-2",
+  "rows": 4,
+  "columns": 4,
+  "cellSize": 128,
+  "atlasWidth": 512,
+  "atlasHeight": 512,
+  "image": {
+    "id": "forage-resources-a-sprite-sheet",
+    "title": "Forage Resources A sprite sheet",
+    "prompt": "Create a game object sprite sheet for Forage Resources A.\nObject brief: A batch sheet of separate static forage resource item pickups for a cozy top-down onchain farming/adventure game.\nEach cell is one independent inventory/resource pickup, not an animation frame.\nEvery item should be readable as a small 32px world drop while still painted at high resolution.\nUse the row and column map exactly.\nRow 0 column 0: Wild fiber (wild_fiber) - loose bundle of mint-green wild grass fiber tied by a tiny violet strand.\nRow 0 column 1: Violet clover (violet_clover) - small violet clover sprig with three rounded leaves and pearl dew.\nRow 0 column 2: Pearl dew (pearl_dew) - single luminous pearl dew droplet cupped in two tiny mint leaves.\nRow 0 column 3: Unicorn petal (unicorn_petal) - soft unicorn-pink petal with a pale mint vein and subtle sparkle.\nRow 1 column 0: Forest root (forest_root) - curled dark violet-brown forest root with moss tips.\nRow 1 column 1: Fee moss mushroom (fee_moss_mushroom) - small mint moss mushroom cap with lavender underside.\nRow 1 column 2: Fallen unicorn branch (fallen_unicorn_branch) - short pale branch with pink fronds and pearl buds.\nRow 1 column 3: Bubble moss (bubble_moss) - teal moss clump with round pink pool bubbles.\nRow 2 column 0: Oracle silt (oracle_silt) - small pinch of dark teal oracle mud with cyan glass flecks.\nRow 2 column 1: Glassy spore (glassy_spore) - transparent cyan spore pod with violet shadow.\nRow 2 column 2: Pearl shell (pearl_shell) - small pale pearl shell with lavender inner shine.\nRow 2 column 3: Lake glass pebble (lake_glass_pebble) - smooth translucent teal lake-glass pebble.\nRow 3 column 0: Swapstone dust (swapstone_dust) - tiny mound of pink-lavender quartz dust with spark glints.\nRow 3 column 1: Swapstone pebble (swapstone_pebble) - rounded rose swapstone pebble with violet edge.\nRow 3 column 2: Governance stone chip (governance_stone_chip) - flat lavender-gray civic stone chip with mint moss seam.\nRow 3 column 3: Route silk fiber (route_silk_fiber) - thin pearly route-silk thread curled into a small loop..\n\nReference image 1 is a checkerboard layout guide. Use it as the exact composition template with exact sizes, all cells are square all equal size.\nPreserve its 4:4 sheet ratio and its 4 columns by 4 rows of equal square cells.\nThe exact guide has also been saved locally at generated/object-sprites/forage-resources-a/object-sprite-layout-guide.png for verification.\nPlace exactly one frame in the center of each checkerboard cell.\nAlign the center of each object frame to the center of its cell.\nKeep every frame fully inside its own cell, with consistent margins and no overlap into neighboring cells.\nKeep the checkerboard grid visible in the final image so the generated frames can be verified against the grid.\nPreserve the alternating white and gray cell backgrounds from the guide.\nDraw the object frames on top of the provided checkerboard cells.\n\nTarget runtime atlas metadata: 512x512 logical units, arranged as 4 rows by 4 columns.\nEach logical grid cell is 128x128 units. The generated image may be higher resolution, but it must keep the same 4:4 grid ratio.\nKeep the object scale, anchor point, perspective, and lighting consistent across cells.\nDo not crop any object. Leave enough breathing room inside each cell for animation motion.\nDo not draw labels, text, numbers, watermarks, decorative borders, or UI.\nUse a transparent background for every cell.\n\nRows, top to bottom:\nRow 0: Forage Item Row 0 (row-0) - column 0: Wild fiber (wild_fiber) - loose bundle of mint-green wild grass fiber tied by a tiny violet strand; column 1: Violet clover (violet_clover) - small violet clover sprig with three rounded leaves and pearl dew; column 2: Pearl dew (pearl_dew) - single luminous pearl dew droplet cupped in two tiny mint leaves; column 3: Unicorn petal (unicorn_petal) - soft unicorn-pink petal with a pale mint vein and subtle sparkle\nRow 1: Forage Item Row 1 (row-1) - column 0: Forest root (forest_root) - curled dark violet-brown forest root with moss tips; column 1: Fee moss mushroom (fee_moss_mushroom) - small mint moss mushroom cap with lavender underside; column 2: Fallen unicorn branch (fallen_unicorn_branch) - short pale branch with pink fronds and pearl buds; column 3: Bubble moss (bubble_moss) - teal moss clump with round pink pool bubbles\nRow 2: Forage Item Row 2 (row-2) - column 0: Oracle silt (oracle_silt) - small pinch of dark teal oracle mud with cyan glass flecks; column 1: Glassy spore (glassy_spore) - transparent cyan spore pod with violet shadow; column 2: Pearl shell (pearl_shell) - small pale pearl shell with lavender inner shine; column 3: Lake glass pebble (lake_glass_pebble) - smooth translucent teal lake-glass pebble\nRow 3: Forage Item Row 3 (row-3) - column 0: Swapstone dust (swapstone_dust) - tiny mound of pink-lavender quartz dust with spark glints; column 1: Swapstone pebble (swapstone_pebble) - rounded rose swapstone pebble with violet edge; column 2: Governance stone chip (governance_stone_chip) - flat lavender-gray civic stone chip with mint moss seam; column 3: Route silk fiber (route_silk_fiber) - thin pearly route-silk thread curled into a small loop\n\nColumns, left to right:\nColumn 0: slot 1.\nColumn 1: slot 2.\nColumn 2: slot 3.\nColumn 3: slot 4.\n\nColumn behavior:\nThis is a batch sheet of separate static world props, not animation frames.\nEach cell must contain the specific prop named by its row and column.\nDo not evolve, transform, or animate objects across columns.\nKeep perspective, lighting, palette, shadow softness, and scale language consistent across all cells.\nSmall props may leave more transparent space inside their cell; large landmarks should still fit fully inside their cell.\nEvery prop must be isolated on a transparent background and usable as an independent in-world object.\n\nStyle direction:\ncozy hand-painted 2D game item pickups, three-quarter top-down view, transparent background, crisp readable silhouettes at 32 pixel gameplay size, small isolated resource icons centered in each cell, Uniswap-inspired violet, mint, pearl, pink, cyan, teal, and lavender-gray palette, soft natural edges, warm but balanced highlights, no readable text, no logos, no UI\nReference image 2 is a style reference. Use it for palette, rendering texture, edge softness, contrast, and game-art finish. Do not copy its subject unless it matches the object brief.\n\nReturn one PNG containing the full sprite sheet only.",
+    "model": "openai/gpt-5.4-image-2",
+    "contentType": "image/png",
+    "filePath": "generated/object-sprites/forage-resources-a/forage-resources-a-sprite-sheet.png"
+  },
+  "cells": [
+    {
+      "stateId": "row-0",
+      "stateTitle": "Forage Item Row 0",
+      "columnLabel": "slot 1",
+      "row": 0,
+      "column": 0,
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-0",
+      "stateTitle": "Forage Item Row 0",
+      "columnLabel": "slot 2",
+      "row": 0,
+      "column": 1,
+      "x": 128,
+      "y": 0,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-0",
+      "stateTitle": "Forage Item Row 0",
+      "columnLabel": "slot 3",
+      "row": 0,
+      "column": 2,
+      "x": 256,
+      "y": 0,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-0",
+      "stateTitle": "Forage Item Row 0",
+      "columnLabel": "slot 4",
+      "row": 0,
+      "column": 3,
+      "x": 384,
+      "y": 0,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Forage Item Row 1",
+      "columnLabel": "slot 1",
+      "row": 1,
+      "column": 0,
+      "x": 0,
+      "y": 128,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Forage Item Row 1",
+      "columnLabel": "slot 2",
+      "row": 1,
+      "column": 1,
+      "x": 128,
+      "y": 128,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Forage Item Row 1",
+      "columnLabel": "slot 3",
+      "row": 1,
+      "column": 2,
+      "x": 256,
+      "y": 128,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Forage Item Row 1",
+      "columnLabel": "slot 4",
+      "row": 1,
+      "column": 3,
+      "x": 384,
+      "y": 128,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Forage Item Row 2",
+      "columnLabel": "slot 1",
+      "row": 2,
+      "column": 0,
+      "x": 0,
+      "y": 256,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Forage Item Row 2",
+      "columnLabel": "slot 2",
+      "row": 2,
+      "column": 1,
+      "x": 128,
+      "y": 256,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Forage Item Row 2",
+      "columnLabel": "slot 3",
+      "row": 2,
+      "column": 2,
+      "x": 256,
+      "y": 256,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Forage Item Row 2",
+      "columnLabel": "slot 4",
+      "row": 2,
+      "column": 3,
+      "x": 384,
+      "y": 256,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Forage Item Row 3",
+      "columnLabel": "slot 1",
+      "row": 3,
+      "column": 0,
+      "x": 0,
+      "y": 384,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Forage Item Row 3",
+      "columnLabel": "slot 2",
+      "row": 3,
+      "column": 1,
+      "x": 128,
+      "y": 384,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Forage Item Row 3",
+      "columnLabel": "slot 3",
+      "row": 3,
+      "column": 2,
+      "x": 256,
+      "y": 384,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Forage Item Row 3",
+      "columnLabel": "slot 4",
+      "row": 3,
+      "column": 3,
+      "x": 384,
+      "y": 384,
+      "width": 128,
+      "height": 128
+    }
+  ]
+}

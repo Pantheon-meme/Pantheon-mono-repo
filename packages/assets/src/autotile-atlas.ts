@@ -34,10 +34,10 @@ export async function combineAutotileAtlas(inputDir: string, outputPath?: string
 
   const placements: Placement[] = [
     ...createGridPlacements(leftTop, 4, 0, 0, 4, 4),
-    ...createGridPlacements(rightTopA, 3, 4, 0, 3, 3),
-    ...createGridPlacements(rightTopB, 3, 4, 3, 3, 1, 1),
+    ...createGridPlacements(rightTopA, 4, 4, 0, 3, 3, 1, 0),
+    ...createGridPlacements(rightTopB, 4, 4, 3, 3, 1, 1, 1),
     ...createGridPlacements(leftBottom, 4, 0, 4, 4, 3),
-    ...createGridPlacements(rightBottom, 3, 4, 4, 3, 3),
+    ...createGridPlacements(rightBottom, 4, 4, 4, 3, 3, 1, 1),
   ];
 
   const composites = await Promise.all(
@@ -79,6 +79,7 @@ function createGridPlacements(
   outputRowStart: number,
   columns: number,
   rows: number,
+  sourceColumnStart = 0,
   sourceRowStart = 0,
 ): Placement[] {
   const placements: Placement[] = [];
@@ -88,7 +89,7 @@ function createGridPlacements(
       placements.push({
         input,
         sourceGridSize,
-        sourceColumn: column,
+        sourceColumn: sourceColumnStart + column,
         sourceRow: sourceRowStart + row,
         outputColumn: outputColumnStart + column,
         outputRow: outputRowStart + row,

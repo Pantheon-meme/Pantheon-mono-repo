@@ -11,6 +11,10 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
+    "mud:build": "pnpm --filter @pantheon/contracts build",
+    "mud:deploy:local": "pnpm --filter @pantheon/contracts deploy:local",
+    "mud:dev": "mprocs -c mprocs.mud.yaml",
+    "mud:node": "pnpm --filter @pantheon/contracts node",
     "publish:game-assets": "pnpm --filter @pantheon/assets publish-game-assets",
     "publish:object-sprites": "pnpm --filter @pantheon/assets publish-object-sprites",
     "lint": "turbo run lint",
@@ -20,7 +24,18 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@latticexyz/cli": "2.2.23",
+    "@latticexyz/common": "2.2.23",
+    "@latticexyz/explorer": "2.2.23",
+    "@latticexyz/store-indexer": "2.2.23",
+    "mprocs": "^0.7.3",
     "prettier": "^3.3.3",
+    "shx": "^0.3.4",
     "turbo": "^2.0.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "better-sqlite3": "12.9.0"
+    }
   }
 }

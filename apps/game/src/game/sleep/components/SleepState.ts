@@ -5,6 +5,7 @@ export class SleepState {
   energyPerSecond = 0;
   pendingEnergy = 0;
   terrainLayerId = "vibrant-grass";
+  onchainStarted = false;
 
   start(
     durationSeconds: number,
@@ -17,6 +18,14 @@ export class SleepState {
     this.energyPerSecond = energyPerSecond;
     this.pendingEnergy = 0;
     this.terrainLayerId = terrainLayerId;
+    this.onchainStarted = false;
+  }
+
+  confirmOnchainStart(energyGain: number): void {
+    this.onchainStarted = true;
+    this.elapsedSeconds = 0;
+    this.pendingEnergy = 0;
+    this.energyPerSecond = energyGain / this.durationSeconds;
   }
 
   finish(): number {
@@ -27,6 +36,7 @@ export class SleepState {
     this.durationSeconds = 0;
     this.energyPerSecond = 0;
     this.pendingEnergy = 0;
+    this.onchainStarted = false;
 
     return energyGain;
   }

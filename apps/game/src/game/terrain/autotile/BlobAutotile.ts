@@ -32,3 +32,10 @@ export function buildBlobAtlasSlotLookup(): Map<number, BlobAtlasSlot> {
 export function blobTextureKey(prefix: string, mask: number): string {
   return `${prefix}-mask-${mask}`;
 }
+
+export function blobCenterVariantTextureKey(
+  prefix: string,
+  variant: number,
+): string {
+  return `${prefix}-center-variant-${variant}`;
+}

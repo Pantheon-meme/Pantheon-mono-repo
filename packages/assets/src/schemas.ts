@@ -82,7 +82,7 @@ export const autotileRequestSchema = z.object({
     )
     .optional(),
   outputDir: z.string().default("generated/autotiles"),
-  concurrency: z.number().int().min(1).max(4).default(4),
+  concurrency: z.number().int().min(1).max(5).default(4),
 });
 
 export const autotileSegmentSchema = z.object({
@@ -109,7 +109,9 @@ export const objectSpriteStateSchema = z.object({
 });
 
 export const objectSpriteRequestSchema = z.object({
-  spriteKind: z.enum(["object", "plant", "tree", "player"]).default("object"),
+  spriteKind: z
+    .enum(["object", "object-batch", "plant", "tree", "player"])
+    .default("object"),
   objectId: z.string().min(1),
   objectName: z.string().min(1),
   objectPrompt: z.string().min(1),

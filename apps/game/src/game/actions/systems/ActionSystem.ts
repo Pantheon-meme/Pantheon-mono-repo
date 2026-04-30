@@ -7,7 +7,10 @@ import { ActionLog } from "../components/ActionLog";
 import { ActionProgress } from "../components/ActionProgress";
 import { ActionQueue } from "../components/ActionQueue";
 import { Energy } from "../../energy/components/Energy";
+import { MovementState } from "../../player/components/MovementState";
+import { Position } from "../../shared/components/Position";
 import { SleepState } from "../../sleep/components/SleepState";
+import { TerrainGrid } from "../../terrain/components/TerrainGrid";
 import type { ActionDefinition } from "../ActionTypes";
 
 export class ActionSystem implements System {
@@ -19,7 +22,15 @@ export class ActionSystem implements System {
       ActionProgress,
     )) {
       if (progress.active) {
-        this.updateProgress(world, entity, energy, log, progress, deltaSeconds);
+        this.updateProgress(
+          world,
+          entity,
+          queue,
+          energy,
+          log,
+          progress,
+          deltaSeconds,
+        );
         continue;
       }
 
@@ -30,6 +41,7 @@ export class ActionSystem implements System {
   private updateProgress(
     world: World,
     entity: Entity,
+    queue: ActionQueue,
     energy: Energy,
     log: ActionLog,
     progress: ActionProgress,
@@ -53,7 +65,7 @@ export class ActionSystem implements System {
       return;
     }
 
-    this.completeAction(world, entity, energy, log, action);
+    this.completeAction(world, entity, queue, energy, log, action);
   }
 
   private startNextAction(
@@ -64,7 +76,7 @@ export class ActionSystem implements System {
     log: ActionLog,
     progress: ActionProgress,
   ): void {
-    let actionId = queue.shift();
+    let actionId = queue.peek();
 
     while (actionId) {
       const sleep = world.getComponent(entity, SleepState);
@@ -78,13 +90,20 @@ export class ActionSystem implements System {
 
       if (!action) {
         log.lastMessage = `Unknown action: ${actionId}`;
-        actionId = queue.shift();
+        queue.shift();
+        actionId = queue.peek();
         continue;
+      }
+
+      if (!isMovementSettled(world, entity)) {
+        log.lastMessage = `${action.label}: waiting for movement`;
+        return;
       }
 
       if (!hasEnoughEnergy(energy, action)) {
         log.lastMessage = `${action.label} needs ${Math.abs(action.energyDelta)} energy`;
-        actionId = queue.shift();
+        queue.shift();
+        actionId = queue.peek();
         continue;
       }
 
@@ -92,15 +111,21 @@ export class ActionSystem implements System {
 
       if (startResult?.applied === false) {
         log.lastMessage = startResult.message ?? `${action.label}: no effect`;
-        actionId = queue.shift();
+        if (startResult.retry) {
+          return;
+        }
+
+        queue.shift();
+        actionId = queue.peek();
         continue;
       }
 
+      queue.shift();
       progress.start(action.id, action.label, action.durationSeconds);
       log.lastMessage = `${action.label}: started`;
 
       if (action.durationSeconds <= 0) {
-        this.updateProgress(world, entity, energy, log, progress, 0);
+        this.updateProgress(world, entity, queue, energy, log, progress, 0);
       }
 
       return;
@@ -110,6 +135,7 @@ export class ActionSystem implements System {
   private completeAction(
     world: World,
     entity: Entity,
+    queue: ActionQueue,
     energy: Energy,
     log: ActionLog,
     action: ActionDefinition,
@@ -123,6 +149,10 @@ export class ActionSystem implements System {
 
     if (result?.applied === false) {
       log.lastMessage = result.message ?? `${action.label}: no effect`;
+      if (result.retry) {
+        queue.unshift(action.id);
+      }
+
       return;
     }
 
@@ -137,6 +167,27 @@ export class ActionSystem implements System {
         ? `${action.label}: no energy change`
         : `${action.label}: ${action.energyDelta > 0 ? "+" : ""}${action.energyDelta} energy`);
   }
+}
+
+function isMovementSettled(world: World, entity: Entity): boolean {
+  const movement = world.getComponent(entity, MovementState);
+  const position = world.getComponent(entity, Position);
+  const grid = world.query(TerrainGrid)[0]?.[1];
+
+  if (!movement || !position || !grid) {
+    return true;
+  }
+
+  const currentTileX = Math.floor(position.x / grid.tileSize);
+  const currentTileY = Math.floor(position.y / grid.tileSize);
+
+  return (
+    !movement.pending &&
+    movement.queuedTileX === undefined &&
+    movement.queuedTileY === undefined &&
+    movement.confirmedTileX === currentTileX &&
+    movement.confirmedTileY === currentTileY
+  );
 }
 
 function hasEnoughEnergy(energy: Energy, action: ActionDefinition): boolean {
