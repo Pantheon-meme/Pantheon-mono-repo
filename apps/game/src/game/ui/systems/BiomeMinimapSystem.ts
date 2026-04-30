@@ -159,6 +159,7 @@ function renderDynamicOverlay(
   const player = world.query(PlayerControlled, Position)[0];
 
   minimap.overlayLayer.clear();
+  minimap.playerMarker.setVisible(false);
 
   if (!player) {
     return;
@@ -178,10 +179,7 @@ function renderDynamicOverlay(
 
   minimap.overlayLayer.lineStyle(1.5, 0xffffff, 0.72);
   minimap.overlayLayer.strokeRect(viewX, viewY, viewWidth, viewHeight);
-  minimap.overlayLayer.fillStyle(0xfff3a1, 1);
-  minimap.overlayLayer.fillCircle(playerX, playerY, 3.5);
-  minimap.overlayLayer.lineStyle(1.5, 0x071018, 0.9);
-  minimap.overlayLayer.strokeCircle(playerX, playerY, 4.2);
+  minimap.playerMarker.setPosition(playerX, playerY).setVisible(true);
 }
 
 function positionMinimap(minimap: BiomeMinimap): void {

@@ -2,7 +2,6 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { InputState } from "../../player/components/InputState";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
-import { hudColors } from "../HudTheme";
 import { VirtualJoystick } from "../components/VirtualJoystick";
 
 export class VirtualJoystickSystem implements System {
@@ -40,8 +39,8 @@ export class VirtualJoystickSystem implements System {
     const thumbY = Math.sin(angle) * limitedDistance;
 
     joystick.thumb.setPosition(thumbX, thumbY);
-    joystick.base.setStrokeStyle(2, hudColors.borderWarm, 0.72);
-    joystick.thumb.setFillStyle(hudColors.borderWarm, 0.88);
+    joystick.base.setAlpha(1);
+    joystick.thumb.setAlpha(1);
 
     if (distance < joystick.radius * 0.28) {
       joystick.directionX = 0;
@@ -71,8 +70,8 @@ export class VirtualJoystickSystem implements System {
     joystick.directionX = 0;
     joystick.directionY = 0;
     joystick.thumb.setPosition(0, 0);
-    joystick.base.setStrokeStyle(2, hudColors.border, 0.32);
-    joystick.thumb.setFillStyle(hudColors.borderWarm, 0.55);
+    joystick.base.setAlpha(0.9);
+    joystick.thumb.setAlpha(0.94);
   }
 
   private positionJoystick(joystick: VirtualJoystick): void {

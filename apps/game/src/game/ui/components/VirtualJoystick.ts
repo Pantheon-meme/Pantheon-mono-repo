@@ -9,9 +9,8 @@ export class VirtualJoystick {
   constructor(
     public readonly container: Phaser.GameObjects.Container,
     public readonly zone: Phaser.GameObjects.Zone,
-    public readonly base: Phaser.GameObjects.Arc,
-    public readonly thumb: Phaser.GameObjects.Arc,
-    public readonly label: Phaser.GameObjects.Text,
+    public readonly base: Phaser.GameObjects.Image,
+    public readonly thumb: Phaser.GameObjects.Image,
     public readonly radius: number,
     public readonly screenX: number,
     public readonly screenYFromBottom: number,

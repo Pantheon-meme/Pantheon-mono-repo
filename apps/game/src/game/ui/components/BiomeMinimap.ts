@@ -12,6 +12,7 @@ export class BiomeMinimap {
     public readonly terrainLayer: Phaser.GameObjects.Graphics,
     public readonly regionLayer: Phaser.GameObjects.Graphics,
     public readonly overlayLayer: Phaser.GameObjects.Graphics,
+    public readonly playerMarker: Phaser.GameObjects.Image,
     public readonly biome: BiomeDefinition,
     public readonly surfacePlan: BiomeSurfacePlan | undefined,
     public readonly width: number,
