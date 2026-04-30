@@ -5,6 +5,7 @@ library PantheonConstants {
   uint32 internal constant STARTING_ENERGY = 100;
   uint32 internal constant MOVE_ENERGY_COST = 1;
   uint32 internal constant DIG_ENERGY_COST = 12;
+  uint32 internal constant FORAGE_ENERGY_COST = 10;
   uint32 internal constant PLANT_ENERGY_COST = 8;
   uint32 internal constant MOVE_SPEED_SCALE = 1000;
   uint32 internal constant DEFAULT_MOVE_SPEED = 2500;
@@ -13,10 +14,12 @@ library PantheonConstants {
   uint32 internal constant SLEEP_ROUGH_ENERGY_PER_SECOND = 2;
   uint64 internal constant SLEEP_DURATION = 6;
   uint64 internal constant DEFAULT_DAY_LENGTH = 300;
+  uint8 internal constant FORAGE_MAX_LOOT_SLOTS = 32;
   uint8 internal constant PLANT_STAGE_GROWING = 0;
   uint8 internal constant PLANT_STAGE_HARVESTED = 2;
 
   bytes32 internal constant ACTION_DIG = bytes32("dig");
+  bytes32 internal constant ACTION_FORAGE = bytes32("forage");
   bytes32 internal constant ACTION_HARVEST = bytes32("harvest");
   bytes32 internal constant ACTION_MOVE = bytes32("move");
   bytes32 internal constant ACTION_PLANT = bytes32("plant");

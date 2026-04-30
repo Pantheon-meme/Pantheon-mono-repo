@@ -27,6 +27,9 @@ type SeedTerrainOptions = {
   tileSize?: number;
   spawnTileX?: number;
   spawnTileY?: number;
+  radius?: number;
+  startIndex?: number;
+  endIndex?: number;
   batchSize?: number;
   rpcUrl?: string;
   worldAddress?: Hex;
@@ -97,7 +100,7 @@ async function main(): Promise<void> {
   const spawnTileY = options.spawnTileY ?? Math.floor(gridHeight / 2);
   const batchSize = options.batchSize ?? defaultBatchSize;
   const terrainTypes = getTerrainTypeSeeds(biome);
-  const records = generateTerrainSeedRecords({
+  const allRecords = generateTerrainSeedRecords({
     biome,
     gridWidth,
     gridHeight,
@@ -105,9 +108,20 @@ async function main(): Promise<void> {
     spawnTileX,
     spawnTileY,
   });
+  const records =
+    options.radius === undefined
+      ? allRecords
+      : allRecords.filter(
+          (record) =>
+            Math.abs(record.x - spawnTileX) <= options.radius! &&
+            Math.abs(record.y - spawnTileY) <= options.radius!,
+        );
+  const seedStartIndex = options.startIndex ?? 0;
+  const seedEndIndex = Math.min(options.endIndex ?? records.length, records.length);
+  const selectedRecords = records.slice(seedStartIndex, seedEndIndex);
 
   console.log(
-    `Prepared ${records.length} ${biome.id} terrain tiles and ${terrainTypes.length} terrain types`,
+    `Prepared ${selectedRecords.length} ${biome.id} terrain tiles and ${terrainTypes.length} terrain types`,
   );
 
   if (options.dryRun) {
@@ -162,8 +176,9 @@ async function main(): Promise<void> {
     console.log(`Registered terrain type ${terrainType.terrainId}`);
   }
 
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize);
+  for (let index = 0; index < selectedRecords.length; index += batchSize) {
+    const batch = selectedRecords.slice(index, index + batchSize);
+    const absoluteStart = seedStartIndex + index;
     const hash = await walletClient.writeContract({
       address: worldAddress,
       abi: terrainSystemAbi,
@@ -177,7 +192,9 @@ async function main(): Promise<void> {
     });
 
     await publicClient.waitForTransactionReceipt({ hash });
-    console.log(`Seeded terrain tiles ${index + 1}-${index + batch.length}`);
+    console.log(
+      `Seeded terrain tiles ${absoluteStart + 1}-${absoluteStart + batch.length}`,
+    );
   }
 }
 
@@ -301,6 +318,18 @@ function parseArgs(args: string[]): SeedTerrainOptions {
         break;
       case "--spawn-y":
         parsed.spawnTileY = readNumber(arg, next);
+        index += 1;
+        break;
+      case "--radius":
+        parsed.radius = readNumber(arg, next);
+        index += 1;
+        break;
+      case "--start-index":
+        parsed.startIndex = readNumber(arg, next);
+        index += 1;
+        break;
+      case "--end-index":
+        parsed.endIndex = readNumber(arg, next);
         index += 1;
         break;
       case "--batch-size":

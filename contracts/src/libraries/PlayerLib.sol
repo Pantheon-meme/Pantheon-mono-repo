@@ -22,6 +22,10 @@ library PlayerLib {
     PlayerState.setEnergy(player, nextEnergy > maxEnergy ? maxEnergy : nextEnergy);
   }
 
+  function getPosition(address player) internal view returns (int32 x, int32 y) {
+    return (PlayerState.getX(player), PlayerState.getY(player));
+  }
+
   function spawn(address player, int32 x, int32 y) internal {
     require(!PlayerState.getExists(player), "already spawned");
     PlayerState.set(

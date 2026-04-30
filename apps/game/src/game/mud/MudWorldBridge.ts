@@ -1,6 +1,7 @@
 import {
   createPublicClient,
   createWalletClient,
+  hexToString,
   http,
   type Hex,
 } from "viem";
@@ -16,6 +17,16 @@ const pantheonWorldAbi = [
   {
     type: "function",
     name: "pantheon__dig",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "pantheon__forage",
     stateMutability: "nonpayable",
     inputs: [
       { name: "x", type: "int32" },
@@ -56,6 +67,19 @@ const pantheonWorldAbi = [
     stateMutability: "nonpayable",
     inputs: [],
     outputs: [],
+  },
+  {
+    type: "function",
+    name: "pantheon__getLastForageResult",
+    stateMutability: "view",
+    inputs: [{ name: "player", type: "address" }],
+    outputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+      { name: "itemId", type: "bytes32" },
+      { name: "amount", type: "uint32" },
+      { name: "exists", type: "bool" },
+    ],
   },
   {
     type: "function",
@@ -102,6 +126,14 @@ export type ConfirmedDig = {
   y: number;
 };
 
+export type ConfirmedForage = {
+  x: number;
+  y: number;
+  itemId: string;
+  amount: number;
+  playerEnergy?: PlayerEnergy;
+};
+
 export type ConfirmedMove = {
   x: number;
   y: number;
@@ -146,6 +178,11 @@ export type MudDigCallbacks = {
   onRejected: (message: string) => void;
 };
 
+export type MudForageCallbacks = {
+  onConfirmed: (forage: ConfirmedForage) => void;
+  onRejected: (message: string) => void;
+};
+
 export type MudMoveCallbacks = {
   onConfirmed: (move: ConfirmedMove) => void;
   onRejected: (message: string) => void;
@@ -165,6 +202,7 @@ export class MudWorldBridge {
   private readonly publicClient;
   private readonly walletClient;
   private readonly pendingDigs = new Set<string>();
+  private readonly pendingForages = new Set<string>();
   private pendingMove = false;
   private pendingSleep = false;
   private pendingResolveAction = false;
@@ -202,6 +240,19 @@ export class MudWorldBridge {
 
     this.pendingDigs.add(key);
     void this.confirmDig(x, y, key, callbacks);
+
+    return true;
+  }
+
+  submitForage(x: number, y: number, callbacks: MudForageCallbacks): boolean {
+    const key = `${x},${y}`;
+
+    if (this.pendingForages.has(key)) {
+      return false;
+    }
+
+    this.pendingForages.add(key);
+    void this.confirmForage(x, y, key, callbacks);
 
     return true;
   }
@@ -356,6 +407,33 @@ export class MudWorldBridge {
     }
   }
 
+  private async confirmForage(
+    x: number,
+    y: number,
+    key: string,
+    callbacks: MudForageCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__forage",
+        args: [x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        ...(await this.readLastForageResultAfterConfirmation(x, y)),
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingForages.delete(key);
+    }
+  }
+
   private async confirmMove(
     x: number,
     y: number,
@@ -480,6 +558,33 @@ export class MudWorldBridge {
     }
   }
 
+  private async readLastForageResultAfterConfirmation(
+    fallbackX: number,
+    fallbackY: number,
+  ): Promise<Omit<ConfirmedForage, "playerEnergy">> {
+    try {
+      const [x, y, itemId, amount, exists] = await this.publicClient.readContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__getLastForageResult",
+        args: [this.walletClient.account.address],
+      });
+
+      if (exists) {
+        return {
+          x,
+          y,
+          itemId: decodeBytes32String(itemId),
+          amount,
+        };
+      }
+    } catch {
+      // Fall through to a no-drop result if the read is temporarily unavailable.
+    }
+
+    return { x: fallbackX, y: fallbackY, itemId: "", amount: 0 };
+  }
+
   private async readPlayerStaticField(
     keyTuple: Hex[],
     fieldIndex: number,
@@ -577,4 +682,8 @@ function decodeInt32StaticField(blob: Hex): number {
 
 function decodeBoolStaticField(blob: Hex): boolean {
   return Number.parseInt(blob.slice(2, 4), 16) !== 0;
+}
+
+function decodeBytes32String(value: Hex): string {
+  return hexToString(value, { size: 32 }).replace(/\0+$/, "");
 }

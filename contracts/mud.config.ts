@@ -69,6 +69,73 @@ export default defineWorld({
       },
       key: ["x", "y"],
     },
+    ItemType: {
+      schema: {
+        itemId: "bytes32",
+        category: "bytes32",
+        exists: "bool",
+        label: "string",
+      },
+      key: ["itemId"],
+    },
+    PlayerInventory: {
+      schema: {
+        player: "address",
+        itemId: "bytes32",
+        amount: "uint32",
+        exists: "bool",
+      },
+      key: ["player", "itemId"],
+    },
+    ForageTable: {
+      schema: {
+        terrainId: "bytes32",
+        tableId: "bytes32",
+        baseChance: "uint32",
+        exists: "bool",
+      },
+      key: ["terrainId"],
+    },
+    ForageLootSlot: {
+      schema: {
+        tableId: "bytes32",
+        slot: "uint8",
+        itemId: "bytes32",
+        weight: "uint32",
+        minAmount: "uint32",
+        maxAmount: "uint32",
+        enabled: "bool",
+      },
+      key: ["tableId", "slot"],
+    },
+    ForageState: {
+      schema: {
+        x: "int32",
+        y: "int32",
+        lastForagedAt: "uint64",
+        exists: "bool",
+      },
+      key: ["x", "y"],
+    },
+    ForageNonce: {
+      schema: {
+        player: "address",
+        value: "uint32",
+        exists: "bool",
+      },
+      key: ["player"],
+    },
+    LastForageResult: {
+      schema: {
+        player: "address",
+        x: "int32",
+        y: "int32",
+        itemId: "bytes32",
+        amount: "uint32",
+        exists: "bool",
+      },
+      key: ["player"],
+    },
     ActionLog: {
       schema: {
         player: "address",

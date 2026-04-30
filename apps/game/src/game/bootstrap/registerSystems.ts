@@ -20,6 +20,7 @@ import { HandHudSystem } from "../ui/systems/HandHudSystem";
 import { HarvestedPlantRenderSystem } from "../plants/systems/HarvestedPlantRenderSystem";
 import { HeldItemPositionSystem } from "../player/systems/HeldItemPositionSystem";
 import { InputSystem } from "../player/systems/InputSystem";
+import { ForageDropRenderSystem } from "../items/systems/ForageDropRenderSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
 import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
@@ -80,6 +81,7 @@ export function registerSystems(
   world.addSystem(new PlantRenderSystem(scene));
   world.addSystem(new HarvestedPlantRenderSystem(scene));
   world.addSystem(new SeedDropRenderSystem(scene));
+  world.addSystem(new ForageDropRenderSystem(scene));
   world.addSystem(new WorldDepthSystem());
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
