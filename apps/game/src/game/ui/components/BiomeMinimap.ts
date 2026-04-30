@@ -5,6 +5,7 @@ import type { BiomeSurfacePlan } from "../../biome/BiomeSurfacePlan";
 export class BiomeMinimap {
   rendered = false;
   legendExpanded = false;
+  visible = true;
 
   constructor(
     public readonly container: Phaser.GameObjects.Container,

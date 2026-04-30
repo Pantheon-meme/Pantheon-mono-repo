@@ -33,6 +33,7 @@ export class BiomeMinimapSystem implements System {
     }
 
     for (const [, minimap] of world.query(BiomeMinimap)) {
+      applyVisibility(minimap);
       setLegendExpanded(minimap, minimap.legendExpanded);
       positionMinimap(minimap);
 
@@ -43,6 +44,18 @@ export class BiomeMinimapSystem implements System {
 
       renderDynamicOverlay(world, minimap, grid);
     }
+  }
+}
+
+function applyVisibility(minimap: BiomeMinimap): void {
+  minimap.container.setVisible(minimap.visible);
+
+  if (!minimap.visible) {
+    minimap.legendExpanded = false;
+  }
+
+  if (minimap.background.input) {
+    minimap.background.input.enabled = minimap.visible;
   }
 }
 

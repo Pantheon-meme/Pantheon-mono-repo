@@ -4,6 +4,7 @@ import { DayNightOverlay } from "../components/DayNightOverlay";
 import { GameClock } from "../../time/components/GameClock";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { JournalPanel } from "../components/JournalPanel";
+import { BiomeMinimap } from "../components/BiomeMinimap";
 import { hudColors } from "../HudTheme";
 
 type Lighting = {
@@ -55,23 +56,22 @@ export class DayNightRenderSystem implements System {
         const buttonX =
           panelPosition.x + (70 + index * 34) * scale;
         const buttonY = panelPosition.y + 48 * scale;
-        const isJournalActive =
-          button.id === "journal" && Boolean(world.query(JournalPanel)[0]?.[1].visible);
+        const isActive = isButtonActive(world, button.id);
 
         button.background.setPosition(buttonX, buttonY);
         button.background.setScale(scale);
         button.background.setFillStyle(
-          isJournalActive ? hudColors.selected : hudColors.panel,
-          isJournalActive ? 0.94 : 0.9,
+          isActive ? hudColors.selected : hudColors.panel,
+          isActive ? 0.94 : 0.9,
         );
         button.background.setStrokeStyle(
           1,
-          isJournalActive ? hudColors.selected : hudColors.border,
-          isJournalActive ? 0.9 : 0.45,
+          isActive ? hudColors.selected : hudColors.border,
+          isActive ? 0.9 : 0.45,
         );
         button.label.setPosition(buttonX, buttonY);
         button.label.setScale(scale);
-        button.label.setColor(isJournalActive ? hudColors.textDark : hudColors.textWarm);
+        button.label.setColor(isActive ? hudColors.textDark : hudColors.textWarm);
         button.background.setVisible(true);
         button.label.setVisible(true);
       });
@@ -116,13 +116,33 @@ export class DayNightRenderSystem implements System {
       }
 
       if (button.id === "map") {
-        log && (log.lastMessage = "Map: minimap is already visible");
+        const minimap = world.query(BiomeMinimap)[0]?.[1];
+
+        if (minimap) {
+          minimap.visible = !minimap.visible;
+          log &&
+            (log.lastMessage = minimap.visible
+              ? "Map: minimap shown"
+              : "Map: minimap hidden");
+        }
         continue;
       }
 
       log && (log.lastMessage = "Settings: not available yet");
     }
   }
+}
+
+function isButtonActive(world: World, buttonId: string): boolean {
+  if (buttonId === "journal") {
+    return Boolean(world.query(JournalPanel)[0]?.[1].visible);
+  }
+
+  if (buttonId === "map") {
+    return Boolean(world.query(BiomeMinimap)[0]?.[1].visible);
+  }
+
+  return false;
 }
 
 function getLighting(dayTime: number): Lighting {
