@@ -33,13 +33,7 @@ export class BiomeMinimapSystem implements System {
     }
 
     for (const [, minimap] of world.query(BiomeMinimap)) {
-      if (minimap.collapsed) {
-        setCollapsed(minimap, true);
-        positionMinimap(minimap);
-        continue;
-      }
-
-      setCollapsed(minimap, false);
+      setLegendExpanded(minimap, minimap.legendExpanded);
       positionMinimap(minimap);
 
       if (!minimap.rendered) {
@@ -144,7 +138,7 @@ function drawRegionLabels(
   minimap: BiomeMinimap,
   regionColorById: ReadonlyMap<string, number>,
 ): void {
-  const labelX = minimap.width + 10;
+  const labelX = -minimap.legendWidth;
 
   minimap.biome.regions.forEach((region, index) => {
     const y = index * 18;
@@ -220,22 +214,23 @@ function positionMinimap(minimap: BiomeMinimap): void {
   minimap.container.setScale(scale);
 }
 
-function setCollapsed(minimap: BiomeMinimap, collapsed: boolean): void {
-  minimap.terrainLayer.setVisible(!collapsed);
-  minimap.regionLayer.setVisible(!collapsed);
-  minimap.overlayLayer.setVisible(!collapsed);
-  minimap.labelLayer.setVisible(!collapsed);
-  minimap.collapseLabel.setVisible(collapsed);
+function setLegendExpanded(minimap: BiomeMinimap, expanded: boolean): void {
+  minimap.terrainLayer.setVisible(true);
+  minimap.regionLayer.setVisible(true);
+  minimap.overlayLayer.setVisible(true);
+  minimap.labelLayer.setVisible(expanded);
 
-  if (collapsed) {
-    minimap.background.setSize(92, 34);
-    minimap.background.setPosition(-10, -10);
-    minimap.background.setFillStyle(0x101821, 0.86);
-    minimap.collapseLabel.setPosition(0, -3);
+  if (expanded) {
+    minimap.background.setSize(
+      minimap.width + minimap.legendWidth + 20,
+      minimap.height + 20,
+    );
+    minimap.background.setPosition(-minimap.legendWidth - 10, -10);
+    minimap.background.setFillStyle(0x101821, 0.82);
     return;
   }
 
-  minimap.background.setSize(minimap.width + 132 + 20, minimap.height + 20);
+  minimap.background.setSize(minimap.width + 20, minimap.height + 20);
   minimap.background.setPosition(-10, -10);
   minimap.background.setFillStyle(0x101821, 0.78);
 }

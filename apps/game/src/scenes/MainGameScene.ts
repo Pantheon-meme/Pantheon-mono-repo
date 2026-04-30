@@ -525,7 +525,7 @@ export class MainGameScene extends Phaser.Scene {
       .rectangle(
         -10,
         -10,
-        width + legendWidth + 20,
+        width + 20,
         height + 20,
         0x101821,
         0.78,
@@ -536,18 +536,7 @@ export class MainGameScene extends Phaser.Scene {
     const terrainLayer = this.add.graphics();
     const regionLayer = this.add.graphics();
     const overlayLayer = this.add.graphics();
-    const labelLayer = this.add.container(0, 0);
-    const collapseLabel = this.add
-      .text(0, 0, "Map", {
-        align: "center",
-        color: hudColors.textWarm,
-        fixedWidth: 72,
-        fontFamily: hudFontFamily,
-        fontSize: "13px",
-        fontStyle: "700",
-      })
-      .setOrigin(0, 0)
-      .setVisible(false);
+    const labelLayer = this.add.container(0, 0).setVisible(false);
 
     container.add([
       background,
@@ -555,7 +544,6 @@ export class MainGameScene extends Phaser.Scene {
       regionLayer,
       overlayLayer,
       labelLayer,
-      collapseLabel,
     ]);
 
     const minimap = new BiomeMinimap(
@@ -565,17 +553,20 @@ export class MainGameScene extends Phaser.Scene {
       regionLayer,
       overlayLayer,
       labelLayer,
-      collapseLabel,
       biome,
       surfacePlan,
       width,
       height,
+      legendWidth,
       x,
       y,
     );
 
-    background.on("pointerdown", () => {
-      minimap.collapsed = !minimap.collapsed;
+    background.on("pointerover", () => {
+      minimap.legendExpanded = true;
+    });
+    background.on("pointerout", () => {
+      minimap.legendExpanded = false;
     });
 
     return minimap;
