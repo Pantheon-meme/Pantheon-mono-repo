@@ -6,6 +6,11 @@ import {
   terrainAtlasTextureKey,
 } from "../assets/autotiles/TerrainAtlasAssets";
 import { objectSpriteAssets } from "../assets/object-sprites/ObjectSpriteAssets";
+import {
+  minimapFrameAsset,
+  minimapFrameSlices,
+  minimapFrameTextureKey,
+} from "../assets/ui/UiFrameAssets";
 import { World } from "../ecs/World";
 import {
   getActiveBiome,
@@ -120,6 +125,8 @@ export class MainGameScene extends Phaser.Scene {
         frameHeight: asset.manifest.cellSize,
       });
     }
+
+    this.load.image(minimapFrameTextureKey, minimapFrameAsset.imageUrl);
   }
 
   create(): void {
@@ -517,33 +524,37 @@ export class MainGameScene extends Phaser.Scene {
   ): BiomeMinimap {
     const width = 184;
     const height = 184;
-    const legendWidth = 132;
+    const displayScale = 0.54;
     const x = 18;
     const y = 18;
+    const frameWidth =
+      width + minimapFrameSlices.left + minimapFrameSlices.right;
+    const frameHeight =
+      height + minimapFrameSlices.top + minimapFrameSlices.bottom;
     const container = this.add.container(0, 0).setDepth(103);
     const background = this.add
-      .rectangle(
-        -10,
-        -10,
-        width + 20,
-        height + 20,
-        0x101821,
-        0.78,
+      .nineslice(
+        -minimapFrameSlices.left,
+        -minimapFrameSlices.top,
+        minimapFrameTextureKey,
+        undefined,
+        frameWidth,
+        frameHeight,
+        minimapFrameSlices.left,
+        minimapFrameSlices.right,
+        minimapFrameSlices.top,
+        minimapFrameSlices.bottom,
       )
-      .setOrigin(0)
-      .setStrokeStyle(2, hudColors.border, 0.45)
-      .setInteractive({ useHandCursor: true });
+      .setOrigin(0);
     const terrainLayer = this.add.graphics();
     const regionLayer = this.add.graphics();
     const overlayLayer = this.add.graphics();
-    const labelLayer = this.add.container(0, 0).setVisible(false);
 
     container.add([
-      background,
       terrainLayer,
       regionLayer,
       overlayLayer,
-      labelLayer,
+      background,
     ]);
 
     const minimap = new BiomeMinimap(
@@ -552,22 +563,14 @@ export class MainGameScene extends Phaser.Scene {
       terrainLayer,
       regionLayer,
       overlayLayer,
-      labelLayer,
       biome,
       surfacePlan,
       width,
       height,
-      legendWidth,
+      displayScale,
       x,
       y,
     );
-
-    background.on("pointerover", () => {
-      minimap.legendExpanded = true;
-    });
-    background.on("pointerout", () => {
-      minimap.legendExpanded = false;
-    });
 
     return minimap;
   }
