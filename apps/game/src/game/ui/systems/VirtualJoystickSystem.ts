@@ -21,18 +21,14 @@ export class VirtualJoystickSystem implements System {
   }
 
   private updatePointer(joystick: VirtualJoystick): void {
-    const pointer = joystick.container.scene.input.activePointer;
+    const pointer = this.getTrackedPointer(joystick);
 
-    if (!joystick.active || !pointer.isDown) {
-      joystick.active = false;
-      joystick.pointerId = undefined;
-      joystick.directionX = 0;
-      joystick.directionY = 0;
-      joystick.thumb.setPosition(0, 0);
-      joystick.base.setStrokeStyle(2, hudColors.border, 0.32);
-      joystick.thumb.setFillStyle(hudColors.borderWarm, 0.55);
+    if (!joystick.active || !pointer?.isDown) {
+      this.resetJoystick(joystick);
       return;
     }
+
+    pointer.updateWorldPoint(joystick.container.scene.cameras.main);
 
     const scale = joystick.container.scaleX || 1;
     const dx = (pointer.worldX - joystick.container.x) / scale;
@@ -55,6 +51,28 @@ export class VirtualJoystickSystem implements System {
 
     joystick.directionX = Math.abs(dx) > joystick.radius * 0.28 ? Math.sign(dx) : 0;
     joystick.directionY = Math.abs(dy) > joystick.radius * 0.28 ? Math.sign(dy) : 0;
+  }
+
+  private getTrackedPointer(
+    joystick: VirtualJoystick,
+  ): Phaser.Input.Pointer | undefined {
+    if (joystick.pointerId === undefined) {
+      return joystick.container.scene.input.activePointer;
+    }
+
+    return joystick.container.scene.input.manager.pointers.find(
+      (pointer) => pointer.id === joystick.pointerId,
+    );
+  }
+
+  private resetJoystick(joystick: VirtualJoystick): void {
+    joystick.active = false;
+    joystick.pointerId = undefined;
+    joystick.directionX = 0;
+    joystick.directionY = 0;
+    joystick.thumb.setPosition(0, 0);
+    joystick.base.setStrokeStyle(2, hudColors.border, 0.32);
+    joystick.thumb.setFillStyle(hudColors.borderWarm, 0.55);
   }
 
   private positionJoystick(joystick: VirtualJoystick): void {

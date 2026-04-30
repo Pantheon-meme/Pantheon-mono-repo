@@ -992,25 +992,25 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   private createVirtualJoystick(): VirtualJoystick {
-    const radius = 42;
+    const radius = 92;
     const container = this.add.container(0, 0).setDepth(104).setAlpha(0.88);
     const zone = this.add
-      .zone(0, 0, radius * 2.5, radius * 2.5)
+      .zone(0, 0, radius * 2 + 20, radius * 2 + 20)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     const base = this.add
       .circle(0, 0, radius, hudColors.panelDark, 0.34)
       .setStrokeStyle(2, hudColors.border, 0.32);
     const thumb = this.add
-      .circle(0, 0, 20, hudColors.borderWarm, 0.55)
+      .circle(0, 0, 34, hudColors.borderWarm, 0.55)
       .setStrokeStyle(2, hudColors.borderWarm, 0.72);
     const label = this.add
-      .text(0, radius + 13, "Move", {
+      .text(0, radius - 20, "Move", {
         align: "center",
         color: hudColors.textSoft,
-        fixedWidth: 86,
+        fixedWidth: radius * 2,
         fontFamily: hudFontFamily,
-        fontSize: "11px",
+        fontSize: "12px",
         fontStyle: "700",
         shadow: hudShadow(),
       })
@@ -1022,19 +1022,16 @@ export class MainGameScene extends Phaser.Scene {
       thumb,
       label,
       radius,
-      84,
-      88,
+      120,
+      120,
     );
 
     zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       joystick.active = true;
       joystick.pointerId = pointer.id;
     });
-    zone.on("pointerup", () => {
-      joystick.active = false;
-    });
-    zone.on("pointerout", () => {
-      if (!this.input.activePointer.isDown) {
+    zone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === joystick.pointerId) {
         joystick.active = false;
       }
     });
