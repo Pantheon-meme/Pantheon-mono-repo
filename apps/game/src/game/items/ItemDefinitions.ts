@@ -37,7 +37,6 @@ const forageItems: ItemDefinition[] = [
   item("violet_clover", "Violet clover", "flower", 0xbd8cff),
   item("pearl_dew", "Pearl dew", "reagent", 0xe8fff8),
   item("unicorn_petal", "Unicorn petal", "flower", 0xff9bd4),
-  item("pink_thistle_seed", "Pink thistle seed", "seed", 0xff7fbd),
   item("forest_root", "Forest root", "wood", 0x8a5b39),
   item("fee_moss_mushroom", "Fee moss mushroom", "mushroom", 0x96f2b7),
   item("fallen_unicorn_branch", "Fallen unicorn branch", "wood", 0xcdb7ff),
@@ -54,6 +53,18 @@ const forageItems: ItemDefinition[] = [
   item("oracle_glass_crystal", "Oracle glass crystal", "gem", 0xa7f3ff),
   item("copper_ore", "Copper ore", "ore", 0xc47a43),
   item("opal_gem", "Opal gem", "gem", 0xf3d7ff),
+  item("mint_reed_fiber", "Mint reed fiber", "fiber", 0x8af2d0),
+  item("pearl_moss", "Pearl moss", "reagent", 0xdff8e7),
+  item("violet_mycela", "Violet mycela", "mushroom", 0xa986ff),
+  item("glass_reed_shard", "Glass reed shard", "gem", 0xa7f3ff),
+  item("liquidity_algae", "Liquidity algae", "reagent", 0x4fd3bb),
+  item("rose_quartz_chip", "Rose quartz chip", "gem", 0xff9bd4),
+  item("civic_clay", "Civic clay", "stone", 0xb6a8cf),
+  item("route_thread_spool", "Route thread spool", "fiber", 0xf5c6ff),
+  item("swamp_glass_nodule", "Swamp glass nodule", "gem", 0x66d4c9),
+  item("oracle_amber", "Oracle amber", "gem", 0xf0bd67),
+  item("pool_pearl", "Pool pearl", "shell", 0xe8fff8),
+  item("moonlit_bark", "Moonlit bark", "wood", 0xbcc8e8),
 ];
 
 export const itemDefinitions: Record<string, ItemDefinition> = {

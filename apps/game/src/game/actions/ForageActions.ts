@@ -15,12 +15,7 @@ import { SkillSet } from "../ideas/components/SkillSet";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { WeightInspectable } from "../shared/components/WeightInspectable";
 import { WeightedObject } from "../shared/components/WeightedObject";
-import {
-  checkQualityLabel,
-  type CheckQuality,
-  resolveCheck,
-} from "../rules/CheckResolver";
-import { getTerrainForageDefinition } from "../forage/ForageLootDefinitions";
+import { checkQualityLabel, resolveCheck } from "../rules/CheckResolver";
 import { getItemDefinition, itemLabel } from "../items/ItemDefinitions";
 import { getPlantBySeed } from "../plants/PlantDefinitions";
 import { getTopTerrainLayerAtCell } from "../terrain/TerrainLayers";
@@ -108,30 +103,14 @@ function forage(world: World, actor: Entity): ActionEffectResult {
       },
     ],
   });
-  const preview = pickPreviewForage(activeLayer, check.quality);
 
   if (ideas) {
     ideas.lastCheck = check;
   }
-  skills.addExperience("foraging", preview.amount > 0 ? 0.5 : 0.2);
-
-  const pendingDrops =
-    preview.amount > 0 && preview.itemId
-      ? scatterForageDrops(
-          world,
-          grid,
-          preview.itemId,
-          preview.amount,
-          tileX,
-          tileY,
-          true,
-        )
-      : [];
+  skills.addExperience("foraging", 0.2);
 
   const submitted = mud.bridge.submitForage(tileX, tileY, {
     onConfirmed: ({ itemId, amount, playerEnergy }) => {
-      clearPendingDrops(world, pendingDrops);
-
       if (playerEnergy) {
         const energy = world.getComponent(actor, Energy);
 
@@ -142,94 +121,31 @@ function forage(world: World, actor: Entity): ActionEffectResult {
       }
 
       if (amount <= 0 || !itemId) {
-        updateActionLog(world, actor, "Forage: confirmed, found nothing");
+        updateActionLog(world, actor, "Forage: found nothing");
         return;
       }
 
+      skills.addExperience("foraging", 0.3);
       scatterForageDrops(world, grid, itemId, amount, tileX, tileY, false);
       updateActionLog(
         world,
         actor,
-        `Forage: confirmed ${amount} ${itemLabel(itemId)}`,
+        `Forage: found ${amount} ${itemLabel(itemId)}`,
       );
     },
     onRejected: (message) => {
-      clearPendingDrops(world, pendingDrops);
       refundEnergy(world, actor, forageEnergyCost);
       updateActionLog(world, actor, `Forage: ${message}`);
     },
   });
 
   if (!submitted) {
-    clearPendingDrops(world, pendingDrops);
-
     return { message: "Forage: waiting on MUD sync", applied: false, retry: true };
   }
 
   return {
-    message:
-      preview.amount > 0 && preview.itemId
-        ? `Forage: maybe ${preview.amount} ${itemLabel(preview.itemId)} (${checkQualityLabel(check.quality)}, syncing)`
-        : `Forage: searching ${formatLayerName(activeLayer)} (${checkQualityLabel(check.quality)}, syncing)`,
+    message: `Forage: searching ${formatLayerName(activeLayer)} (${checkQualityLabel(check.quality)}, syncing)`,
   };
-}
-
-function getForageAmount(quality: CheckQuality, baseChance: number): number {
-  const roll = Math.random() * 10000;
-
-  if (quality === "critical-failure" || quality === "failure") {
-    return 0;
-  }
-
-  if (roll < baseChance) {
-    return quality === "critical-success" ? 2 : 1;
-  }
-
-  if (roll < baseChance + baseChance / 4) {
-    return quality === "critical-success" ? 3 : 2;
-  }
-
-  if (
-    roll < baseChance + baseChance / 4 + baseChance / 20 &&
-    (quality === "great-success" || quality === "critical-success")
-  ) {
-    return 3;
-  }
-
-  return 0;
-}
-
-function pickPreviewForage(
-  activeLayer: string,
-  quality: CheckQuality,
-): { itemId: string; amount: number } {
-  const definition = getTerrainForageDefinition(activeLayer);
-
-  if (!definition) {
-    return { itemId: "", amount: 0 };
-  }
-
-  const amount = getForageAmount(quality, definition.baseChance);
-
-  if (amount <= 0) {
-    return { itemId: "", amount: 0 };
-  }
-
-  const totalWeight = definition.loot.reduce(
-    (total, slot) => total + slot.weight,
-    0,
-  );
-  let roll = Math.random() * totalWeight;
-
-  for (const slot of definition.loot) {
-    roll -= slot.weight;
-
-    if (roll <= 0) {
-      return { itemId: slot.itemId, amount };
-    }
-  }
-
-  return { itemId: definition.loot[0]?.itemId ?? "", amount };
 }
 
 function scatterForageDrops(
@@ -297,27 +213,6 @@ function addForageDropPayload(
   }
 
   world.addComponent(drop, ForageDrop, new ForageDrop(itemId, 1, pending));
-}
-
-function clearPendingDrops(world: World, drops: Entity[]): void {
-  for (const drop of drops) {
-    const forageDrop = world.getComponent(drop, ForageDrop);
-    const seedDrop = world.getComponent(drop, SeedDrop);
-    const position = world.getComponent(drop, Position);
-
-    if (forageDrop) {
-      forageDrop.collected = true;
-    }
-
-    if (seedDrop) {
-      seedDrop.collected = true;
-    }
-
-    if (position) {
-      position.x = -999999;
-      position.y = -999999;
-    }
-  }
 }
 
 function updateActionLog(world: World, actor: Entity, message: string): void {

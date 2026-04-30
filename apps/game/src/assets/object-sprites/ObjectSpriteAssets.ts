@@ -3,6 +3,8 @@ import cityCloverSpriteUrl from "./city-clover/city-clover-sprite-sheet.png?url"
 import duskmilletSpriteUrl from "./duskmillet/duskmillet-sprite-sheet.png?url";
 import emberoakSpriteUrl from "./emberoak/emberoak-sprite-sheet.png?url";
 import emberwheatSpriteUrl from "./emberwheat/emberwheat-sprite-sheet.png?url";
+import forageResourcesASpriteUrl from "./forage-resources-a/forage-resources-a-sprite-sheet.png?url";
+import forageResourcesBSpriteUrl from "./forage-resources-b/forage-resources-b-sprite-sheet.png?url";
 import frostbarleySpriteUrl from "./frostbarley/frostbarley-sprite-sheet.png?url";
 import frostpineSpriteUrl from "./frostpine/frostpine-sprite-sheet.png?url";
 import honeyfigSpriteUrl from "./honeyfig/honeyfig-sprite-sheet.png?url";
@@ -986,6 +988,382 @@ export const objectSpriteAssets = {
                 "stateId": "harvested",
                 "stateTitle": "Harvested",
                 "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "forage-resources-a": {
+    imageUrl: forageResourcesASpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "forage-resources-b": {
+    imageUrl: forageResourcesBSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Forage Item Row 0",
+                "columnLabel": "slot 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Forage Item Row 1",
+                "columnLabel": "slot 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Forage Item Row 2",
+                "columnLabel": "slot 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Forage Item Row 3",
+                "columnLabel": "slot 4",
                 "row": 3,
                 "column": 3,
                 "x": 768,

@@ -20,6 +20,7 @@
     "generate-uniswap-biome-assets": "tsx src/generate-uniswap-biome-assets.ts",
     "generate-object-sprites": "tsx src/object-sprite-cli.ts",
     "generate-biome-object-sprites": "tsx src/generate-biome-object-sprites.ts",
+    "generate-forage-item-sprites": "tsx src/generate-forage-item-sprites.ts",
     "generate-biome-plant-sprites": "tsx src/generate-biome-plant-sprites.ts",
     "generate-tree-sprites": "tsx src/generate-tree-sprites.ts",
     "combine-autotile-atlas": "tsx src/combine-autotile-atlas.ts",
