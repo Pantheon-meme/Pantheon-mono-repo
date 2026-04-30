@@ -19,6 +19,8 @@ import {
 import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 
 const digEnergyCost = 12;
+const maxDigLevel = 1;
+const blockedDigTerrainIds = new Set(["path", "road", "water", "swamp"]);
 
 export const terrainActionDefinitions: Record<string, ActionDefinition> = {
   dig: {
@@ -50,13 +52,27 @@ function canDig(world: World, actor: Entity): ActionEffectResult {
     };
   }
 
-  const isSurfaceDirt = dirtLayer.grid.has(targetCell.x, targetCell.y);
   const terrainLayerId =
     getTopTerrainLayerAtCell(world, targetCell.x, targetCell.y)?.layer.id ??
     hardness.defaultLayerId;
-  const requiredPower = isSurfaceDirt
-    ? hardness.getDeepHardness(digDepth.get(targetCell.x, targetCell.y))
-    : hardness.getLayerHardness(terrainLayerId);
+
+  if (blockedDigTerrainIds.has(terrainLayerId)) {
+    return {
+      message: `Dig: can't dig ${terrainLayerId}`,
+      applied: false,
+    };
+  }
+
+  const currentDigLevel = digDepth.get(targetCell.x, targetCell.y);
+
+  if (currentDigLevel >= maxDigLevel) {
+    return {
+      message: `Dig: already loosened at ${targetCell.x},${targetCell.y}`,
+      applied: false,
+    };
+  }
+
+  const requiredPower = hardness.getLayerHardness(terrainLayerId);
   const power = world.getComponent(actor, DiggingCapability)?.power ?? 1;
 
   if (power < requiredPower) {
@@ -200,14 +216,10 @@ function applyOptimisticDig(
   x: number,
   y: number,
 ): string {
-  if (!dirtGrid.has(x, y)) {
-    dirtGrid.set(x, y, true);
-    return `Dig: loosened soil at ${x},${y}`;
-  }
+  dirtGrid.set(x, y, true);
+  digDepth.set(x, y, maxDigLevel);
 
-  const depth = digDepth.increment(x, y);
-
-  return `Dig: depth ${depth} at ${x},${y}`;
+  return `Dig: loosened soil at ${x},${y}`;
 }
 
 function rollbackOptimisticDig(

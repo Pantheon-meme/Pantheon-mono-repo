@@ -7,6 +7,7 @@ library PantheonConstants {
   uint32 internal constant DIG_ENERGY_COST = 12;
   uint32 internal constant FORAGE_ENERGY_COST = 10;
   uint32 internal constant PLANT_ENERGY_COST = 8;
+  uint32 internal constant MAX_DIG_LEVEL = 1;
   uint32 internal constant MOVE_SPEED_SCALE = 1000;
   uint32 internal constant DEFAULT_MOVE_SPEED = 2500;
   uint32 internal constant SLEEP_GRASS_ENERGY_PER_SECOND = 4;

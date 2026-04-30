@@ -209,6 +209,8 @@ export class MainGameScene extends Phaser.Scene {
     const visibleTerrainDefinitions = biome.terrains
       .filter((terrain) => terrain.placement.kind !== "background")
       .sort((a, b) => a.stackOrder - b.stackOrder);
+    const digTerrainOverlayStackOrder =
+      Math.max(...visibleTerrainDefinitions.map((terrain) => terrain.stackOrder)) + 1;
     const terrainGrids = new Map<string, TerrainGrid>();
     const spawnTileX = Math.floor(spawnX / tileSize);
     const spawnTileY = Math.floor(spawnY / tileSize);
@@ -218,7 +220,7 @@ export class MainGameScene extends Phaser.Scene {
         : undefined;
     const minimapDisplay = this.createBiomeMinimap(biome, surfacePlan);
 
-    visibleTerrainDefinitions.forEach((terrainDefinition, terrainIndex) => {
+    visibleTerrainDefinitions.forEach((terrainDefinition) => {
       if (terrainDefinition.placement.kind === "background") {
         return;
       }
@@ -229,6 +231,10 @@ export class MainGameScene extends Phaser.Scene {
         terrainDefinition.id === digTerrainDefinition.id
           ? dirtGrid
           : new TerrainGrid(gridWidth, gridHeight, tileSize);
+      const isDigTerrain = terrainDefinition.id === digTerrainDefinition.id;
+      const stackOrder = isDigTerrain
+        ? digTerrainOverlayStackOrder
+        : terrainDefinition.stackOrder;
 
       seedBiomeTerrainGrid(
         terrainGrid,
@@ -243,7 +249,7 @@ export class MainGameScene extends Phaser.Scene {
       world.addComponent(
         terrain,
         TerrainLayer,
-        new TerrainLayer(terrainDefinition.id, terrainDefinition.stackOrder),
+        new TerrainLayer(terrainDefinition.id, stackOrder),
       );
       world.addComponent(
         terrain,
@@ -252,7 +258,7 @@ export class MainGameScene extends Phaser.Scene {
           this.add
             .container(0, 0)
             .setDepth(
-              terrainLayerDepthBase + terrainIndex * terrainLayerDepthStep,
+              terrainLayerDepthBase + stackOrder * terrainLayerDepthStep,
             ),
           terrainAtlasTextureKey(terrainAtlas.id),
           terrainDefinition.texturePrefix,

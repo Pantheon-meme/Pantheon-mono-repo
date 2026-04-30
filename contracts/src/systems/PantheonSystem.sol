@@ -44,15 +44,24 @@ contract PantheonSystem is System {
     PlayerLib.requireExists(player);
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
+    require(TerrainTile.getExists(x, y), "missing terrain");
+
+    bytes32 terrainId = TerrainTile.getTerrainId(x, y);
+    require(
+      terrainId != PantheonConstants.TERRAIN_PATH &&
+        terrainId != PantheonConstants.TERRAIN_WATER &&
+        terrainId != PantheonConstants.TERRAIN_SWAMP,
+      "terrain not diggable"
+    );
+    require(TerrainState.getDigDepth(x, y) < PantheonConstants.MAX_DIG_LEVEL, "already dug");
+
     PlayerLib.spendEnergy(player, PantheonConstants.DIG_ENERGY_COST);
 
-    uint32 depth = TerrainState.getDigDepth(x, y);
-    bool loosened = TerrainState.getLoosened(x, y);
     TerrainState.set(
       x,
       y,
       PantheonConstants.TERRAIN_DIRT,
-      loosened ? depth + 1 : depth,
+      PantheonConstants.MAX_DIG_LEVEL,
       true
     );
     PendingActionLib.startBusy(
