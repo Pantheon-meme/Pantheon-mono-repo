@@ -7,6 +7,8 @@ import { Grabbable } from "../shared/components/Grabbable";
 import { IdeaState } from "../ideas/components/IdeaState";
 import { Energy } from "../energy/components/Energy";
 import { ForageDrop } from "../items/components/ForageDrop";
+import { getMudActionDurationSeconds } from "../mud/ActionDurations";
+import { OnchainPresentation } from "../mud/components/OnchainPresentation";
 import { MudWorld } from "../mud/components/MudWorld";
 import { ItemUseConstraints } from "../shared/components/ItemUseConstraints";
 import { Position } from "../shared/components/Position";
@@ -36,7 +38,7 @@ export const forageActionDefinitions: Record<string, ActionDefinition> = {
     id: "forage",
     label: "Forage",
     energyDelta: -forageEnergyCost,
-    durationSeconds: 2.4,
+    durationSeconds: 0,
     canStart: canForage,
     apply: forage,
   },
@@ -109,15 +111,19 @@ function forage(world: World, actor: Entity): ActionEffectResult {
   }
   skills.addExperience("foraging", 0.2);
 
+  const energy = world.getComponent(actor, Energy);
+  const optimisticEnergyDelta = -forageEnergyCost;
   const submitted = mud.bridge.submitForage(tileX, tileY, {
     onConfirmed: ({ itemId, amount, playerEnergy }) => {
       if (playerEnergy) {
-        const energy = world.getComponent(actor, Energy);
-
-        if (energy) {
-          energy.max = playerEnergy.maxEnergy;
-          energy.current = playerEnergy.energy;
-        }
+        energy?.settleOptimisticDelta(
+          optimisticEnergyDelta,
+          playerEnergy.energy,
+          playerEnergy.maxEnergy,
+          playerEnergy.updatedAt,
+        );
+      } else {
+        energy?.settleOptimisticLocally(optimisticEnergyDelta);
       }
 
       if (amount <= 0 || !itemId) {
@@ -133,7 +139,8 @@ function forage(world: World, actor: Entity): ActionEffectResult {
       );
     },
     onRejected: (message) => {
-      refundEnergy(world, actor, forageEnergyCost);
+      energy?.rollbackOptimisticDelta(optimisticEnergyDelta);
+      clearActionPresentation(world, actor);
       updateActionLog(world, actor, `Forage: ${message}`);
     },
   });
@@ -142,8 +149,11 @@ function forage(world: World, actor: Entity): ActionEffectResult {
     return { message: "Forage: waiting on MUD sync", applied: false, retry: true };
   }
 
+  startActionPresentation(world, actor, "forage");
+
   return {
     message: `Forage: searching ${formatLayerName(activeLayer)} (${checkQualityLabel(check.quality)}, syncing)`,
+    energySettlement: "pending",
   };
 }
 
@@ -222,10 +232,25 @@ function updateActionLog(world: World, actor: Entity, message: string): void {
   }
 }
 
-function refundEnergy(world: World, actor: Entity, amount: number): void {
-  const energy = world.getComponent(actor, Energy);
+function startActionPresentation(
+  world: World,
+  actor: Entity,
+  action: string,
+): void {
+  let presentation = world.getComponent(actor, OnchainPresentation);
 
-  if (energy) {
-    energy.current = Math.min(energy.max, energy.current + amount);
+  if (!presentation) {
+    presentation = new OnchainPresentation();
+    world.addComponent(actor, OnchainPresentation, presentation);
+  }
+
+  presentation.start("action", getMudActionDurationSeconds(action));
+}
+
+function clearActionPresentation(world: World, actor: Entity): void {
+  const presentation = world.getComponent(actor, OnchainPresentation);
+
+  if (presentation?.pose === "action") {
+    presentation.clear();
   }
 }

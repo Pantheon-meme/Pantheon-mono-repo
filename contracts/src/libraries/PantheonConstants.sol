@@ -13,6 +13,10 @@ library PantheonConstants {
   uint32 internal constant SLEEP_DIRT_ENERGY_PER_SECOND = 7;
   uint32 internal constant SLEEP_ROUGH_ENERGY_PER_SECOND = 2;
   uint64 internal constant SLEEP_DURATION = 6;
+  uint64 internal constant DIG_DURATION = 2;
+  uint64 internal constant FORAGE_DURATION = 3;
+  uint64 internal constant PLANT_DURATION = 2;
+  uint64 internal constant HARVEST_DURATION = 2;
   uint64 internal constant DEFAULT_DAY_LENGTH = 300;
   uint8 internal constant FORAGE_MAX_LOOT_SLOTS = 32;
   uint8 internal constant PLANT_STAGE_GROWING = 0;

@@ -340,8 +340,8 @@ export class MovementSystem implements System {
     movement.pending = true;
     movement.queuedTileX = undefined;
     movement.queuedTileY = undefined;
-    const previousEnergy = energy.current;
-    energy.current = Math.max(0, energy.current - energyCost);
+    const optimisticEnergyDelta = -energyCost;
+    energy.applyOptimisticDelta(optimisticEnergyDelta);
     updateActionLog(
       world,
       entity,
@@ -357,14 +357,20 @@ export class MovementSystem implements System {
         movement.lastConfirmedAtMs = Date.now();
         movement.pending = false;
         if (playerEnergy) {
-          energy.max = playerEnergy.maxEnergy;
-          energy.current = playerEnergy.energy;
+          energy.settleOptimisticDelta(
+            optimisticEnergyDelta,
+            playerEnergy.energy,
+            playerEnergy.maxEnergy,
+            playerEnergy.updatedAt,
+          );
+        } else {
+          energy.settleOptimisticLocally(optimisticEnergyDelta);
         }
         updateActionLog(world, entity, `Move: confirmed ${x},${y}`);
       },
       onRejected: (message) => {
         movement.pending = false;
-        energy.current = previousEnergy;
+        energy.rollbackOptimisticDelta(optimisticEnergyDelta);
 
         if (previousTileX !== undefined && previousTileY !== undefined) {
           const currentTileX = clampTile(
@@ -411,7 +417,7 @@ export class MovementSystem implements System {
       movement.pending = false;
       movement.queuedTileX = targetTileX;
       movement.queuedTileY = targetTileY;
-      energy.current = previousEnergy;
+      energy.rollbackOptimisticDelta(optimisticEnergyDelta);
       updateActionLog(world, entity, "Move: waiting on previous move");
     }
   }

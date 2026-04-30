@@ -1,4 +1,3 @@
-import Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { Entity } from "../../../ecs/World";
 import type { World } from "../../../ecs/World";
@@ -156,11 +155,11 @@ export class ActionSystem implements System {
       return;
     }
 
-    energy.current = Phaser.Math.Clamp(
-      energy.current + action.energyDelta,
-      0,
-      energy.max,
-    );
+    if (result?.energySettlement === "pending") {
+      energy.applyOptimisticDelta(action.energyDelta);
+    } else {
+      energy.commitLocalDelta(action.energyDelta);
+    }
     log.lastMessage =
       result?.message ??
       (action.energyDelta === 0

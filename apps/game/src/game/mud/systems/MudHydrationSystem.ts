@@ -4,6 +4,7 @@ import { scatterForageDrops } from "../../actions/ForageActions";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
 import { OnchainPresentation } from "../components/OnchainPresentation";
+import { getMudActionDurationSeconds } from "../ActionDurations";
 import { FreeExploreMode } from "../../player/components/FreeExploreMode";
 import { InputState } from "../../player/components/InputState";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
@@ -21,7 +22,7 @@ export class MudHydrationSystem implements System {
   private pollInSeconds = 0;
   private lastSnapshotKey?: string;
   private lastPresentedActionAt = 0;
-  private lastPresentedPendingSleepReadyAt = 0;
+  private lastPresentedPendingActionReadyAt = 0;
   private readonly hydratedObjectIds = new Set<string>();
 
   constructor(private readonly pollIntervalSeconds = 1) {}
@@ -130,8 +131,16 @@ export class MudHydrationSystem implements System {
       (input?.directionY ?? 0) !== 0 ||
       movement.wasMoving;
 
-    energy.current = snapshot.energy;
-    energy.max = snapshot.maxEnergy;
+    if (
+      !this.hydrated ||
+      (!localMoveInFlight && !energy.hasPendingOptimisticDelta)
+    ) {
+      energy.setConfirmed(
+        snapshot.energy,
+        snapshot.maxEnergy,
+        snapshot.actionLog?.updatedAt ?? 0,
+      );
+    }
     this.hydrateWorldObjects(world, grid, snapshot);
     this.applyOnchainPresentation(world, entity, snapshot);
 
@@ -204,15 +213,23 @@ export class MudHydrationSystem implements System {
       world.addComponent(entity, OnchainPresentation, presentation);
     }
 
-    if (snapshot.pendingSleep) {
+    if (snapshot.pendingAction) {
       if (
-        snapshot.pendingSleep.readyAt !== this.lastPresentedPendingSleepReadyAt
+        snapshot.pendingAction.readyAt !== this.lastPresentedPendingActionReadyAt
       ) {
-        this.lastPresentedPendingSleepReadyAt = snapshot.pendingSleep.readyAt;
-        presentation.start("sleep", 2.2);
+        this.lastPresentedPendingActionReadyAt = snapshot.pendingAction.readyAt;
+        presentation.start(
+          snapshot.pendingAction.action === "sleep" ? "sleep" : "action",
+          Math.max(
+            0.1,
+            snapshot.pendingAction.readyAt - Date.now() / 1000,
+          ),
+        );
       }
       return;
     }
+
+    presentation.clear();
 
     const action = snapshot.actionLog?.action;
     const updatedAt = snapshot.actionLog?.updatedAt ?? 0;
@@ -224,12 +241,12 @@ export class MudHydrationSystem implements System {
     this.lastPresentedActionAt = updatedAt;
 
     if (action === "forage" || action === "dig" || action === "plant" || action === "harvest") {
-      presentation.start("action", 1.4);
+      presentation.start("action", getMudActionDurationSeconds(action));
       return;
     }
 
     if (action === "sleep") {
-      presentation.start("sleep", 2.2);
+      presentation.start("sleep", getMudActionDurationSeconds(action));
     }
   }
 

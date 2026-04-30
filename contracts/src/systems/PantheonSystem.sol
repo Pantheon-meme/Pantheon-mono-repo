@@ -55,6 +55,11 @@ contract PantheonSystem is System {
       loosened ? depth + 1 : depth,
       true
     );
+    PendingActionLib.startBusy(
+      player,
+      PantheonConstants.ACTION_DIG,
+      PantheonConstants.DIG_DURATION
+    );
     ActionLogLib.write(player, PantheonConstants.ACTION_DIG, "Dug soil");
   }
 
@@ -103,6 +108,12 @@ contract PantheonSystem is System {
     } else {
       ActionLogLib.write(player, PantheonConstants.ACTION_FORAGE, "Foraged nothing");
     }
+
+    PendingActionLib.startBusy(
+      player,
+      PantheonConstants.ACTION_FORAGE,
+      PantheonConstants.FORAGE_DURATION
+    );
   }
 
   function plant(int32 x, int32 y, bytes32 plantId) public {
@@ -122,6 +133,11 @@ contract PantheonSystem is System {
       PantheonConstants.PLANT_STAGE_GROWING,
       true
     );
+    PendingActionLib.startBusy(
+      player,
+      PantheonConstants.ACTION_PLANT,
+      PantheonConstants.PLANT_DURATION
+    );
     ActionLogLib.write(player, PantheonConstants.ACTION_PLANT, "Planted seed");
   }
 
@@ -133,6 +149,11 @@ contract PantheonSystem is System {
     require(PlantState.getExists(x, y), "missing plant");
 
     PlantState.setStage(x, y, PantheonConstants.PLANT_STAGE_HARVESTED);
+    PendingActionLib.startBusy(
+      player,
+      PantheonConstants.ACTION_HARVEST,
+      PantheonConstants.HARVEST_DURATION
+    );
     ActionLogLib.write(player, PantheonConstants.ACTION_HARVEST, "Harvested plant");
   }
 

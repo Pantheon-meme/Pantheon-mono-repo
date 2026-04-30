@@ -31,11 +31,11 @@ export class SleepProgressBarSystem implements System {
         sleep.durationSeconds === 0
           ? 0
           : sleep.elapsedSeconds / sleep.durationSeconds;
-      const pendingEnergy = Math.floor(sleep.pendingEnergy);
+      const gainedEnergy = Math.floor(sleep.pendingEnergy);
 
       bar.fill.width = Math.max(0, bar.width * progress);
       bar.label.setText(
-        `Sleeping on ${formatLayerName(sleep.terrainLayerId)}  +${pendingEnergy} energy on wake`,
+        `Sleeping on ${formatLayerName(sleep.terrainLayerId)}  +${gainedEnergy} energy`,
       );
       bar.background.setVisible(true);
       bar.fill.setVisible(true);

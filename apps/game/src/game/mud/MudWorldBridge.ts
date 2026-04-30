@@ -144,6 +144,7 @@ const pendingActionTableId =
   "0x746270616e7468656f6e00000000000050656e64696e67416374696f6e000000";
 const pendingActionFieldLayout =
   "0x0055070020080404042001000000000000000000000000000000000000000000";
+const pendingActionActionFieldIndex = 0;
 const pendingActionReadyAtFieldIndex = 1;
 const pendingActionValueFieldIndex = 4;
 const pendingActionExistsFieldIndex = 6;
@@ -165,6 +166,7 @@ const actionLogMessageFieldIndex = 0;
 export type ConfirmedDig = {
   x: number;
   y: number;
+  playerEnergy?: PlayerEnergy;
 };
 
 export type ConfirmedForage = {
@@ -199,6 +201,7 @@ export type MovePathStep = {
 export type PlayerEnergy = {
   energy: number;
   maxEnergy: number;
+  updatedAt?: number;
 };
 
 export type PlayerSnapshot = PlayerEnergy & {
@@ -208,7 +211,7 @@ export type PlayerSnapshot = PlayerEnergy & {
   moveSpeed: number;
   exists: boolean;
   actionLog?: ActionLogSnapshot;
-  pendingSleep?: PendingSleep;
+  pendingAction?: PendingActionSnapshot;
   worldObjects: WorldObjectSnapshot[];
 };
 
@@ -223,14 +226,11 @@ export type WorldTimeConfig = {
   dayLength: number;
 };
 
-export type ConfirmedSleep = {
-  amount: number;
-  playerEnergy?: PlayerEnergy;
-};
-
-export type PendingSleep = {
+export type PendingActionSnapshot = {
+  action: string;
   readyAt: number;
-  energyGain: number;
+  value: number;
+  playerEnergy?: PlayerEnergy;
 };
 
 export type MudDigCallbacks = {
@@ -248,13 +248,8 @@ export type MudMoveCallbacks = {
   onRejected: (message: string) => void;
 };
 
-export type MudSleepCallbacks = {
-  onConfirmed: (sleep: ConfirmedSleep) => void;
-  onRejected: (message: string) => void;
-};
-
 export type MudStartSleepCallbacks = {
-  onConfirmed: (sleep: PendingSleep) => void;
+  onConfirmed: (action: PendingActionSnapshot) => void;
   onRejected: (message: string) => void;
 };
 
@@ -267,7 +262,6 @@ export class MudWorldBridge {
   private cachedWorldObjectCount = 0;
   private pendingMove = false;
   private pendingSleep = false;
-  private pendingResolveAction = false;
 
   constructor(
     private readonly rpcUrl: string,
@@ -352,17 +346,6 @@ export class MudWorldBridge {
     return true;
   }
 
-  submitResolveAction(amount: number, callbacks: MudSleepCallbacks): boolean {
-    if (this.pendingSleep || this.pendingResolveAction || amount <= 0) {
-      return false;
-    }
-
-    this.pendingResolveAction = true;
-    void this.confirmResolveAction(Math.floor(amount), callbacks);
-
-    return true;
-  }
-
   async readWorldTime(): Promise<WorldTimeConfig | undefined> {
     try {
       const keyTuple = [worldTimeKey as Hex];
@@ -440,7 +423,7 @@ export class MudWorldBridge {
         moveSpeed: decodeUint32StaticField(moveSpeedBlob),
         exists,
         actionLog: await this.readActionLogAfterConfirmation(keyTuple),
-        pendingSleep: await this.readPendingSleepAfterConfirmationOptional(),
+        pendingAction: await this.readPendingActionAfterConfirmationOptional(),
         worldObjects: await this.readWorldObjectsAfterConfirmation(),
       };
     } catch {
@@ -464,7 +447,11 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed({ x, y });
+      callbacks.onConfirmed({
+        x,
+        y,
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
@@ -566,7 +553,7 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed(await this.readPendingSleepAfterConfirmation());
+      callbacks.onConfirmed(await this.readPendingActionAfterConfirmation());
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
@@ -574,42 +561,33 @@ export class MudWorldBridge {
     }
   }
 
-  private async confirmResolveAction(
-    amount: number,
-    callbacks: MudSleepCallbacks,
-  ): Promise<void> {
-    try {
-      const hash = await this.walletClient.writeContract({
-        address: this.worldAddress,
-        abi: pantheonWorldAbi,
-        functionName: "pantheon__resolveAction",
-        args: [],
-        chain: foundry,
-      });
-
-      await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed({
-        amount,
-        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
-      });
-    } catch (error) {
-      callbacks.onRejected(formatMudError(error));
-    } finally {
-      this.pendingResolveAction = false;
-    }
-  }
-
   private async readPlayerEnergy(): Promise<PlayerEnergy | undefined> {
     const keyTuple = [addressToBytes32(this.walletClient.account.address)];
 
-    const [energyBlob, maxEnergyBlob] = await Promise.all([
+    const [energyBlob, maxEnergyBlob, updatedAtBlob] = await Promise.all([
       this.readPlayerStaticField(keyTuple, playerEnergyFieldIndex),
       this.readPlayerStaticField(keyTuple, playerMaxEnergyFieldIndex),
+      this.publicClient
+        .readContract({
+          address: this.worldAddress,
+          abi: pantheonWorldAbi,
+          functionName: "getStaticField",
+          args: [
+            actionLogTableId,
+            keyTuple,
+            actionLogUpdatedAtFieldIndex,
+            actionLogFieldLayout,
+          ],
+        })
+        .catch(() => undefined),
     ]);
 
     return {
       energy: decodeUint32StaticField(energyBlob),
       maxEnergy: decodeUint32StaticField(maxEnergyBlob),
+      updatedAt: updatedAtBlob
+        ? decodeUint64StaticField(updatedAtBlob)
+        : undefined,
     };
   }
 
@@ -783,33 +761,42 @@ export class MudWorldBridge {
     });
   }
 
-  private async readPendingSleepAfterConfirmation(): Promise<PendingSleep> {
+  private async readPendingActionAfterConfirmation(): Promise<PendingActionSnapshot> {
     try {
-      const pendingSleep = await this.readPendingSleep();
+      const pendingAction = await this.readPendingAction();
 
-      if (pendingSleep) {
-        return pendingSleep;
+      if (pendingAction) {
+        return {
+          ...pendingAction,
+          playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+        };
       }
     } catch {
       // Fall back to the local default when the read is temporarily unavailable.
     }
 
-    return { readyAt: 0, energyGain: 24 };
+    return {
+      action: "sleep",
+      readyAt: Math.floor(Date.now() / 1000) + 6,
+      value: 24,
+      playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+    };
   }
 
-  private async readPendingSleepAfterConfirmationOptional(): Promise<
-    PendingSleep | undefined
+  private async readPendingActionAfterConfirmationOptional(): Promise<
+    PendingActionSnapshot | undefined
   > {
     try {
-      return await this.readPendingSleep();
+      return await this.readPendingAction();
     } catch {
       return undefined;
     }
   }
 
-  private async readPendingSleep(): Promise<PendingSleep | undefined> {
+  private async readPendingAction(): Promise<PendingActionSnapshot | undefined> {
     const keyTuple = [addressToBytes32(this.walletClient.account.address)];
-    const [readyAtBlob, valueBlob, existsBlob] = await Promise.all([
+    const [actionBlob, readyAtBlob, valueBlob, existsBlob] = await Promise.all([
+      this.readPendingActionStaticField(keyTuple, pendingActionActionFieldIndex),
       this.readPendingActionStaticField(keyTuple, pendingActionReadyAtFieldIndex),
       this.readPendingActionStaticField(keyTuple, pendingActionValueFieldIndex),
       this.readPendingActionStaticField(keyTuple, pendingActionExistsFieldIndex),
@@ -820,8 +807,9 @@ export class MudWorldBridge {
     }
 
     return {
+      action: decodeBytes32String(actionBlob),
       readyAt: decodeUint64StaticField(readyAtBlob),
-      energyGain: decodeUint32StaticField(valueBlob),
+      value: decodeUint32StaticField(valueBlob),
     };
   }
 

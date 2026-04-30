@@ -25,7 +25,7 @@ export const terrainActionDefinitions: Record<string, ActionDefinition> = {
     id: "dig",
     label: "Dig",
     energyDelta: -digEnergyCost,
-    durationSeconds: 2,
+    durationSeconds: 0,
     canStart: canDig,
     apply: dig,
   },
@@ -102,8 +102,20 @@ function dig(world: World, actor: Entity): ActionEffectResult {
     targetCell.x,
     targetCell.y,
   );
+  const energy = world.getComponent(actor, Energy);
+  const optimisticEnergyDelta = -digEnergyCost;
   const submitted = mud.bridge.submitDig(targetCell.x, targetCell.y, {
-    onConfirmed: ({ x, y }) => {
+    onConfirmed: ({ x, y, playerEnergy }) => {
+      if (playerEnergy) {
+        energy?.settleOptimisticDelta(
+          optimisticEnergyDelta,
+          playerEnergy.energy,
+          playerEnergy.maxEnergy,
+          playerEnergy.updatedAt,
+        );
+      } else {
+        energy?.settleOptimisticLocally(optimisticEnergyDelta);
+      }
       updateActionLog(world, actor, `Dig: confirmed at ${x},${y}`);
     },
     onRejected: (message) => {
@@ -114,7 +126,7 @@ function dig(world: World, actor: Entity): ActionEffectResult {
         targetCell.y,
         previousState,
       );
-      refundEnergy(world, actor, digEnergyCost);
+      energy?.rollbackOptimisticDelta(optimisticEnergyDelta);
       updateActionLog(world, actor, `Dig: ${message}`);
     },
   });
@@ -134,7 +146,10 @@ function dig(world: World, actor: Entity): ActionEffectResult {
     };
   }
 
-  return { message: `${optimisticMessage} (syncing)` };
+  return {
+    message: `${optimisticMessage} (syncing)`,
+    energySettlement: "pending",
+  };
 }
 
 function getDigTargetCell(
@@ -204,14 +219,4 @@ function rollbackOptimisticDig(
 ): void {
   dirtGrid.set(x, y, previousState.hadDirt);
   digDepth.set(x, y, previousState.depth);
-}
-
-function refundEnergy(world: World, actor: Entity, amount: number): void {
-  const energy = world.getComponent(actor, Energy);
-
-  if (!energy) {
-    return;
-  }
-
-  energy.current = Math.min(energy.max, energy.current + amount);
 }

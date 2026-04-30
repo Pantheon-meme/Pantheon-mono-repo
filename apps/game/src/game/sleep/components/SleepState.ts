@@ -21,11 +21,13 @@ export class SleepState {
     this.onchainStarted = false;
   }
 
-  confirmOnchainStart(energyGain: number): void {
+  confirmOnchainStart(energyGain: number, durationSeconds = this.durationSeconds): void {
     this.onchainStarted = true;
     this.elapsedSeconds = 0;
     this.pendingEnergy = 0;
+    this.durationSeconds = Math.max(0.1, durationSeconds);
     this.energyPerSecond = energyGain / this.durationSeconds;
+    this.pendingEnergy = energyGain;
   }
 
   finish(): number {
