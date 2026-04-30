@@ -6,6 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
+    "play": "../../packages/assets/node_modules/.bin/tsx src/run-player-agent.ts",
+    "play:studio": "../../packages/assets/node_modules/.bin/tsx src/run-player-agent-studio.ts",
     "build": "mastra build",
     "start": "mastra start"
   },

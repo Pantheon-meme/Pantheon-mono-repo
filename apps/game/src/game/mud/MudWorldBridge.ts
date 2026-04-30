@@ -93,6 +93,17 @@ const pantheonWorldAbi = [
     ],
     outputs: [{ name: "data", type: "bytes32" }],
   },
+  {
+    type: "function",
+    name: "getDynamicField",
+    stateMutability: "view",
+    inputs: [
+      { name: "tableId", type: "bytes32" },
+      { name: "keyTuple", type: "bytes32[]" },
+      { name: "fieldIndex", type: "uint8" },
+    ],
+    outputs: [{ name: "data", type: "bytes" }],
+  },
 ] as const;
 
 const playerStateTableId =
@@ -120,6 +131,13 @@ const worldTimeFieldLayout =
 const worldTimeStartedAtFieldIndex = 0;
 const worldTimeDayLengthFieldIndex = 1;
 const worldTimeKey = "0x776f726c64000000000000000000000000000000000000000000000000000000";
+const actionLogTableId =
+  "0x746270616e7468656f6e000000000000416374696f6e4c6f6700000000000000";
+const actionLogFieldLayout =
+  "0x0028020120080000000000000000000000000000000000000000000000000000";
+const actionLogActionFieldIndex = 0;
+const actionLogUpdatedAtFieldIndex = 1;
+const actionLogMessageFieldIndex = 0;
 
 export type ConfirmedDig = {
   x: number;
@@ -156,6 +174,13 @@ export type PlayerSnapshot = PlayerEnergy & {
   lastMoveAt: number;
   moveSpeed: number;
   exists: boolean;
+  actionLog?: ActionLogSnapshot;
+};
+
+export type ActionLogSnapshot = {
+  action: string;
+  updatedAt: number;
+  message: string;
 };
 
 export type WorldTimeConfig = {
@@ -377,6 +402,7 @@ export class MudWorldBridge {
         lastMoveAt: decodeUint64StaticField(lastMoveAtBlob),
         moveSpeed: decodeUint32StaticField(moveSpeedBlob),
         exists,
+        actionLog: await this.readActionLogAfterConfirmation(keyTuple),
       };
     } catch {
       return undefined;
@@ -558,6 +584,51 @@ export class MudWorldBridge {
     }
   }
 
+  private async readActionLogAfterConfirmation(
+    keyTuple: Hex[],
+  ): Promise<ActionLogSnapshot | undefined> {
+    try {
+      const [actionBlob, updatedAtBlob, messageBlob] = await Promise.all([
+        this.publicClient.readContract({
+          address: this.worldAddress,
+          abi: pantheonWorldAbi,
+          functionName: "getStaticField",
+          args: [
+            actionLogTableId,
+            keyTuple,
+            actionLogActionFieldIndex,
+            actionLogFieldLayout,
+          ],
+        }),
+        this.publicClient.readContract({
+          address: this.worldAddress,
+          abi: pantheonWorldAbi,
+          functionName: "getStaticField",
+          args: [
+            actionLogTableId,
+            keyTuple,
+            actionLogUpdatedAtFieldIndex,
+            actionLogFieldLayout,
+          ],
+        }),
+        this.publicClient.readContract({
+          address: this.worldAddress,
+          abi: pantheonWorldAbi,
+          functionName: "getDynamicField",
+          args: [actionLogTableId, keyTuple, actionLogMessageFieldIndex],
+        }),
+      ]);
+
+      return {
+        action: decodeBytes32String(actionBlob),
+        updatedAt: decodeUint64StaticField(updatedAtBlob),
+        message: decodeDynamicString(messageBlob),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
   private async readLastForageResultAfterConfirmation(
     fallbackX: number,
     fallbackY: number,
@@ -686,4 +757,8 @@ function decodeBoolStaticField(blob: Hex): boolean {
 
 function decodeBytes32String(value: Hex): string {
   return hexToString(value, { size: 32 }).replace(/\0+$/, "");
+}
+
+function decodeDynamicString(value: Hex): string {
+  return hexToString(value).replace(/\0+$/, "");
 }
