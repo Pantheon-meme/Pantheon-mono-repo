@@ -7,7 +7,10 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { getActiveBiome, biomeDefinitions } from "../src/game/biome/BiomeDefinitions";
+import {
+  getActiveBiome,
+  biomeDefinitions,
+} from "../src/game/biome/BiomeDefinitions";
 import { generateTerrainSeedRecords } from "../src/game/terrain/TerrainSeedRecords";
 
 type TerrainTypeSeed = {
@@ -31,6 +34,7 @@ type SeedTerrainOptions = {
   startIndex?: number;
   endIndex?: number;
   batchSize?: number;
+  concurrency?: number;
   rpcUrl?: string;
   worldAddress?: Hex;
   privateKey?: Hex;
@@ -44,7 +48,8 @@ const defaultPrivateKey =
 const defaultGridWidth = 200;
 const defaultGridHeight = 200;
 const defaultTileSize = 256;
-const defaultBatchSize = 500;
+const defaultBatchSize = 250;
+const defaultConcurrency = 1;
 
 const terrainSystemAbi = [
   {
@@ -99,6 +104,7 @@ async function main(): Promise<void> {
   const spawnTileX = options.spawnTileX ?? Math.floor(gridWidth / 2);
   const spawnTileY = options.spawnTileY ?? Math.floor(gridHeight / 2);
   const batchSize = options.batchSize ?? defaultBatchSize;
+  const concurrency = options.concurrency ?? defaultConcurrency;
   const terrainTypes = getTerrainTypeSeeds(biome);
   const allRecords = generateTerrainSeedRecords({
     biome,
@@ -117,12 +123,16 @@ async function main(): Promise<void> {
             Math.abs(record.y - spawnTileY) <= options.radius!,
         );
   const seedStartIndex = options.startIndex ?? 0;
-  const seedEndIndex = Math.min(options.endIndex ?? records.length, records.length);
+  const seedEndIndex = Math.min(
+    options.endIndex ?? records.length,
+    records.length,
+  );
   const selectedRecords = records.slice(seedStartIndex, seedEndIndex);
 
   console.log(
     `Prepared ${selectedRecords.length} ${biome.id} terrain tiles and ${terrainTypes.length} terrain types`,
   );
+  console.log(`Using transaction concurrency ${concurrency}`);
 
   if (options.dryRun) {
     return;
@@ -156,46 +166,45 @@ async function main(): Promise<void> {
     publicClient,
   );
 
-  for (const terrainType of terrainTypes) {
-    const hash = await walletClient.writeContract({
-      address: worldAddress,
-      abi: terrainSystemAbi,
-      functionName: "pantheon__registerTerrainType",
-      args: [
-        toBytes32(terrainType.terrainId),
-        terrainType.label,
-        terrainType.walkable,
-        terrainType.diggable,
-        terrainType.plantable,
-        terrainType.sleepModifier,
-        terrainType.moveCost,
-      ],
-    });
+  await runTransactionBatches(
+    terrainTypes,
+    concurrency,
+    (terrainType) =>
+      walletClient.writeContract({
+        address: worldAddress,
+        abi: terrainSystemAbi,
+        functionName: "pantheon__registerTerrainType",
+        args: [
+          toBytes32(terrainType.terrainId),
+          terrainType.label,
+          terrainType.walkable,
+          terrainType.diggable,
+          terrainType.plantable,
+          terrainType.sleepModifier,
+          terrainType.moveCost,
+        ],
+      }),
+    async (terrainType, hash) => {
+      await publicClient.waitForTransactionReceipt({ hash });
+      console.log(`Registered terrain type ${terrainType.terrainId}`);
+    },
+  );
 
-    await publicClient.waitForTransactionReceipt({ hash });
-    console.log(`Registered terrain type ${terrainType.terrainId}`);
-  }
+  const terrainBatches = createTerrainBatches(
+    selectedRecords,
+    batchSize,
+    seedStartIndex,
+  );
 
-  for (let index = 0; index < selectedRecords.length; index += batchSize) {
-    const batch = selectedRecords.slice(index, index + batchSize);
-    const absoluteStart = seedStartIndex + index;
-    const hash = await walletClient.writeContract({
-      address: worldAddress,
-      abi: terrainSystemAbi,
-      functionName: "pantheon__seedTerrainTiles",
-      args: [
-        batch.map((record) => record.x),
-        batch.map((record) => record.y),
-        batch.map((record) => toBytes32(record.terrainId)),
-        batch.map((record) => toBytes32(record.biomeId)),
-      ],
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash });
-    console.log(
-      `Seeded terrain tiles ${absoluteStart + 1}-${absoluteStart + batch.length}`,
-    );
-  }
+  await runTransactionBatches(
+    terrainBatches,
+    concurrency,
+    ({ batch }) => submitTerrainBatch(walletClient, worldAddress, batch),
+    async ({ batch, start }, hash) => {
+      await publicClient.waitForTransactionReceipt({ hash });
+      console.log(`Seeded terrain tiles ${start + 1}-${start + batch.length}`);
+    },
+  );
 }
 
 async function submitOptionalTx(
@@ -286,6 +295,71 @@ function toBytes32(value: string): Hex {
   return stringToHex(value, { size: 32 });
 }
 
+function createTerrainBatches<T>(
+  records: T[],
+  batchSize: number,
+  startIndex: number,
+): Array<{ batch: T[]; start: number }> {
+  const batches: Array<{ batch: T[]; start: number }> = [];
+
+  for (let index = 0; index < records.length; index += batchSize) {
+    batches.push({
+      batch: records.slice(index, index + batchSize),
+      start: startIndex + index,
+    });
+  }
+
+  return batches;
+}
+
+async function submitTerrainBatch(
+  walletClient: ReturnType<typeof createWalletClient>,
+  worldAddress: Hex,
+  batch: ReturnType<typeof generateTerrainSeedRecords>,
+): Promise<Hex> {
+  try {
+    return await walletClient.writeContract({
+      address: worldAddress,
+      abi: terrainSystemAbi,
+      functionName: "pantheon__seedTerrainTiles",
+      args: [
+        batch.map((record) => record.x),
+        batch.map((record) => record.y),
+        batch.map((record) => toBytes32(record.terrainId)),
+        batch.map((record) => toBytes32(record.biomeId)),
+      ],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.includes("execution reverted")) {
+      throw new Error(
+        `Terrain batch of ${batch.length} tile(s) reverted. Try a smaller --batch-size, such as 50.`,
+      );
+    }
+
+    throw error;
+  }
+}
+
+async function runTransactionBatches<T>(
+  items: T[],
+  concurrency: number,
+  submit: (item: T) => Promise<Hex>,
+  confirm: (item: T, hash: Hex) => Promise<void>,
+): Promise<void> {
+  for (let index = 0; index < items.length; index += concurrency) {
+    const batch = items.slice(index, index + concurrency);
+    const pending: Array<{ item: T; hash: Hex }> = [];
+
+    for (const item of batch) {
+      pending.push({ item, hash: await submit(item) });
+    }
+
+    await Promise.all(pending.map(({ item, hash }) => confirm(item, hash)));
+  }
+}
+
 function parseArgs(args: string[]): SeedTerrainOptions {
   const parsed: SeedTerrainOptions = {};
 
@@ -336,6 +410,10 @@ function parseArgs(args: string[]): SeedTerrainOptions {
         parsed.batchSize = readNumber(arg, next);
         index += 1;
         break;
+      case "--concurrency":
+        parsed.concurrency = readPositiveInteger(arg, next);
+        index += 1;
+        break;
       case "--rpc":
         parsed.rpcUrl = readValue(arg, next);
         index += 1;
@@ -372,6 +450,16 @@ function readNumber(flag: string, value: string | undefined): number {
 
   if (!Number.isFinite(parsed)) {
     throw new Error(`${flag} must be a number`);
+  }
+
+  return parsed;
+}
+
+function readPositiveInteger(flag: string, value: string | undefined): number {
+  const parsed = readNumber(flag, value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${flag} must be a positive integer`);
   }
 
   return parsed;

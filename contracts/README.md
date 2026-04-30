@@ -25,3 +25,6 @@ pnpm mud:build
 pnpm mud:node
 pnpm mud:deploy:local
 ```
+
+For the full local workflow, including terrain and forage/item seeding, see
+[`docs/mud-dev-and-seeding.md`](../docs/mud-dev-and-seeding.md).

@@ -9,6 +9,7 @@
     "clean": "forge clean && shx rm -rf src/**/codegen",
     "deploy:local": "mud deploy",
     "dev": "mud dev-contracts --rpc http://127.0.0.1:8545",
+    "explorer": "NEXT_PUBLIC_PROJECT_ID=${NEXT_PUBLIC_PROJECT_ID:-local} explorer",
     "lint": "pnpm run prettier && pnpm run solhint",
     "node": "anvil --base-fee 0 --block-time 2",
     "prettier": "prettier --write 'src/**/*.sol'",
