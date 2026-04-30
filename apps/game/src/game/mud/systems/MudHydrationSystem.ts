@@ -1,7 +1,9 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import { scatterForageDrops } from "../../actions/ForageActions";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
+import { OnchainPresentation } from "../components/OnchainPresentation";
 import { FreeExploreMode } from "../../player/components/FreeExploreMode";
 import { InputState } from "../../player/components/InputState";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
@@ -18,6 +20,9 @@ export class MudHydrationSystem implements System {
   private retryInSeconds = 0;
   private pollInSeconds = 0;
   private lastSnapshotKey?: string;
+  private lastPresentedActionAt = 0;
+  private lastPresentedPendingSleepReadyAt = 0;
+  private readonly hydratedObjectIds = new Set<string>();
 
   constructor(private readonly pollIntervalSeconds = 1) {}
 
@@ -127,17 +132,23 @@ export class MudHydrationSystem implements System {
 
     energy.current = snapshot.energy;
     energy.max = snapshot.maxEnergy;
+    this.hydrateWorldObjects(world, grid, snapshot);
+    this.applyOnchainPresentation(world, entity, snapshot);
 
-    if (!localMoveInFlight) {
+    if (!this.hydrated) {
       position.x = snapshot.x * grid.tileSize + grid.tileSize / 2;
       position.y = snapshot.y * grid.tileSize + grid.tileSize / 2;
       movement.confirmedTileX = snapshot.x;
       movement.confirmedTileY = snapshot.y;
       movement.queuedTileX = undefined;
       movement.queuedTileY = undefined;
+      movement.externalTargetTileX = undefined;
+      movement.externalTargetTileY = undefined;
       movement.lastConfirmedAtMs = snapshot.lastMoveAt * 1000;
       movement.pending = false;
       movement.wasMoving = false;
+    } else if (!localMoveInFlight) {
+      this.applyExternalMovement(movement, snapshot);
     }
 
     if (!this.hydrated) {
@@ -160,6 +171,89 @@ export class MudHydrationSystem implements System {
     }
 
     this.lastSnapshotKey = snapshotKey;
+  }
+
+  private applyExternalMovement(
+    movement: MovementState,
+    snapshot: PlayerSnapshot,
+  ): void {
+    if (
+      movement.confirmedTileX === snapshot.x &&
+      movement.confirmedTileY === snapshot.y
+    ) {
+      return;
+    }
+
+    movement.externalTargetTileX = snapshot.x;
+    movement.externalTargetTileY = snapshot.y;
+    movement.queuedTileX = undefined;
+    movement.queuedTileY = undefined;
+    movement.pending = false;
+    movement.wasMoving = false;
+  }
+
+  private applyOnchainPresentation(
+    world: World,
+    entity: number,
+    snapshot: PlayerSnapshot,
+  ): void {
+    let presentation = world.getComponent(entity, OnchainPresentation);
+
+    if (!presentation) {
+      presentation = new OnchainPresentation();
+      world.addComponent(entity, OnchainPresentation, presentation);
+    }
+
+    if (snapshot.pendingSleep) {
+      if (
+        snapshot.pendingSleep.readyAt !== this.lastPresentedPendingSleepReadyAt
+      ) {
+        this.lastPresentedPendingSleepReadyAt = snapshot.pendingSleep.readyAt;
+        presentation.start("sleep", 2.2);
+      }
+      return;
+    }
+
+    const action = snapshot.actionLog?.action;
+    const updatedAt = snapshot.actionLog?.updatedAt ?? 0;
+
+    if (updatedAt <= this.lastPresentedActionAt || !action) {
+      return;
+    }
+
+    this.lastPresentedActionAt = updatedAt;
+
+    if (action === "forage" || action === "dig" || action === "plant" || action === "harvest") {
+      presentation.start("action", 1.4);
+      return;
+    }
+
+    if (action === "sleep") {
+      presentation.start("sleep", 2.2);
+    }
+  }
+
+  private hydrateWorldObjects(
+    world: World,
+    grid: TerrainGrid,
+    snapshot: PlayerSnapshot,
+  ): void {
+    for (const object of snapshot.worldObjects) {
+      if (this.hydratedObjectIds.has(object.objectId)) {
+        continue;
+      }
+
+      this.hydratedObjectIds.add(object.objectId);
+      scatterForageDrops(
+        world,
+        grid,
+        object.itemId,
+        object.amount,
+        object.x,
+        object.y,
+        false,
+      );
+    }
   }
 
   private writeLog(world: World, entity: number, message: string): void {

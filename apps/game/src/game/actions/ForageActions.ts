@@ -126,11 +126,10 @@ function forage(world: World, actor: Entity): ActionEffectResult {
       }
 
       skills.addExperience("foraging", 0.3);
-      scatterForageDrops(world, grid, itemId, amount, tileX, tileY, false);
       updateActionLog(
         world,
         actor,
-        `Forage: found ${amount} ${itemLabel(itemId)}`,
+        `Forage: found ${amount} ${itemLabel(itemId)} onchain`,
       );
     },
     onRejected: (message) => {
@@ -148,7 +147,7 @@ function forage(world: World, actor: Entity): ActionEffectResult {
   };
 }
 
-function scatterForageDrops(
+export function scatterForageDrops(
   world: World,
   grid: TerrainGrid,
   itemId: string,

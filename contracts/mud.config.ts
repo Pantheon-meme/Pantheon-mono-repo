@@ -87,6 +87,27 @@ export default defineWorld({
       },
       key: ["player", "itemId"],
     },
+    WorldObject: {
+      schema: {
+        objectId: "bytes32",
+        x: "int32",
+        y: "int32",
+        itemId: "bytes32",
+        amount: "uint32",
+        spawnedBy: "address",
+        createdAt: "uint64",
+        exists: "bool",
+      },
+      key: ["objectId"],
+    },
+    WorldObjectCount: {
+      schema: {
+        id: "bytes32",
+        count: "uint32",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
     ForageTable: {
       schema: {
         terrainId: "bytes32",

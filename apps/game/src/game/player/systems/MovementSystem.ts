@@ -5,6 +5,7 @@ import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
 import { MudWorld } from "../../mud/components/MudWorld";
 import type { MudMoveCallbacks } from "../../mud/MudWorldBridge";
+import { FacingDirection } from "../components/FacingDirection";
 import { FreeExploreMode } from "../components/FreeExploreMode";
 import { InputState } from "../components/InputState";
 import { MovementState } from "../components/MovementState";
@@ -40,6 +41,20 @@ export class MovementSystem implements System {
       }
 
       if (grid && mud && movement && energy) {
+        if (
+          this.updateExternalOnchainMovement(
+            world,
+            entity,
+            position,
+            velocity,
+            movement,
+            grid,
+            deltaSeconds,
+          )
+        ) {
+          continue;
+        }
+
         this.updateOnchainMovement(
           world,
           entity,
@@ -57,6 +72,53 @@ export class MovementSystem implements System {
 
       this.updateLocalMovement(position, velocity, input, deltaSeconds);
     }
+  }
+
+  private updateExternalOnchainMovement(
+    world: World,
+    entity: Entity,
+    position: Position,
+    velocity: Velocity,
+    movement: MovementState,
+    grid: TerrainGrid,
+    deltaSeconds: number,
+  ): boolean {
+    const targetTileX = movement.externalTargetTileX;
+    const targetTileY = movement.externalTargetTileY;
+
+    if (targetTileX === undefined || targetTileY === undefined) {
+      return false;
+    }
+
+    const targetX = targetTileX * grid.tileSize + grid.tileSize / 2;
+    const targetY = targetTileY * grid.tileSize + grid.tileSize / 2;
+    const dx = targetX - position.x;
+    const dy = targetY - position.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance <= 2) {
+      position.x = targetX;
+      position.y = targetY;
+      velocity.x = 0;
+      velocity.y = 0;
+      movement.confirmedTileX = targetTileX;
+      movement.confirmedTileY = targetTileY;
+      movement.externalTargetTileX = undefined;
+      movement.externalTargetTileY = undefined;
+      movement.lastConfirmedAtMs = Date.now();
+      return true;
+    }
+
+    const speed = Math.max(velocity.maxSpeed, grid.tileSize * 5);
+    const step = Math.min(distance, speed * deltaSeconds);
+
+    velocity.x = (dx / distance) * speed;
+    velocity.y = (dy / distance) * speed;
+    position.x += (dx / distance) * step;
+    position.y += (dy / distance) * step;
+    updateFacing(world, entity, dx, dy);
+
+    return true;
   }
 
   private updateLocalMovement(
@@ -416,4 +478,26 @@ function updateActionLog(world: World, entity: Entity, message: string): void {
   if (log) {
     log.lastMessage = message;
   }
+}
+
+function updateFacing(
+  world: World,
+  entity: Entity,
+  directionX: number,
+  directionY: number,
+): void {
+  const facing = world.getComponent(entity, FacingDirection);
+
+  if (!facing) {
+    return;
+  }
+
+  if (Math.abs(directionX) > Math.abs(directionY)) {
+    facing.x = Math.sign(directionX);
+    facing.y = 0;
+    return;
+  }
+
+  facing.x = 0;
+  facing.y = Math.sign(directionY);
 }

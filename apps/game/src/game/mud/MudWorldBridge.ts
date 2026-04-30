@@ -83,6 +83,29 @@ const pantheonWorldAbi = [
   },
   {
     type: "function",
+    name: "pantheon__getWorldObjectCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "count", type: "uint32" }],
+  },
+  {
+    type: "function",
+    name: "pantheon__getWorldObject",
+    stateMutability: "view",
+    inputs: [{ name: "index", type: "uint32" }],
+    outputs: [
+      { name: "objectId", type: "bytes32" },
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+      { name: "itemId", type: "bytes32" },
+      { name: "amount", type: "uint32" },
+      { name: "spawnedBy", type: "address" },
+      { name: "createdAt", type: "uint64" },
+      { name: "exists", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
     name: "getStaticField",
     stateMutability: "view",
     inputs: [
@@ -152,6 +175,16 @@ export type ConfirmedForage = {
   playerEnergy?: PlayerEnergy;
 };
 
+export type WorldObjectSnapshot = {
+  objectId: string;
+  x: number;
+  y: number;
+  itemId: string;
+  amount: number;
+  spawnedBy: string;
+  createdAt: number;
+};
+
 export type ConfirmedMove = {
   x: number;
   y: number;
@@ -175,6 +208,8 @@ export type PlayerSnapshot = PlayerEnergy & {
   moveSpeed: number;
   exists: boolean;
   actionLog?: ActionLogSnapshot;
+  pendingSleep?: PendingSleep;
+  worldObjects: WorldObjectSnapshot[];
 };
 
 export type ActionLogSnapshot = {
@@ -228,6 +263,8 @@ export class MudWorldBridge {
   private readonly walletClient;
   private readonly pendingDigs = new Set<string>();
   private readonly pendingForages = new Set<string>();
+  private readonly cachedWorldObjects: WorldObjectSnapshot[] = [];
+  private cachedWorldObjectCount = 0;
   private pendingMove = false;
   private pendingSleep = false;
   private pendingResolveAction = false;
@@ -403,6 +440,8 @@ export class MudWorldBridge {
         moveSpeed: decodeUint32StaticField(moveSpeedBlob),
         exists,
         actionLog: await this.readActionLogAfterConfirmation(keyTuple),
+        pendingSleep: await this.readPendingSleepAfterConfirmationOptional(),
+        worldObjects: await this.readWorldObjectsAfterConfirmation(),
       };
     } catch {
       return undefined;
@@ -634,26 +673,97 @@ export class MudWorldBridge {
     fallbackY: number,
   ): Promise<Omit<ConfirmedForage, "playerEnergy">> {
     try {
-      const [x, y, itemId, amount, exists] = await this.publicClient.readContract({
-        address: this.worldAddress,
-        abi: pantheonWorldAbi,
-        functionName: "pantheon__getLastForageResult",
-        args: [this.walletClient.account.address],
-      });
+      const result = await this.readLastForageResult();
 
-      if (exists) {
-        return {
-          x,
-          y,
-          itemId: decodeBytes32String(itemId),
-          amount,
-        };
+      if (result) {
+        return result;
       }
     } catch {
       // Fall through to a no-drop result if the read is temporarily unavailable.
     }
 
     return { x: fallbackX, y: fallbackY, itemId: "", amount: 0 };
+  }
+
+  async readWorldObjects(): Promise<WorldObjectSnapshot[]> {
+    const count = await this.publicClient.readContract({
+      address: this.worldAddress,
+      abi: pantheonWorldAbi,
+      functionName: "pantheon__getWorldObjectCount",
+      args: [],
+    });
+    if (count < this.cachedWorldObjectCount) {
+      this.cachedWorldObjects.length = 0;
+      this.cachedWorldObjectCount = 0;
+    }
+
+    for (let index = this.cachedWorldObjectCount + 1; index <= count; index += 1) {
+      const [
+        objectId,
+        x,
+        y,
+        itemId,
+        amount,
+        spawnedBy,
+        createdAt,
+        exists,
+      ] = await this.publicClient.readContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__getWorldObject",
+        args: [index],
+      });
+
+      if (!exists || amount <= 0) {
+        continue;
+      }
+
+      this.cachedWorldObjects.push({
+        objectId,
+        x,
+        y,
+        itemId: decodeBytes32String(itemId),
+        amount,
+        spawnedBy,
+        createdAt: Number(createdAt),
+      });
+    }
+
+    this.cachedWorldObjectCount = count;
+
+    return [...this.cachedWorldObjects];
+  }
+
+  private async readWorldObjectsAfterConfirmation(): Promise<
+    WorldObjectSnapshot[]
+  > {
+    try {
+      return await this.readWorldObjects();
+    } catch {
+      return [];
+    }
+  }
+
+  private async readLastForageResult(): Promise<
+    Omit<ConfirmedForage, "playerEnergy"> | undefined
+  > {
+    const [x, y, itemId, amount, exists] = await this.publicClient.readContract({
+      address: this.worldAddress,
+      abi: pantheonWorldAbi,
+      functionName: "pantheon__getLastForageResult",
+      args: [this.walletClient.account.address],
+    });
+
+    if (!exists || amount <= 0) {
+      return undefined;
+    }
+
+    return {
+      x,
+      y,
+      itemId: decodeBytes32String(itemId),
+      amount,
+    };
   }
 
   private async readPlayerStaticField(
@@ -685,6 +795,16 @@ export class MudWorldBridge {
     }
 
     return { readyAt: 0, energyGain: 24 };
+  }
+
+  private async readPendingSleepAfterConfirmationOptional(): Promise<
+    PendingSleep | undefined
+  > {
+    try {
+      return await this.readPendingSleep();
+    } catch {
+      return undefined;
+    }
   }
 
   private async readPendingSleep(): Promise<PendingSleep | undefined> {

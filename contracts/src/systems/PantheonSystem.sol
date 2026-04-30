@@ -10,10 +10,11 @@ import {
   LastForageResult,
   PlantState,
   TerrainState,
-  TerrainTile
+  TerrainTile,
+  WorldObject,
+  WorldObjectCount
 } from "../codegen/index.sol";
 import { ActionLogLib } from "../libraries/ActionLogLib.sol";
-import { InventoryLib } from "../libraries/InventoryLib.sol";
 import { PantheonConstants } from "../libraries/PantheonConstants.sol";
 import { PendingActionLib } from "../libraries/PendingActionLib.sol";
 import { PlayerLib } from "../libraries/PlayerLib.sol";
@@ -97,7 +98,7 @@ contract PantheonSystem is System {
     LastForageResult.set(player, x, y, result.itemId, result.amount, true);
 
     if (result.amount > 0) {
-      InventoryLib.add(player, result.itemId, result.amount);
+      _spawnForageObjects(player, x, y, result.itemId, result.amount);
       ActionLogLib.write(player, PantheonConstants.ACTION_FORAGE, "Foraged resource");
     } else {
       ActionLogLib.write(player, PantheonConstants.ACTION_FORAGE, "Foraged nothing");
@@ -145,6 +146,69 @@ contract PantheonSystem is System {
       LastForageResult.getAmount(player),
       LastForageResult.getExists(player)
     );
+  }
+
+  function getWorldObjectCount() public view returns (uint32 count) {
+    return WorldObjectCount.getCount(PantheonConstants.WORLD_OBJECT_COUNTER_ID);
+  }
+
+  function getWorldObject(
+    uint32 index
+  )
+    public
+    view
+    returns (
+      bytes32 objectId,
+      int32 x,
+      int32 y,
+      bytes32 itemId,
+      uint32 amount,
+      address spawnedBy,
+      uint64 createdAt,
+      bool exists
+    )
+  {
+    objectId = bytes32(uint256(index));
+
+    return (
+      objectId,
+      WorldObject.getX(objectId),
+      WorldObject.getY(objectId),
+      WorldObject.getItemId(objectId),
+      WorldObject.getAmount(objectId),
+      WorldObject.getSpawnedBy(objectId),
+      WorldObject.getCreatedAt(objectId),
+      WorldObject.getExists(objectId)
+    );
+  }
+
+  function _spawnForageObjects(
+    address player,
+    int32 x,
+    int32 y,
+    bytes32 itemId,
+    uint32 amount
+  ) private {
+    bytes32 counterId = PantheonConstants.WORLD_OBJECT_COUNTER_ID;
+    uint32 count = WorldObjectCount.getCount(counterId);
+
+    for (uint32 i = 0; i < amount; i++) {
+      count += 1;
+      bytes32 objectId = bytes32(uint256(count));
+
+      WorldObject.set(
+        objectId,
+        x,
+        y,
+        itemId,
+        1,
+        player,
+        uint64(block.timestamp),
+        true
+      );
+    }
+
+    WorldObjectCount.set(counterId, count, true);
   }
 
   function _resolveForage(
