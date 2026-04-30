@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { World } from "../../ecs/World";
 import { ActionInputSystem } from "../actions/systems/ActionInputSystem";
+import { ActionToastStackSystem } from "../ui/systems/ActionToastStackSystem";
 import { ActionProgressBarSystem } from "../ui/systems/ActionProgressBarSystem";
 import { ActionSystem } from "../actions/systems/ActionSystem";
 import { AutotileRenderSystem } from "../terrain/systems/AutotileRenderSystem";
@@ -35,6 +36,8 @@ import { SleepVisualSystem } from "../ui/systems/SleepVisualSystem";
 import { TargetActionMenuSystem } from "../ui/systems/TargetActionMenuSystem";
 import { TerrainBackgroundSystem } from "../terrain/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../terrain/systems/TerrainBaseRenderSystem";
+import { ToolInventoryHudSystem } from "../ui/systems/ToolInventoryHudSystem";
+import { VirtualJoystickSystem } from "../ui/systems/VirtualJoystickSystem";
 import { WeightDisplaySystem } from "../ui/systems/WeightDisplaySystem";
 import { WorldDepthSystem } from "../shared/systems/WorldDepthSystem";
 import type { BiomeDefinition } from "../biome/BiomeDefinitions";
@@ -61,6 +64,7 @@ export function registerSystems(
       >,
     ),
   );
+  world.addSystem(new VirtualJoystickSystem());
   world.addSystem(new ActionInputSystem(keyboard));
   world.addSystem(new MudHydrationSystem());
   world.addSystem(new GameClockSystem());
@@ -86,8 +90,10 @@ export function registerSystems(
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new ToolInventoryHudSystem());
   world.addSystem(new BiomeMinimapSystem());
   world.addSystem(new ActionProgressBarSystem());
+  world.addSystem(new ActionToastStackSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new HandHudSystem());
   world.addSystem(new EnergyBarSystem(biome));

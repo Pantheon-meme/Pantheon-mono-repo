@@ -4,6 +4,7 @@ import type { BiomeSurfacePlan } from "../../biome/BiomeSurfacePlan";
 
 export class BiomeMinimap {
   rendered = false;
+  collapsed = false;
 
   constructor(
     public readonly container: Phaser.GameObjects.Container,
@@ -12,6 +13,7 @@ export class BiomeMinimap {
     public readonly regionLayer: Phaser.GameObjects.Graphics,
     public readonly overlayLayer: Phaser.GameObjects.Graphics,
     public readonly labelLayer: Phaser.GameObjects.Container,
+    public readonly collapseLabel: Phaser.GameObjects.Text,
     public readonly biome: BiomeDefinition,
     public readonly surfacePlan: BiomeSurfacePlan | undefined,
     public readonly width: number,

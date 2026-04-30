@@ -33,12 +33,20 @@ export class BiomeMinimapSystem implements System {
     }
 
     for (const [, minimap] of world.query(BiomeMinimap)) {
+      if (minimap.collapsed) {
+        setCollapsed(minimap, true);
+        positionMinimap(minimap);
+        continue;
+      }
+
+      setCollapsed(minimap, false);
+      positionMinimap(minimap);
+
       if (!minimap.rendered) {
         renderStaticMinimap(minimap, grid);
         minimap.rendered = true;
       }
 
-      positionMinimap(minimap);
       renderDynamicOverlay(world, minimap, grid);
     }
   }
@@ -197,11 +205,39 @@ function renderDynamicOverlay(
 function positionMinimap(minimap: BiomeMinimap): void {
   const camera = minimap.container.scene.cameras.main;
   const scale = 1 / camera.zoom;
-  const worldX = camera.worldView.x + minimap.screenX * scale;
-  const worldY = camera.worldView.y + minimap.screenY * scale;
+  const localRight = minimap.background.x + minimap.background.width;
+  const localBottom = minimap.background.y + minimap.background.height;
+  const worldX =
+    camera.worldView.x +
+    (camera.width - minimap.screenX) * scale -
+    localRight * scale;
+  const worldY =
+    camera.worldView.y +
+    (camera.height - minimap.screenY) * scale -
+    localBottom * scale;
 
   minimap.container.setPosition(worldX, worldY);
   minimap.container.setScale(scale);
+}
+
+function setCollapsed(minimap: BiomeMinimap, collapsed: boolean): void {
+  minimap.terrainLayer.setVisible(!collapsed);
+  minimap.regionLayer.setVisible(!collapsed);
+  minimap.overlayLayer.setVisible(!collapsed);
+  minimap.labelLayer.setVisible(!collapsed);
+  minimap.collapseLabel.setVisible(collapsed);
+
+  if (collapsed) {
+    minimap.background.setSize(92, 34);
+    minimap.background.setPosition(-10, -10);
+    minimap.background.setFillStyle(0x101821, 0.86);
+    minimap.collapseLabel.setPosition(0, -3);
+    return;
+  }
+
+  minimap.background.setSize(minimap.width + 132 + 20, minimap.height + 20);
+  minimap.background.setPosition(-10, -10);
+  minimap.background.setFillStyle(0x101821, 0.78);
 }
 
 function getMinimapTile(

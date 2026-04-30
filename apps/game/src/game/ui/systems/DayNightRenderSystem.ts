@@ -2,6 +2,9 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { DayNightOverlay } from "../components/DayNightOverlay";
 import { GameClock } from "../../time/components/GameClock";
+import { ActionLog } from "../../actions/components/ActionLog";
+import { JournalPanel } from "../components/JournalPanel";
+import { hudColors } from "../HudTheme";
 
 type Lighting = {
   alpha: number;
@@ -31,15 +34,93 @@ export class DayNightRenderSystem implements System {
       overlay.shade.setFillStyle(lighting.color, lighting.alpha);
       overlay.shade.setVisible(lighting.alpha > 0);
 
-      overlay.label.setText(
-        `Day ${clock.day}  ${timeLabel}\n${lighting.phase}`,
+      overlay.label.setText(`Day ${clock.day}  ${timeLabel}`);
+      overlay.phase.setText(lighting.phase);
+      this.handleButtonClicks(world, overlay);
+      const panelPosition = this.positionPanel(
+        overlay,
+        worldX,
+        worldY,
+        camera.width,
+        scale,
       );
-      overlay.label.setPosition(
-        worldX + (camera.width - overlay.screenX) * scale,
-        worldY + overlay.screenY * scale,
-      );
+      overlay.panel.setStrokeStyle(1, phaseColor(lighting.phase), 0.68);
       overlay.label.setScale(scale);
+      overlay.phase.setScale(scale);
       overlay.label.setVisible(true);
+      overlay.phase.setVisible(true);
+      overlay.panel.setVisible(true);
+
+      overlay.buttons.forEach((button, index) => {
+        const buttonX =
+          panelPosition.x + (70 + index * 34) * scale;
+        const buttonY = panelPosition.y + 48 * scale;
+        const isJournalActive =
+          button.id === "journal" && Boolean(world.query(JournalPanel)[0]?.[1].visible);
+
+        button.background.setPosition(buttonX, buttonY);
+        button.background.setScale(scale);
+        button.background.setFillStyle(
+          isJournalActive ? hudColors.selected : hudColors.panel,
+          isJournalActive ? 0.94 : 0.9,
+        );
+        button.background.setStrokeStyle(
+          1,
+          isJournalActive ? hudColors.selected : hudColors.border,
+          isJournalActive ? 0.9 : 0.45,
+        );
+        button.label.setPosition(buttonX, buttonY);
+        button.label.setScale(scale);
+        button.label.setColor(isJournalActive ? hudColors.textDark : hudColors.textWarm);
+        button.background.setVisible(true);
+        button.label.setVisible(true);
+      });
+    }
+  }
+
+  private positionPanel(
+    overlay: DayNightOverlay,
+    worldX: number,
+    worldY: number,
+    cameraWidth: number,
+    scale: number,
+  ): { x: number; y: number } {
+    const panelX = worldX + (cameraWidth - overlay.screenX - 172) * scale;
+    const panelY = worldY + overlay.screenY * scale;
+
+    overlay.panel.setPosition(panelX, panelY);
+    overlay.panel.setScale(scale);
+    overlay.label.setPosition(panelX + 14 * scale, panelY + 11 * scale);
+    overlay.phase.setPosition(panelX + 158 * scale, panelY + 31 * scale);
+
+    return { x: panelX, y: panelY };
+  }
+
+  private handleButtonClicks(world: World, overlay: DayNightOverlay): void {
+    const log = world.query(ActionLog)[0]?.[1];
+
+    for (const button of overlay.buttons) {
+      if (!button.pendingClick) {
+        continue;
+      }
+
+      button.pendingClick = false;
+
+      if (button.id === "journal") {
+        const panel = world.query(JournalPanel)[0]?.[1];
+
+        if (panel) {
+          panel.visible = !panel.visible;
+        }
+        continue;
+      }
+
+      if (button.id === "map") {
+        log && (log.lastMessage = "Map: minimap is already visible");
+        continue;
+      }
+
+      log && (log.lastMessage = "Settings: not available yet");
     }
   }
 }
@@ -82,4 +163,19 @@ function formatClock(clock: GameClock): string {
 
 function lerp(from: number, to: number, progress: number): number {
   return from + (to - from) * Math.max(0, Math.min(1, progress));
+}
+
+function phaseColor(phase: string): number {
+  switch (phase) {
+    case "Dawn":
+      return 0xf0c85a;
+    case "Day":
+      return 0xfff3a1;
+    case "Dusk":
+      return 0xd192ff;
+    case "Night":
+      return 0x7bd7ff;
+    default:
+      return hudColors.border;
+  }
 }

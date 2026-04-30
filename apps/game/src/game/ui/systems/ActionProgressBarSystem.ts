@@ -2,6 +2,7 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionProgress } from "../../actions/components/ActionProgress";
 import { Position } from "../../shared/components/Position";
+import { hudColors } from "../HudTheme";
 import { ActionProgressBar } from "../components/ActionProgressBar";
 
 export class ActionProgressBarSystem implements System {
@@ -23,9 +24,36 @@ export class ActionProgressBarSystem implements System {
       bar.container.setPosition(position.x, position.y + bar.offsetY * scale);
       bar.container.setScale(scale);
       bar.fill.width = fillWidth;
-      bar.fill.setPosition(-bar.width / 2, -bar.height / 2);
+      bar.fill.setPosition(-bar.width / 2, 10);
       bar.label.setText(progress.label);
+      bar.icon.setText(iconForAction(progress.actionId ?? progress.label));
+      bar.detail.setText(`${Math.round(progress.ratio * 100)}%`);
+      bar.panel.setStrokeStyle(1, hudColors.borderWarm, 0.72);
       bar.container.setVisible(true);
     }
   }
+}
+
+function iconForAction(actionId: string): string {
+  if (actionId.includes("sleep") || actionId.includes("Rest")) {
+    return "Z";
+  }
+
+  if (actionId.includes("forage")) {
+    return "F";
+  }
+
+  if (actionId.includes("plant")) {
+    return "P";
+  }
+
+  if (actionId.includes("dig")) {
+    return "D";
+  }
+
+  if (actionId.includes("fetch")) {
+    return "H";
+  }
+
+  return ">";
 }

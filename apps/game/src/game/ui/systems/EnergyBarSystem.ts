@@ -1,19 +1,18 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
-import { ActionLog } from "../../actions/components/ActionLog";
 import type { BiomeDefinition } from "../../biome/BiomeDefinitions";
 import { BiomeRegionAwareness } from "../../biome/components/BiomeRegionAwareness";
 import { Energy } from "../../energy/components/Energy";
 import { FocusTarget } from "../../player/components/FocusTarget";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { getTopTerrainLayerAtCell } from "../../terrain/TerrainLayers";
+import { hudColors } from "../HudTheme";
 import { EnergyBar } from "../components/EnergyBar";
 
 export class EnergyBarSystem implements System {
   constructor(private readonly biome: BiomeDefinition) {}
 
   update(world: World): void {
-    const actionLog = world.query(ActionLog)[0]?.[1];
     const playerFocus = world.query(
       PlayerControlled,
       BiomeRegionAwareness,
@@ -26,33 +25,26 @@ export class EnergyBarSystem implements System {
     for (const [, energy, bar] of world.query(Energy, EnergyBar)) {
       const ratio = energy.max === 0 ? 0 : energy.current / energy.max;
       const fillWidth = Math.max(0, bar.width * ratio);
-      const camera = bar.background.scene.cameras.main;
+      const camera = bar.container.scene.cameras.main;
       const scale = 1 / camera.zoom;
       const worldX = camera.worldView.x + bar.screenX * scale;
       const worldY = camera.worldView.y + bar.screenY * scale;
+      const fillColor = getEnergyFillColor(ratio);
 
-      bar.background.setPosition(worldX, worldY);
-      bar.background.setScale(scale);
-      bar.fill.setPosition(worldX, worldY);
-      bar.fill.setScale(scale);
-      bar.label.setPosition(worldX, worldY + (bar.height + 6) * scale);
-      bar.label.setScale(scale);
+      bar.container.setPosition(worldX, worldY);
+      bar.container.setScale(scale);
       bar.fill.width = fillWidth;
-      bar.label.setText(
-        `${regionLine}Energy ${Math.round(energy.current)} / ${energy.max}\n${actionLog?.lastMessage ?? ""}`,
+      bar.fill.setFillStyle(fillColor, ratio <= 0 ? 0 : 1);
+      bar.value.setText(`${Math.round(energy.current)} / ${energy.max}`);
+      bar.region.setText(regionLine.trim());
+      bar.warning.setVisible(ratio <= 0.25);
+      bar.warning.setFillStyle(hudColors.energyLow, ratio <= 0.12 ? 0.22 : 0.1);
+      bar.frame.setStrokeStyle(
+        2,
+        ratio <= 0.25 ? hudColors.energyLow : hudColors.border,
+        ratio <= 0.25 ? 0.74 : 0.52,
       );
-
-      if (ratio > 0.55) {
-        bar.fill.setFillStyle(0x66d685);
-      } else if (ratio > 0.25) {
-        bar.fill.setFillStyle(0xf0c85a);
-      } else {
-        bar.fill.setFillStyle(0xee6b5f);
-      }
-
-      bar.background.setVisible(true);
-      bar.fill.setVisible(true);
-      bar.label.setVisible(true);
+      bar.container.setVisible(true);
     }
   }
 
@@ -80,6 +72,18 @@ export class EnergyBarSystem implements System {
 
     return terrain?.label ?? titleCaseTerrainId(terrainId);
   }
+}
+
+function getEnergyFillColor(ratio: number): number {
+  if (ratio > 0.55) {
+    return hudColors.energy;
+  }
+
+  if (ratio > 0.25) {
+    return hudColors.energyMedium;
+  }
+
+  return hudColors.energyLow;
 }
 
 function titleCaseTerrainId(terrainId: string): string {
