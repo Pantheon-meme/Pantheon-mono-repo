@@ -70,7 +70,7 @@ contract TerrainSystem is System {
     _requireTerrainAdmin();
     require(itemId != bytes32(0), "empty item");
 
-    ItemType.set(itemId, category, true, label);
+    ItemType.set(itemId, category, 1, true, label);
   }
 
   function registerForageTable(

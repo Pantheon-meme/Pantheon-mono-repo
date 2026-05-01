@@ -3,6 +3,8 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { FocusTarget } from "../../player/components/FocusTarget";
 import { Footprint } from "../../shared/components/Footprint";
+import { Grabbable } from "../../shared/components/Grabbable";
+import { ItemUseConstraints } from "../../shared/components/ItemUseConstraints";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { Position } from "../../shared/components/Position";
 import { WeightInspectable } from "../../shared/components/WeightInspectable";
@@ -27,7 +29,13 @@ export class WeightDisplaySystem implements System {
       const inspectable = world.getComponent(focus.object, WeightInspectable);
 
       if (weight && inspectable) {
-        this.label.setText(`Focus: ${inspectable.label}: ${weight.weight} kg`);
+        this.label.setText(
+          `Focus: ${inspectable.label}: ${formatObjectDetail(
+            world,
+            focus.object,
+            weight,
+          )}`,
+        );
         return;
       }
     }
@@ -44,7 +52,9 @@ export class WeightDisplaySystem implements System {
     }
 
     const [, , weight, , inspectable] = weightedObject;
-    this.label.setText(`${inspectable.label}: ${weight.weight} kg`);
+    this.label.setText(
+      `${inspectable.label}: ${formatObjectDetail(world, weightedObject[0], weight)}`,
+    );
   }
 
   private contains(
@@ -62,4 +72,22 @@ export class WeightDisplaySystem implements System {
       playerPosition.y <= objectPosition.y + halfHeight
     );
   }
+}
+
+function formatObjectDetail(
+  world: World,
+  entity: number,
+  weight: WeightedObject,
+): string {
+  const traits = [
+    `${weight.weight} weight`,
+    world.getComponent(entity, Grabbable) ? "grabbable" : "fixed",
+  ];
+  const constraints = world.getComponent(entity, ItemUseConstraints);
+
+  if (constraints) {
+    traits.push("usable");
+  }
+
+  return traits.join(" - ");
 }

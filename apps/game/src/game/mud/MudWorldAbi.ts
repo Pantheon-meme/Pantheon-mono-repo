@@ -94,6 +94,13 @@ export const pantheonWorldAbi = [
   },
   {
     type: "function",
+    name: "pantheon__pickupObject",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "objectId", type: "bytes32" }],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "pantheon__resolveAction",
     stateMutability: "nonpayable",
     inputs: [],
@@ -148,6 +155,21 @@ export const pantheonWorldAbi = [
       { name: "spawnedBy", type: "address" },
       { name: "createdAt", type: "uint64" },
       { name: "exists", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
+    name: "pantheon__getPlayerInventory",
+    stateMutability: "view",
+    inputs: [{ name: "player", type: "address" }],
+    outputs: [
+      { name: "maxWeight", type: "uint32" },
+      { name: "slots", type: "uint8[]" },
+      { name: "objectIds", type: "bytes32[]" },
+      { name: "objectTypeIds", type: "bytes32[]" },
+      { name: "itemIds", type: "bytes32[]" },
+      { name: "amounts", type: "uint32[]" },
+      { name: "weights", type: "uint32[]" },
     ],
   },
   {

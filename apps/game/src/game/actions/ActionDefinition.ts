@@ -1,5 +1,6 @@
 import { forageActionDefinitions } from "./ForageActions";
 import { handActionDefinitions } from "./HandActions";
+import { inventoryActionDefinitions } from "./InventoryActions";
 import { plantActionDefinitions } from "./PlantActions";
 import { reflectionActionDefinitions } from "./ReflectionActions";
 import { sleepActionDefinitions } from "./SleepActions";
@@ -11,6 +12,7 @@ export type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 export const actionDefinitions: Record<string, ActionDefinition> = {
   ...forageActionDefinitions,
   ...plantActionDefinitions,
+  ...inventoryActionDefinitions,
   ...handActionDefinitions,
   ...sleepActionDefinitions,
   ...reflectionActionDefinitions,

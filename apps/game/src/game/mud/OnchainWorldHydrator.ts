@@ -28,7 +28,7 @@ export class OnchainWorldHydrator {
       }
 
       this.hydratedObjectIds.add(object.objectId);
-      scatterForageDrops(
+      const drops = scatterForageDrops(
         world,
         grid,
         object.itemId,
@@ -37,6 +37,14 @@ export class OnchainWorldHydrator {
         object.y,
         false,
       );
+
+      for (const drop of drops) {
+        world.addComponent(
+          drop,
+          OnchainObjectRef,
+          new OnchainObjectRef(object.objectId as `0x${string}`),
+        );
+      }
     }
   }
 
@@ -119,3 +127,4 @@ function resolvePlantStage(
 
   return elapsedSeconds >= growthSeconds ? "grown" : "growing";
 }
+import { OnchainObjectRef } from "./components/OnchainObjectRef";

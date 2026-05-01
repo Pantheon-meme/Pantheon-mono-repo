@@ -18,6 +18,7 @@ library PantheonConstants {
   uint32 internal constant FARM_TEND_FERTILITY_GAIN = 12;
   uint32 internal constant FARM_TEND_STRESS_RELIEF = 24;
   uint32 internal constant FARM_HARVEST_EXHAUSTION = 8;
+  uint32 internal constant DEFAULT_INVENTORY_MAX_WEIGHT = 2;
   uint32 internal constant MAX_DIG_LEVEL = 1;
   uint32 internal constant MOVE_SPEED_SCALE = 1000;
   uint32 internal constant DEFAULT_MOVE_SPEED = 2500;

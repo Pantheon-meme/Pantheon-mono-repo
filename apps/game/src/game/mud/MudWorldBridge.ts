@@ -20,6 +20,7 @@ import type {
   MudForageCallbacks,
   MudHarvestCallbacks,
   MudMoveCallbacks,
+  MudPickupObjectCallbacks,
   MudPlantCallbacks,
   MudPlantCareCallbacks,
   MudStartSleepCallbacks,
@@ -35,6 +36,7 @@ export type {
   ConfirmedForage,
   ConfirmedHarvest,
   ConfirmedMove,
+  ConfirmedPickupObject,
   ConfirmedPlant,
   ConfirmedPlantCare,
   MovePathStep,
@@ -42,10 +44,13 @@ export type {
   MudForageCallbacks,
   MudHarvestCallbacks,
   MudMoveCallbacks,
+  MudPickupObjectCallbacks,
   MudPlantCallbacks,
   MudPlantCareCallbacks,
   MudStartSleepCallbacks,
   PendingActionSnapshot,
+  PlayerInventorySnapshot,
+  PlayerInventorySlotSnapshot,
   PlantStateSnapshot,
   PlayerEnergy,
   PlayerSnapshot,
@@ -64,6 +69,7 @@ export class MudWorldBridge {
   private readonly pendingPlants = new Set<string>();
   private readonly pendingHarvests = new Set<string>();
   private readonly pendingCareActions = new Set<string>();
+  private readonly pendingPickups = new Set<string>();
   private readonly snapshotReader: MudSnapshotReader;
   private pendingMove = false;
   private pendingSleep = false;
@@ -207,6 +213,20 @@ export class MudWorldBridge {
     return true;
   }
 
+  submitPickupObject(
+    objectId: Hex,
+    callbacks: MudPickupObjectCallbacks,
+  ): boolean {
+    if (this.pendingPickups.has(objectId)) {
+      return false;
+    }
+
+    this.pendingPickups.add(objectId);
+    void this.confirmPickupObject(objectId, callbacks);
+
+    return true;
+  }
+
   async readWorldTime(): Promise<WorldTimeConfig | undefined> {
     return this.snapshotReader.readWorldTime();
   }
@@ -246,6 +266,31 @@ export class MudWorldBridge {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingDigs.delete(key);
+    }
+  }
+
+  private async confirmPickupObject(
+    objectId: Hex,
+    callbacks: MudPickupObjectCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__pickupObject",
+        args: [objectId],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        objectId,
+        inventory: await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingPickups.delete(objectId);
     }
   }
 

@@ -12,14 +12,40 @@ export type ConfirmedForage = {
   playerEnergy?: PlayerEnergy;
 };
 
+export type ConfirmedPickupObject = {
+  objectId: string;
+  inventory?: PlayerInventorySnapshot;
+};
+
 export type WorldObjectSnapshot = {
   objectId: string;
+  objectTypeId?: string;
   x: number;
   y: number;
   itemId: string;
   amount: number;
+  weight?: number;
+  grabbable?: boolean;
+  usable?: boolean;
+  owner?: string;
+  inInventory?: boolean;
   spawnedBy: string;
   createdAt: number;
+};
+
+export type PlayerInventorySlotSnapshot = {
+  slot: number;
+  objectId: string;
+  objectTypeId: string;
+  itemId: string;
+  amount: number;
+  weight: number;
+};
+
+export type PlayerInventorySnapshot = {
+  maxWeight: number;
+  usedWeight: number;
+  slots: PlayerInventorySlotSnapshot[];
 };
 
 export type ConfirmedPlant = {
@@ -71,6 +97,7 @@ export type PlayerSnapshot = PlayerEnergy & {
   exists: boolean;
   actionLog?: ActionLogSnapshot;
   pendingAction?: PendingActionSnapshot;
+  inventory?: PlayerInventorySnapshot;
   worldObjects: WorldObjectSnapshot[];
   worldState?: WorldStateSnapshot;
 };
@@ -153,5 +180,10 @@ export type MudMoveCallbacks = {
 
 export type MudStartSleepCallbacks = {
   onConfirmed: (action: PendingActionSnapshot) => void;
+  onRejected: (message: string) => void;
+};
+
+export type MudPickupObjectCallbacks = {
+  onConfirmed: (pickup: ConfirmedPickupObject) => void;
   onRejected: (message: string) => void;
 };

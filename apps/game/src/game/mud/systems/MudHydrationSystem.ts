@@ -2,6 +2,8 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
+import { itemLabel } from "../../items/ItemDefinitions";
+import { PlayerInventory } from "../../inventory/components/PlayerInventory";
 import { OnchainPresentation } from "../components/OnchainPresentation";
 import { getMudActionDurationSeconds } from "../ActionDurations";
 import { FreeExploreMode } from "../../player/components/FreeExploreMode";
@@ -152,6 +154,7 @@ export class MudHydrationSystem implements System {
       );
     }
     this.worldHydrator.apply(world, grid, snapshot);
+    this.applyInventory(world, entity, snapshot);
     this.applyOnchainPresentation(world, entity, snapshot);
 
     if (!this.hydrated) {
@@ -209,6 +212,32 @@ export class MudHydrationSystem implements System {
     movement.queuedTileY = undefined;
     movement.pending = false;
     movement.wasMoving = false;
+  }
+
+  private applyInventory(
+    world: World,
+    entity: number,
+    snapshot: PlayerSnapshot,
+  ): void {
+    if (!snapshot.inventory) {
+      return;
+    }
+
+    let inventory = world.getComponent(entity, PlayerInventory);
+
+    if (!inventory) {
+      inventory = new PlayerInventory(snapshot.inventory.maxWeight);
+      world.addComponent(entity, PlayerInventory, inventory);
+    }
+
+    inventory.replaceSlots(
+      snapshot.inventory.slots.map((slot) => ({
+        ...slot,
+        label: itemLabel(slot.itemId),
+        syncState: "confirmed",
+      })),
+      snapshot.inventory.maxWeight,
+    );
   }
 
   private applyOnchainPresentation(

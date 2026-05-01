@@ -21,6 +21,7 @@ import { HarvestedPlantRenderSystem } from "../plants/systems/HarvestedPlantRend
 import { HeldItemPositionSystem } from "../player/systems/HeldItemPositionSystem";
 import { InputSystem } from "../player/systems/InputSystem";
 import { ForageDropRenderSystem } from "../items/systems/ForageDropRenderSystem";
+import { InventoryHudSystem } from "../ui/systems/InventoryHudSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
 import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
@@ -92,6 +93,7 @@ export function registerSystems(
   world.addSystem(new ActionProgressBarSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new HandHudSystem());
+  world.addSystem(new InventoryHudSystem(keyboard));
   world.addSystem(new EnergyBarSystem(biome));
   world.addSystem(new WeightDisplaySystem(weightLabel));
 }

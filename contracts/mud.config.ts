@@ -119,27 +119,65 @@ export default defineWorld({
       schema: {
         itemId: "bytes32",
         category: "bytes32",
+        weight: "uint32",
         exists: "bool",
         label: "string",
       },
       key: ["itemId"],
     },
+    ObjectType: {
+      schema: {
+        objectTypeId: "bytes32",
+        itemId: "bytes32",
+        category: "bytes32",
+        weight: "uint32",
+        grabbable: "bool",
+        usable: "bool",
+        exists: "bool",
+        label: "string",
+      },
+      key: ["objectTypeId"],
+    },
     PlayerInventory: {
       schema: {
         player: "address",
+        slot: "uint8",
+        objectId: "bytes32",
+        exists: "bool",
+      },
+      key: ["player", "slot"],
+    },
+    PlayerInventoryCapacity: {
+      schema: {
+        player: "address",
+        maxWeight: "uint32",
+        exists: "bool",
+      },
+      key: ["player"],
+    },
+    ObjectState: {
+      schema: {
+        objectId: "bytes32",
+        objectTypeId: "bytes32",
         itemId: "bytes32",
         amount: "uint32",
         exists: "bool",
       },
-      key: ["player", "itemId"],
+      key: ["objectId"],
+    },
+    InventoryObject: {
+      schema: {
+        objectId: "bytes32",
+        owner: "address",
+        exists: "bool",
+      },
+      key: ["objectId"],
     },
     WorldObject: {
       schema: {
         objectId: "bytes32",
         x: "int32",
         y: "int32",
-        itemId: "bytes32",
-        amount: "uint32",
         spawnedBy: "address",
         createdAt: "uint64",
         exists: "bool",

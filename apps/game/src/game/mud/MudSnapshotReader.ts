@@ -43,6 +43,7 @@ import type {
   ConfirmedHarvest,
   PendingActionSnapshot,
   PlayerEnergy,
+  PlayerInventorySnapshot,
   PlayerSnapshot,
   WorldObjectSnapshot,
   WorldStateReadBounds,
@@ -145,6 +146,7 @@ export class MudSnapshotReader {
         exists,
         actionLog: await this.readActionLogAfterConfirmation(keyTuple),
         pendingAction: await this.readPendingActionAfterConfirmationOptional(),
+        inventory: await this.readPlayerInventoryAfterConfirmation(),
         worldObjects: await this.readWorldObjectsAfterConfirmation(),
         worldState: worldStateBounds
           ? await this.worldStateReader.readAfterConfirmation(
@@ -257,6 +259,16 @@ export class MudSnapshotReader {
     return [...this.cachedWorldObjects];
   }
 
+  async readPlayerInventoryAfterConfirmation(): Promise<
+    PlayerInventorySnapshot | undefined
+  > {
+    try {
+      return await this.readPlayerInventory();
+    } catch {
+      return undefined;
+    }
+  }
+
   async readPendingActionAfterConfirmation(): Promise<PendingActionSnapshot> {
     try {
       const pendingAction = await this.readPendingAction();
@@ -306,6 +318,30 @@ export class MudSnapshotReader {
       updatedAt: updatedAtBlob
         ? decodeUint64StaticField(updatedAtBlob)
         : undefined,
+    };
+  }
+
+  private async readPlayerInventory(): Promise<PlayerInventorySnapshot> {
+    const [maxWeight, slots, objectIds, objectTypeIds, itemIds, amounts, weights] =
+      await this.publicClient.readContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__getPlayerInventory",
+        args: [this.playerAddress],
+      });
+    const inventorySlots = slots.map((slot, index) => ({
+      slot,
+      objectId: objectIds[index],
+      objectTypeId: decodeBytes32String(objectTypeIds[index]),
+      itemId: decodeBytes32String(itemIds[index]),
+      amount: amounts[index],
+      weight: weights[index],
+    }));
+
+    return {
+      maxWeight,
+      usedWeight: inventorySlots.reduce((total, slot) => total + slot.weight, 0),
+      slots: inventorySlots,
     };
   }
 

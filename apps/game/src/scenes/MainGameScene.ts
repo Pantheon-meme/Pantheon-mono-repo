@@ -39,6 +39,7 @@ import { Grabbable } from "../game/shared/components/Grabbable";
 import { HandHud } from "../game/ui/components/HandHud";
 import { Hands } from "../game/player/components/Hands";
 import { IdeaState } from "../game/ideas/components/IdeaState";
+import { InventoryHud } from "../game/ui/components/InventoryHud";
 import { GridTargetHighlight } from "../game/terrain/components/GridTargetHighlight";
 import { InputState } from "../game/player/components/InputState";
 import { ItemUseConstraints } from "../game/shared/components/ItemUseConstraints";
@@ -49,6 +50,7 @@ import { MudWorldBridge } from "../game/mud/MudWorldBridge";
 import { NeedState } from "../game/needs/components/NeedState";
 import { PlantStatusPanel } from "../game/ui/components/PlantStatusPanel";
 import { MovementState } from "../game/player/components/MovementState";
+import { PlayerInventory } from "../game/inventory/components/PlayerInventory";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { plantDefinitions } from "../game/plants/PlantDefinitions";
 import { seedWorldTrees } from "../game/plants/WorldTreeGeneration";
@@ -130,6 +132,7 @@ export class MainGameScene extends Phaser.Scene {
     const sleepHud = world.createEntity();
     const journal = world.createEntity();
     const handHud = world.createEntity();
+    const inventoryHud = world.createEntity();
     const targetActionMenu = world.createEntity();
     const plantStatusPanel = world.createEntity();
     const minimap = world.createEntity();
@@ -146,6 +149,7 @@ export class MainGameScene extends Phaser.Scene {
     const sleepVisual = this.createSleepVisual();
     const journalPanel = this.createJournalPanel();
     const handHudDisplay = this.createHandHud();
+    const inventoryHudDisplay = this.createInventoryHud();
     const targetActionMenuDisplay = this.createTargetActionMenu();
     const plantStatusPanelDisplay = this.createPlantStatusPanel();
     const weightLabel = this.createWeightLabel();
@@ -281,6 +285,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
     world.addComponent(journal, JournalPanel, journalPanel);
     world.addComponent(handHud, HandHud, handHudDisplay);
+    world.addComponent(inventoryHud, InventoryHud, inventoryHudDisplay);
     world.addComponent(
       targetActionMenu,
       TargetActionMenu,
@@ -309,6 +314,7 @@ export class MainGameScene extends Phaser.Scene {
       world.addComponent(player, FreeExploreMode, new FreeExploreMode());
     }
     world.addComponent(player, Hands, new Hands());
+    world.addComponent(player, PlayerInventory, new PlayerInventory(2));
     world.addComponent(player, DiggingCapability, new DiggingCapability());
     world.addComponent(player, SeedPouch, new SeedPouch());
     world.addComponent(player, NeedState, needs);
@@ -338,11 +344,7 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
         [Phaser.Input.Keyboard.KeyCodes.Z]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
-        [Phaser.Input.Keyboard.KeyCodes.ONE]: "left-hand-toggle",
-        [Phaser.Input.Keyboard.KeyCodes.TWO]: "left-hand-use",
-        [Phaser.Input.Keyboard.KeyCodes.THREE]: "right-hand-toggle",
-        [Phaser.Input.Keyboard.KeyCodes.FOUR]: "right-hand-use",
-        [Phaser.Input.Keyboard.KeyCodes.FIVE]: "carry-more-need",
+        [Phaser.Input.Keyboard.KeyCodes.ONE]: "inventory-grab",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
@@ -609,6 +611,29 @@ export class MainGameScene extends Phaser.Scene {
       .setDepth(101);
 
     return new HandHud(label, 18, 180);
+  }
+
+  private createInventoryHud(): InventoryHud {
+    const container = this.add.container(18, 248).setDepth(101);
+    const title = this.add
+      .text(0, 0, "", {
+        color: "#eef7f4",
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+        lineSpacing: 4,
+        shadow: {
+          color: "#071018",
+          blur: 4,
+          fill: true,
+          offsetX: 1,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(0, 0);
+
+    container.add(title);
+
+    return new InventoryHud(container, title, 18, 248);
   }
 
   private createWeightLabel(): Phaser.GameObjects.Text {
