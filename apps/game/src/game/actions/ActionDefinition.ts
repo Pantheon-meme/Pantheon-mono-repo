@@ -1,3 +1,4 @@
+import { bankActionDefinitions } from "./BankActions";
 import { forageActionDefinitions } from "./ForageActions";
 import { handActionDefinitions } from "./HandActions";
 import { inventoryActionDefinitions } from "./InventoryActions";
@@ -10,6 +11,7 @@ import type { ActionDefinition } from "./ActionTypes";
 export type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 
 export const actionDefinitions: Record<string, ActionDefinition> = {
+  ...bankActionDefinitions,
   ...forageActionDefinitions,
   ...plantActionDefinitions,
   ...inventoryActionDefinitions,

@@ -10,7 +10,10 @@ import {
 } from "./MudWorldAbi";
 import { MudSnapshotReader } from "./MudSnapshotReader";
 import type {
+  BankItemQuoteSnapshot,
   MovePathStep,
+  MudBankBuyCallbacks,
+  MudBankSellCallbacks,
   MudDigCallbacks,
   MudDropObjectCallbacks,
   MudForageCallbacks,
@@ -28,6 +31,7 @@ import type {
 
 export type {
   ActionLogSnapshot,
+  BankItemQuoteSnapshot,
   ConfirmedDig,
   ConfirmedDropObject,
   ConfirmedForage,
@@ -37,6 +41,8 @@ export type {
   ConfirmedPlant,
   ConfirmedPlantCare,
   MovePathStep,
+  MudBankBuyCallbacks,
+  MudBankSellCallbacks,
   MudDigCallbacks,
   MudDropObjectCallbacks,
   MudForageCallbacks,
@@ -69,6 +75,8 @@ export class MudWorldBridge {
   private readonly pendingCareActions = new Set<string>();
   private readonly pendingPickups = new Set<string>();
   private readonly pendingDrops = new Set<string>();
+  private readonly pendingBankSales = new Set<string>();
+  private readonly pendingBankPurchases = new Set<string>();
   private readonly snapshotReader: MudSnapshotReader;
   private pendingMove = false;
   private pendingSleep = false;
@@ -230,6 +238,39 @@ export class MudWorldBridge {
     return true;
   }
 
+  submitSellObjectsToBank(
+    objectIds: Hex[],
+    itemIds: string[],
+    callbacks: MudBankSellCallbacks,
+  ): boolean {
+    const key = objectIds.join(",");
+
+    if (this.pendingBankSales.has(key)) {
+      return false;
+    }
+
+    this.pendingBankSales.add(key);
+    void this.confirmSellObjectsToBank(objectIds, itemIds, key, callbacks);
+
+    return true;
+  }
+
+  submitBuyObjectFromBank(
+    itemId: string,
+    callbacks: MudBankBuyCallbacks,
+  ): boolean {
+    const key = `${itemId}:1`;
+
+    if (this.pendingBankPurchases.has(key)) {
+      return false;
+    }
+
+    this.pendingBankPurchases.add(key);
+    void this.confirmBuyObjectFromBank(itemId, key, callbacks);
+
+    return true;
+  }
+
   async readWorldTime(): Promise<WorldTimeConfig | undefined> {
     return this.snapshotReader.readWorldTime();
   }
@@ -242,6 +283,12 @@ export class MudWorldBridge {
 
   async readWorldObjects(): Promise<WorldObjectSnapshot[]> {
     return this.snapshotReader.readWorldObjects();
+  }
+
+  async readBankItemQuotes(
+    itemIds: string[],
+  ): Promise<BankItemQuoteSnapshot[]> {
+    return this.snapshotReader.readBankItemQuotes(itemIds);
   }
 
   private async confirmDig(
@@ -326,6 +373,68 @@ export class MudWorldBridge {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingDrops.delete(objectId);
+    }
+  }
+
+  private async confirmSellObjectsToBank(
+    objectIds: Hex[],
+    itemIds: string[],
+    key: string,
+    callbacks: MudBankSellCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__sellObjectsToBank",
+        args: [objectIds],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        objectIds,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+        cucBalance: await this.snapshotReader.readCucBalanceAfterConfirmation(),
+        bankQuotes:
+          await this.snapshotReader.readBankItemQuotesAfterConfirmation(itemIds),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingBankSales.delete(key);
+    }
+  }
+
+  private async confirmBuyObjectFromBank(
+    itemId: string,
+    key: string,
+    callbacks: MudBankBuyCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__buyObjectsFromBank",
+        args: [stringToBytes32(itemId), 1],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        itemId,
+        quantity: 1,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+        cucBalance: await this.snapshotReader.readCucBalanceAfterConfirmation(),
+        bankQuotes:
+          await this.snapshotReader.readBankItemQuotesAfterConfirmation([itemId]),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingBankPurchases.delete(key);
     }
   }
 

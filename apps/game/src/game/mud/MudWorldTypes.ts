@@ -24,6 +24,33 @@ export type ConfirmedDropObject = {
   inventory?: PlayerInventorySnapshot;
 };
 
+export type BankItemQuoteSnapshot = {
+  itemId: string;
+  buyPrice: bigint;
+  sellPrice: bigint;
+  buyMaxQuantity: number;
+  sellMaxQuantity: number;
+  validUntil: number;
+  epoch: number;
+  inventoryQuantity: number;
+  priceExists: boolean;
+};
+
+export type ConfirmedBankSell = {
+  objectIds: string[];
+  inventory?: PlayerInventorySnapshot;
+  cucBalance?: bigint;
+  bankQuotes: BankItemQuoteSnapshot[];
+};
+
+export type ConfirmedBankBuy = {
+  itemId: string;
+  quantity: number;
+  inventory?: PlayerInventorySnapshot;
+  cucBalance?: bigint;
+  bankQuotes: BankItemQuoteSnapshot[];
+};
+
 export type WorldObjectSnapshot = {
   objectId: string;
   objectTypeId?: string;
@@ -106,6 +133,7 @@ export type PlayerSnapshot = PlayerEnergy & {
   actionLog?: ActionLogSnapshot;
   pendingAction?: PendingActionSnapshot;
   inventory?: PlayerInventorySnapshot;
+  cucBalance?: bigint;
   worldObjects: WorldObjectSnapshot[];
   worldState?: WorldStateSnapshot;
 };
@@ -209,5 +237,15 @@ export type MudPickupObjectCallbacks = {
 
 export type MudDropObjectCallbacks = {
   onConfirmed: (drop: ConfirmedDropObject) => void;
+  onRejected: (message: string) => void;
+};
+
+export type MudBankSellCallbacks = {
+  onConfirmed: (sale: ConfirmedBankSell) => void;
+  onRejected: (message: string) => void;
+};
+
+export type MudBankBuyCallbacks = {
+  onConfirmed: (purchase: ConfirmedBankBuy) => void;
   onRejected: (message: string) => void;
 };

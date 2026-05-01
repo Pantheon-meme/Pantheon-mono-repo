@@ -1,6 +1,7 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
+import { CucBalance } from "../../currency/components/CucBalance";
 import { Energy } from "../../energy/components/Energy";
 import { itemLabel } from "../../items/ItemDefinitions";
 import { PlayerInventory } from "../../inventory/components/PlayerInventory";
@@ -198,6 +199,7 @@ export class MudHydrationSystem implements System {
     }
     this.worldHydrator.apply(world, grid, snapshot);
     this.applyInventory(world, entity, snapshot);
+    this.applyCucBalance(world, entity, snapshot);
     this.applyOnchainPresentation(world, entity, snapshot);
 
     if (!this.hydrated) {
@@ -281,6 +283,21 @@ export class MudHydrationSystem implements System {
       })),
       snapshot.inventory.maxWeight,
     );
+  }
+
+  private applyCucBalance(
+    world: World,
+    entity: number,
+    snapshot: PlayerSnapshot,
+  ): void {
+    let balance = world.getComponent(entity, CucBalance);
+
+    if (!balance) {
+      balance = new CucBalance();
+      world.addComponent(entity, CucBalance, balance);
+    }
+
+    balance.setConfirmed(snapshot.cucBalance ?? BigInt(0));
   }
 
   private applyOnchainPresentation(

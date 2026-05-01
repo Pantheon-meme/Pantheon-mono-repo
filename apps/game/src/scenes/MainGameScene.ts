@@ -26,6 +26,9 @@ import { ActionProgress } from "../game/actions/components/ActionProgress";
 import { ActionQueue } from "../game/actions/components/ActionQueue";
 import { AutotileLayer } from "../game/terrain/components/AutotileLayer";
 import { DayNightOverlay } from "../game/ui/components/DayNightOverlay";
+import { BankPanel } from "../game/ui/components/BankPanel";
+import { CucBalance } from "../game/currency/components/CucBalance";
+import { CurrencyDisplay } from "../game/ui/components/CurrencyDisplay";
 import { DiggingCapability } from "../game/player/components/DiggingCapability";
 import { Energy } from "../game/energy/components/Energy";
 import { EnergyBar } from "../game/ui/components/EnergyBar";
@@ -144,6 +147,7 @@ export class MainGameScene extends Phaser.Scene {
     const handHud = world.createEntity();
     const inventoryHud = world.createEntity();
     const targetActionMenu = world.createEntity();
+    const bankPanel = world.createEntity();
     const plantStatusPanel = world.createEntity();
     const minimap = world.createEntity();
     const player = world.createEntity();
@@ -154,6 +158,7 @@ export class MainGameScene extends Phaser.Scene {
     const playerSprite = this.createPlayerSprite(spawnX, spawnY);
     const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
+    const currencyDisplay = this.createCurrencyDisplay();
     const dayNightOverlay = this.createDayNightOverlay();
     const sleepProgressBar = this.createSleepProgressBar();
     const sleepVisual = this.createSleepVisual();
@@ -161,6 +166,7 @@ export class MainGameScene extends Phaser.Scene {
     const handHudDisplay = this.createHandHud();
     const inventoryHudDisplay = this.createInventoryHud();
     const targetActionMenuDisplay = this.createTargetActionMenu();
+    const bankPanelDisplay = this.createBankPanel();
     const plantStatusPanelDisplay = this.createPlantStatusPanel();
     const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
@@ -309,6 +315,7 @@ export class MainGameScene extends Phaser.Scene {
       TargetActionMenu,
       targetActionMenuDisplay,
     );
+    world.addComponent(bankPanel, BankPanel, bankPanelDisplay);
     world.addComponent(
       plantStatusPanel,
       PlantStatusPanel,
@@ -362,12 +369,15 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.F]: "dig",
         [Phaser.Input.Keyboard.KeyCodes.Z]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
+        [Phaser.Input.Keyboard.KeyCodes.ENTER]: "bank-open",
         [Phaser.Input.Keyboard.KeyCodes.ONE]: "inventory-grab",
         [Phaser.Input.Keyboard.KeyCodes.X]: "inventory-drop",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
     world.addComponent(player, EnergyBar, energyBar);
+    world.addComponent(player, CucBalance, new CucBalance());
+    world.addComponent(player, CurrencyDisplay, currencyDisplay);
     world.addComponent(player, Renderable, new Renderable(playerSprite));
     world.addComponent(player, SleepVisual, sleepVisual);
     world.addComponent(
@@ -468,6 +478,30 @@ export class MainGameScene extends Phaser.Scene {
     background.setStrokeStyle(2, 0xe8f0e8, 0.55);
 
     return new EnergyBar(background, fill, label, width, height, x, y);
+  }
+
+  private createCurrencyDisplay(): CurrencyDisplay {
+    const width = 190;
+    const height = 34;
+    const x = 18;
+    const y = 92;
+    const background = this.add
+      .rectangle(x, y, width, height, 0x101821, 0.9)
+      .setOrigin(0)
+      .setDepth(101)
+      .setStrokeStyle(2, 0xf1d38b, 0.72);
+    const label = this.add
+      .text(x + 14, y + 8, "0 CUC", {
+        color: "#f6efd7",
+        fixedWidth: width - 28,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "15px",
+        fontStyle: "700",
+      })
+      .setOrigin(0)
+      .setDepth(102);
+
+    return new CurrencyDisplay(background, label, width, height, x, y);
   }
 
   private createBiomeMinimap(
@@ -698,6 +732,112 @@ export class MainGameScene extends Phaser.Scene {
     container.add([background, title]);
 
     return new TargetActionMenu(container, background, title, 440, 38);
+  }
+
+  private createBankPanel(): BankPanel {
+    const width = 620;
+    const height = 590;
+    const container = this.add.container(0, 0).setDepth(114).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, width, height, 0x101821, 0.94)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, 0xf1d38b, 0.78);
+    const title = this.add
+      .text(22, 18, "Central Uni Bank", {
+        color: "#f6efd7",
+        fixedWidth: width - 92,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "22px",
+        fontStyle: "700",
+      })
+      .setOrigin(0, 0);
+    const closeButton = this.add
+      .text(width - 54, 18, "X", {
+        align: "center",
+        color: "#101820",
+        fixedWidth: 32,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "16px",
+        fontStyle: "700",
+        backgroundColor: "#f1d38b",
+        padding: { x: 4, y: 4 },
+      })
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+    const sellTab = this.add
+      .rectangle(22, 64, 126, 34, 0xf1d38b, 1)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+    const sellTabLabel = this.add
+      .text(22, 73, "Sell", {
+        align: "center",
+        color: "#101820",
+        fixedWidth: 126,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "14px",
+        fontStyle: "700",
+      })
+      .setOrigin(0, 0);
+    const buyTab = this.add
+      .rectangle(156, 64, 126, 34, 0x1a2a32, 0.92)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: true });
+    const buyTabLabel = this.add
+      .text(156, 73, "Buy", {
+        align: "center",
+        color: "#dce8e2",
+        fixedWidth: 126,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "14px",
+        fontStyle: "700",
+      })
+      .setOrigin(0, 0);
+    const status = this.add
+      .text(304, 68, "", {
+        color: "#b9c9c8",
+        fixedWidth: width - 326,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "12px",
+      })
+      .setOrigin(0, 0);
+    const panel = new BankPanel(
+      container,
+      background,
+      title,
+      closeButton,
+      sellTab,
+      sellTabLabel,
+      buyTab,
+      buyTabLabel,
+      status,
+      width,
+      height,
+    );
+
+    closeButton.on("pointerdown", () => {
+      panel.visible = false;
+    });
+    sellTab.on("pointerdown", () => {
+      panel.activeTab = "sell";
+      panel.signature = "";
+    });
+    buyTab.on("pointerdown", () => {
+      panel.activeTab = "buy";
+      panel.signature = "";
+    });
+
+    container.add([
+      background,
+      title,
+      closeButton,
+      sellTab,
+      sellTabLabel,
+      buyTab,
+      buyTabLabel,
+      status,
+    ]);
+
+    return panel;
   }
 
   private createPlantStatusPanel(): PlantStatusPanel {

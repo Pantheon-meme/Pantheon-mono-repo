@@ -4,10 +4,12 @@ import { ActionInputSystem } from "../actions/systems/ActionInputSystem";
 import { ActionProgressBarSystem } from "../ui/systems/ActionProgressBarSystem";
 import { ActionSystem } from "../actions/systems/ActionSystem";
 import { AutotileRenderSystem } from "../terrain/systems/AutotileRenderSystem";
+import { BankPanelSystem } from "../ui/systems/BankPanelSystem";
 import { BiomeObjectRenderSystem } from "../biome/systems/BiomeObjectRenderSystem";
 import { BiomeRegionAwarenessSystem } from "../biome/systems/BiomeRegionAwarenessSystem";
 import { BiomeMinimapSystem } from "../ui/systems/BiomeMinimapSystem";
 import { BoundsSystem } from "../shared/systems/BoundsSystem";
+import { CurrencyDisplaySystem } from "../ui/systems/CurrencyDisplaySystem";
 import { DayNightRenderSystem } from "../ui/systems/DayNightRenderSystem";
 import { EnergyBarSystem } from "../ui/systems/EnergyBarSystem";
 import { EnergySystem } from "../energy/systems/EnergySystem";
@@ -90,6 +92,7 @@ export function registerSystems(
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new BankPanelSystem(scene));
   world.addSystem(new PlantStatusPanelSystem());
   world.addSystem(new BiomeMinimapSystem());
   world.addSystem(new ActionProgressBarSystem());
@@ -97,5 +100,6 @@ export function registerSystems(
   world.addSystem(new HandHudSystem());
   world.addSystem(new InventoryHudSystem(keyboard));
   world.addSystem(new EnergyBarSystem(biome));
+  world.addSystem(new CurrencyDisplaySystem());
   world.addSystem(new WeightDisplaySystem(weightLabel));
 }

@@ -55,6 +55,14 @@ function getObjectActions(
   const actions: TargetActionEntry[] = [];
   const grownPlant = findPlantByEntity(world, target, true);
 
+  if (focus.objectLabel === "Central Uni Bank") {
+    actions.push({
+      id: "bank-open",
+      label: "Bank",
+      detail: "Trade CUC goods",
+    });
+  }
+
   if (grownPlant) {
     actions.push({
       id: "fetch",

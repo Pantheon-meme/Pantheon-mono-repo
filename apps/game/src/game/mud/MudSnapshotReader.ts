@@ -7,6 +7,8 @@ import {
   decodeInt32StaticField,
   decodeUint32StaticField,
   decodeUint64StaticField,
+  decodeUint256StaticField,
+  stringToBytes32,
 } from "./MudCodec";
 import {
   actionLogActionFieldIndex,
@@ -14,6 +16,21 @@ import {
   actionLogMessageFieldIndex,
   actionLogTableId,
   actionLogUpdatedAtFieldIndex,
+  cucBalanceBalanceFieldIndex,
+  cucBalanceFieldLayout,
+  cucBalanceTableId,
+  bankItemInventoryFieldLayout,
+  bankItemInventoryQuantityFieldIndex,
+  bankItemInventoryTableId,
+  bankItemPriceBuyMaxQuantityFieldIndex,
+  bankItemPriceBuyPriceFieldIndex,
+  bankItemPriceEpochFieldIndex,
+  bankItemPriceExistsFieldIndex,
+  bankItemPriceFieldLayout,
+  bankItemPriceSellMaxQuantityFieldIndex,
+  bankItemPriceSellPriceFieldIndex,
+  bankItemPriceTableId,
+  bankItemPriceValidUntilFieldIndex,
   pendingActionActionFieldIndex,
   pendingActionExistsFieldIndex,
   pendingActionFieldLayout,
@@ -39,6 +56,7 @@ import { pantheonWorldAbi } from "./MudWorldAbi";
 import { MudWorldStateReader } from "./MudWorldStateReader";
 import type {
   ActionLogSnapshot,
+  BankItemQuoteSnapshot,
   ConfirmedForage,
   ConfirmedHarvest,
   PendingActionSnapshot,
@@ -147,6 +165,7 @@ export class MudSnapshotReader {
         actionLog: await this.readActionLogAfterConfirmation(keyTuple),
         pendingAction: await this.readPendingActionAfterConfirmationOptional(),
         inventory: await this.readPlayerInventoryAfterConfirmation(),
+        cucBalance: await this.readCucBalanceAfterConfirmation(),
         worldObjects: await this.readWorldObjectsAfterConfirmation(),
         worldState: worldStateBounds
           ? await this.worldStateReader.readAfterConfirmation(
@@ -259,6 +278,12 @@ export class MudSnapshotReader {
     return [...this.cachedWorldObjects];
   }
 
+  async readBankItemQuotes(
+    itemIds: string[],
+  ): Promise<BankItemQuoteSnapshot[]> {
+    return Promise.all(itemIds.map((itemId) => this.readBankItemQuote(itemId)));
+  }
+
   async readPlayerInventoryAfterConfirmation(): Promise<
     PlayerInventorySnapshot | undefined
   > {
@@ -267,6 +292,103 @@ export class MudSnapshotReader {
     } catch {
       return undefined;
     }
+  }
+
+  async readBankItemQuotesAfterConfirmation(
+    itemIds: string[],
+  ): Promise<BankItemQuoteSnapshot[]> {
+    try {
+      return await this.readBankItemQuotes(itemIds);
+    } catch {
+      return [];
+    }
+  }
+
+  async readCucBalanceAfterConfirmation(): Promise<bigint | undefined> {
+    try {
+      return await this.readCucBalance();
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async readBankItemQuote(
+    itemId: string,
+  ): Promise<BankItemQuoteSnapshot> {
+    const keyTuple = [stringToBytes32(itemId)];
+    const zero =
+      "0x0000000000000000000000000000000000000000000000000000000000000000" as Hex;
+    const [
+      buyPriceBlob,
+      sellPriceBlob,
+      buyMaxQuantityBlob,
+      sellMaxQuantityBlob,
+      validUntilBlob,
+      epochBlob,
+      priceExistsBlob,
+      inventoryQuantityBlob,
+    ] = await Promise.all([
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceBuyPriceFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceSellPriceFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceBuyMaxQuantityFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceSellMaxQuantityFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceValidUntilFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceEpochFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemPriceTableId,
+        keyTuple,
+        bankItemPriceExistsFieldIndex,
+        bankItemPriceFieldLayout,
+      ).catch(() => zero),
+      this.readStaticField(
+        bankItemInventoryTableId,
+        keyTuple,
+        bankItemInventoryQuantityFieldIndex,
+        bankItemInventoryFieldLayout,
+      ).catch(() => zero),
+    ]);
+
+    return {
+      itemId,
+      buyPrice: decodeUint256StaticField(buyPriceBlob),
+      sellPrice: decodeUint256StaticField(sellPriceBlob),
+      buyMaxQuantity: decodeUint32StaticField(buyMaxQuantityBlob),
+      sellMaxQuantity: decodeUint32StaticField(sellMaxQuantityBlob),
+      validUntil: decodeUint64StaticField(validUntilBlob),
+      epoch: decodeUint32StaticField(epochBlob),
+      inventoryQuantity: decodeUint32StaticField(inventoryQuantityBlob),
+      priceExists: decodeBoolStaticField(priceExistsBlob),
+    };
   }
 
   async readPendingActionAfterConfirmation(): Promise<PendingActionSnapshot> {
@@ -319,6 +441,31 @@ export class MudSnapshotReader {
         ? decodeUint64StaticField(updatedAtBlob)
         : undefined,
     };
+  }
+
+  private async readCucBalance(): Promise<bigint> {
+    const balanceBlob = await this.readStaticField(
+      cucBalanceTableId,
+      [addressToBytes32(this.playerAddress)],
+      cucBalanceBalanceFieldIndex,
+      cucBalanceFieldLayout,
+    );
+
+    return decodeUint256StaticField(balanceBlob);
+  }
+
+  private async readStaticField(
+    tableId: Hex,
+    keyTuple: Hex[],
+    fieldIndex: number,
+    fieldLayout: Hex,
+  ): Promise<Hex> {
+    return this.publicClient.readContract({
+      address: this.worldAddress,
+      abi: pantheonWorldAbi,
+      functionName: "getStaticField",
+      args: [tableId, keyTuple, fieldIndex, fieldLayout],
+    });
   }
 
   private async readPlayerInventory(): Promise<PlayerInventorySnapshot> {

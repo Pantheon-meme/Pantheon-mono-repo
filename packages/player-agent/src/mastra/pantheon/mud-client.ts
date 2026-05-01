@@ -82,6 +82,28 @@ const pantheonWorldAbi = [
   },
   {
     type: 'function',
+    name: 'pantheon__setBankAgent',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'agent', type: 'address' }],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'pantheon__setBankItemPrice',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'itemId', type: 'bytes32' },
+      { name: 'buyPrice', type: 'uint256' },
+      { name: 'sellPrice', type: 'uint256' },
+      { name: 'buyMaxQuantity', type: 'uint32' },
+      { name: 'sellMaxQuantity', type: 'uint32' },
+      { name: 'validUntil', type: 'uint64' },
+      { name: 'epoch', type: 'uint32' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
     name: 'pantheon__getLastForageResult',
     stateMutability: 'view',
     inputs: [{ name: 'player', type: 'address' }],
@@ -127,6 +149,14 @@ const actionLogTableId =
   '0x746270616e7468656f6e000000000000416374696f6e4c6f6700000000000000';
 const actionLogFieldLayout =
   '0x0048020020080000000000000000000000000000000000000000000000000000';
+const bankItemPriceTableId =
+  '0x746270616e7468656f6e00000000000042616e6b4974656d5072696365000000';
+const bankItemPriceFieldLayout =
+  '0x0055070020200404080401000000000000000000000000000000000000000000';
+const bankItemInventoryTableId =
+  '0x746270616e7468656f6e00000000000042616e6b4974656d496e76656e746f72';
+const bankItemInventoryFieldLayout =
+  '0x0005020004010000000000000000000000000000000000000000000000000000';
 
 export type PlayerSnapshot = {
   address: Hex;
@@ -202,6 +232,28 @@ export type ForageExpeditionResult = {
     note?: string;
     reason?: string;
   };
+};
+
+export type BankItemQuoteSnapshot = {
+  itemId: string;
+  inventoryQuantity: number;
+  buyPrice: bigint;
+  sellPrice: bigint;
+  buyMaxQuantity: number;
+  sellMaxQuantity: number;
+  validUntil: number;
+  epoch: number;
+  priceExists: boolean;
+};
+
+export type BankItemPriceInput = {
+  itemId: string;
+  buyPrice: bigint;
+  sellPrice: bigint;
+  buyMaxQuantity: number;
+  sellMaxQuantity: number;
+  validUntil: number;
+  epoch: number;
 };
 
 export class PantheonMudClient {
@@ -405,6 +457,103 @@ export class PantheonMudClient {
     await this.publicClient.waitForTransactionReceipt({ hash });
 
     return { hash, player: await this.getPlayer() };
+  }
+
+  async setBankAgent(agent = this.walletClient.account.address) {
+    const hash = await this.walletClient.writeContract({
+      address: this.worldAddress,
+      abi: pantheonWorldAbi,
+      functionName: 'pantheon__setBankAgent',
+      args: [agent],
+      chain: foundry,
+    });
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+
+    return { hash, agent };
+  }
+
+  async setBankItemPrice(price: BankItemPriceInput) {
+    const hash = await this.walletClient.writeContract({
+      address: this.worldAddress,
+      abi: pantheonWorldAbi,
+      functionName: 'pantheon__setBankItemPrice',
+      args: [
+        bytes32(price.itemId),
+        price.buyPrice,
+        price.sellPrice,
+        price.buyMaxQuantity,
+        price.sellMaxQuantity,
+        BigInt(price.validUntil),
+        price.epoch,
+      ],
+      chain: foundry,
+    });
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+
+    return { hash, price };
+  }
+
+  async getBankItemQuote(itemId: string): Promise<BankItemQuoteSnapshot> {
+    const keyTuple = [bytes32(itemId)];
+    const zero =
+      '0x0000000000000000000000000000000000000000000000000000000000000000' as Hex;
+
+    const [
+      buyPriceBlob,
+      sellPriceBlob,
+      buyMaxQuantityBlob,
+      sellMaxQuantityBlob,
+      validUntilBlob,
+      epochBlob,
+      priceExistsBlob,
+      inventoryQuantityBlob,
+    ] = await Promise.all([
+      this.getStaticField(bankItemPriceTableId, keyTuple, 0, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(bankItemPriceTableId, keyTuple, 1, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(bankItemPriceTableId, keyTuple, 2, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(bankItemPriceTableId, keyTuple, 3, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(bankItemPriceTableId, keyTuple, 4, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(bankItemPriceTableId, keyTuple, 5, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(bankItemPriceTableId, keyTuple, 6, bankItemPriceFieldLayout).catch(
+        () => zero,
+      ),
+      this.getStaticField(
+        bankItemInventoryTableId,
+        keyTuple,
+        0,
+        bankItemInventoryFieldLayout,
+      ).catch(() => zero),
+    ]);
+
+    return {
+      itemId,
+      inventoryQuantity: decodeUint32StaticField(inventoryQuantityBlob),
+      buyPrice: decodeUint256StaticField(buyPriceBlob),
+      sellPrice: decodeUint256StaticField(sellPriceBlob),
+      buyMaxQuantity: decodeUint32StaticField(buyMaxQuantityBlob),
+      sellMaxQuantity: decodeUint32StaticField(sellMaxQuantityBlob),
+      validUntil: decodeUint64StaticField(validUntilBlob),
+      epoch: decodeUint32StaticField(epochBlob),
+      priceExists: decodeBoolStaticField(priceExistsBlob),
+    };
+  }
+
+  async getBankItemQuotes(itemIds: string[]): Promise<BankItemQuoteSnapshot[]> {
+    return Promise.all(itemIds.map((itemId) => this.getBankItemQuote(itemId)));
   }
 
   async scanNearby(radius: number): Promise<TerrainTileSnapshot[]> {
@@ -854,6 +1003,10 @@ function decodeUint32StaticField(blob: Hex): number {
 
 function decodeUint64StaticField(blob: Hex): number {
   return Number.parseInt(blob.slice(2, 18), 16);
+}
+
+function decodeUint256StaticField(blob: Hex): bigint {
+  return BigInt(blob);
 }
 
 function decodeInt32StaticField(blob: Hex): number {

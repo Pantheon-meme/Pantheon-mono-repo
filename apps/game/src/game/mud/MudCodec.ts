@@ -26,6 +26,10 @@ export function decodeUint64StaticField(blob: Hex): number {
   return Number.parseInt(blob.slice(2, 18), 16);
 }
 
+export function decodeUint256StaticField(blob: Hex): bigint {
+  return BigInt(blob);
+}
+
 export function decodeInt32StaticField(blob: Hex): number {
   const value = decodeUint32StaticField(blob);
 
