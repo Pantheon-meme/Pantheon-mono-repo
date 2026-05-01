@@ -3,6 +3,7 @@ export type PlantCareSyncState = "local" | "pending" | "confirmed" | "rejected";
 export class PlantCareState {
   moisture = 45;
   fertility = 55;
+  exhaustion = 0;
   health = 100;
   stress = 0;
   syncState: PlantCareSyncState = "local";
@@ -12,6 +13,7 @@ export class PlantCareState {
     return {
       moisture: this.moisture,
       fertility: this.fertility,
+      exhaustion: this.exhaustion,
       health: this.health,
       stress: this.stress,
       syncState: this.syncState,
@@ -22,6 +24,7 @@ export class PlantCareState {
   restore(snapshot: PlantCareSnapshot): void {
     this.moisture = snapshot.moisture;
     this.fertility = snapshot.fertility;
+    this.exhaustion = snapshot.exhaustion;
     this.health = snapshot.health;
     this.stress = snapshot.stress;
     this.syncState = snapshot.syncState;
@@ -37,7 +40,7 @@ export class PlantCareState {
           : 0;
     const fertilityStress = this.fertility < 42 ? 42 - this.fertility : 0;
 
-    this.stress = clampCare(moistureStress + fertilityStress);
+    this.stress = clampCare(this.exhaustion + moistureStress + fertilityStress);
     this.health = 100 - this.stress;
   }
 }
@@ -45,6 +48,7 @@ export class PlantCareState {
 export type PlantCareSnapshot = {
   moisture: number;
   fertility: number;
+  exhaustion: number;
   health: number;
   stress: number;
   syncState: PlantCareSyncState;

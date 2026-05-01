@@ -54,6 +54,7 @@ export class PlantStatusPanelSystem implements System {
       Math.floor(plant.elapsedSeconds),
       care?.moisture ?? "",
       care?.fertility ?? "",
+      care?.exhaustion ?? "",
       care?.health ?? "",
       care?.stress ?? "",
       care?.syncState ?? "",
@@ -90,6 +91,9 @@ export class PlantStatusPanelSystem implements System {
         `Stress: ${care.stress}/100`,
         `Moisture: ${care.moisture}/100`,
         `Fertility: ${care.fertility}/100`,
+        `Exhaustion: ${care.exhaustion}/100`,
+        `Yield: ${formatYieldOutlook(care.stress)}`,
+        `Care: water moisture, tend fertility/stress`,
         `Sync: ${formatId(care.syncState)}${
           care.lastAction ? ` (${care.lastAction})` : ""
         }`,
@@ -129,6 +133,18 @@ function getFocusedPlant(
 
 function formatStage(stage: string): string {
   return stage === "fetched" ? "harvested" : formatId(stage);
+}
+
+function formatYieldOutlook(stress: number): string {
+  if (stress >= 75) {
+    return "stressed - reduced";
+  }
+
+  if (stress <= 10) {
+    return "excellent - bonus";
+  }
+
+  return "normal";
 }
 
 function formatId(value: string): string {

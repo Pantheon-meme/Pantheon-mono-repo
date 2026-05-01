@@ -8,6 +8,14 @@ import {
   int32ToBytes32,
 } from "./MudCodec";
 import {
+  farmTileStateExhaustionFieldIndex,
+  farmTileStateExistsFieldIndex,
+  farmTileStateFertilityFieldIndex,
+  farmTileStateFieldLayout,
+  farmTileStateLastMaintainedAtFieldIndex,
+  farmTileStateLastWateredAtFieldIndex,
+  farmTileStateMoistureFieldIndex,
+  farmTileStateTableId,
   plantStateExistsFieldIndex,
   plantStateFieldLayout,
   plantStateHealthFieldIndex,
@@ -25,6 +33,7 @@ import {
 } from "./MudTableIds";
 import { pantheonWorldAbi } from "./MudWorldAbi";
 import type {
+  FarmTileStateSnapshot,
   PlantStateSnapshot,
   TerrainStateSnapshot,
   WorldStateReadBounds,
@@ -45,7 +54,7 @@ export class MudWorldStateReader {
     try {
       return await this.read(centerX, centerY, bounds);
     } catch {
-      return { terrain: [], plants: [] };
+      return { terrain: [], plants: [], farmTiles: [] };
     }
   }
 
@@ -59,32 +68,43 @@ export class MudWorldStateReader {
       int32ToBytes32(cell.x),
       int32ToBytes32(cell.y),
     ]);
-    const [terrainExistsBlobs, plantExistsBlobs] = await Promise.all([
-      this.readStaticFieldsBatch(
-        terrainStateTableId,
-        terrainStateFieldLayout,
-        terrainStateLoosenedFieldIndex,
-        keyTuples,
-      ),
-      this.readStaticFieldsBatch(
-        plantStateTableId,
-        plantStateFieldLayout,
-        plantStateExistsFieldIndex,
-        keyTuples,
-      ),
-    ]);
+    const [terrainExistsBlobs, plantExistsBlobs, farmTileExistsBlobs] =
+      await Promise.all([
+        this.readStaticFieldsBatch(
+          terrainStateTableId,
+          terrainStateFieldLayout,
+          terrainStateLoosenedFieldIndex,
+          keyTuples,
+        ),
+        this.readStaticFieldsBatch(
+          plantStateTableId,
+          plantStateFieldLayout,
+          plantStateExistsFieldIndex,
+          keyTuples,
+        ),
+        this.readStaticFieldsBatch(
+          farmTileStateTableId,
+          farmTileStateFieldLayout,
+          farmTileStateExistsFieldIndex,
+          keyTuples,
+        ),
+      ]);
     const terrainCells = cells.filter((_, index) =>
       decodeBoolStaticField(terrainExistsBlobs[index]),
     );
     const plantCells = cells.filter((_, index) =>
       decodeBoolStaticField(plantExistsBlobs[index]),
     );
-    const [terrain, plants] = await Promise.all([
+    const farmTileCells = cells.filter((_, index) =>
+      decodeBoolStaticField(farmTileExistsBlobs[index]),
+    );
+    const [terrain, plants, farmTiles] = await Promise.all([
       this.readTerrainStates(terrainCells),
       this.readPlantStates(plantCells),
+      this.readFarmTileStates(farmTileCells),
     ]);
 
-    return { terrain, plants };
+    return { terrain, plants, farmTiles };
   }
 
   private async readTerrainStates(
@@ -166,6 +186,63 @@ export class MudWorldStateReader {
       stage: decodeUint8StaticField(stageBlobs[index]),
       health: decodeUint32StaticField(healthBlobs[index]),
       stress: decodeUint32StaticField(stressBlobs[index]),
+    }));
+  }
+
+  private async readFarmTileStates(
+    cells: Array<{ x: number; y: number }>,
+  ): Promise<FarmTileStateSnapshot[]> {
+    if (cells.length === 0) {
+      return [];
+    }
+
+    const keyTuples = encodeCellKeyTuples(cells);
+    const [
+      moistureBlobs,
+      fertilityBlobs,
+      exhaustionBlobs,
+      lastMaintainedAtBlobs,
+      lastWateredAtBlobs,
+    ] = await Promise.all([
+      this.readStaticFieldsBatch(
+        farmTileStateTableId,
+        farmTileStateFieldLayout,
+        farmTileStateMoistureFieldIndex,
+        keyTuples,
+      ),
+      this.readStaticFieldsBatch(
+        farmTileStateTableId,
+        farmTileStateFieldLayout,
+        farmTileStateFertilityFieldIndex,
+        keyTuples,
+      ),
+      this.readStaticFieldsBatch(
+        farmTileStateTableId,
+        farmTileStateFieldLayout,
+        farmTileStateExhaustionFieldIndex,
+        keyTuples,
+      ),
+      this.readStaticFieldsBatch(
+        farmTileStateTableId,
+        farmTileStateFieldLayout,
+        farmTileStateLastMaintainedAtFieldIndex,
+        keyTuples,
+      ),
+      this.readStaticFieldsBatch(
+        farmTileStateTableId,
+        farmTileStateFieldLayout,
+        farmTileStateLastWateredAtFieldIndex,
+        keyTuples,
+      ),
+    ]);
+
+    return cells.map((cell, index) => ({
+      ...cell,
+      moisture: decodeUint32StaticField(moistureBlobs[index]),
+      fertility: decodeUint32StaticField(fertilityBlobs[index]),
+      exhaustion: decodeUint32StaticField(exhaustionBlobs[index]),
+      lastMaintainedAt: decodeUint64StaticField(lastMaintainedAtBlobs[index]),
+      lastWateredAt: decodeUint64StaticField(lastWateredAtBlobs[index]),
     }));
   }
 

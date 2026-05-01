@@ -11,7 +11,11 @@ import { TerrainDigDepth } from "../terrain/components/TerrainDigDepth";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { getTerrainLayer } from "../terrain/TerrainLayers";
 import { OnchainObjectRef } from "./components/OnchainObjectRef";
-import type { PlantStateSnapshot, PlayerSnapshot } from "./MudWorldTypes";
+import type {
+  FarmTileStateSnapshot,
+  PlantStateSnapshot,
+  PlayerSnapshot,
+} from "./MudWorldTypes";
 
 export class OnchainWorldHydrator {
   private readonly hydratedObjectIds = new Set<string>();
@@ -128,8 +132,20 @@ export class OnchainWorldHydrator {
       }
     }
 
+    const farmTilesByCell = new Map(
+      snapshot.worldState.farmTiles.map((farmTile) => [
+        cellKey(farmTile.x, farmTile.y),
+        farmTile,
+      ]),
+    );
+
     for (const plant of snapshot.worldState.plants) {
-      this.hydratePlant(world, grid, plant);
+      this.hydratePlant(
+        world,
+        grid,
+        plant,
+        farmTilesByCell.get(cellKey(plant.x, plant.y)),
+      );
     }
   }
 
@@ -137,6 +153,7 @@ export class OnchainWorldHydrator {
     world: World,
     grid: TerrainGrid,
     snapshot: PlantStateSnapshot,
+    farmTile: FarmTileStateSnapshot | undefined,
   ): void {
     const definition = plantDefinitions[snapshot.plantId];
 
@@ -165,11 +182,20 @@ export class OnchainWorldHydrator {
     plant.stage = resolvePlantStage(snapshot, definition.growthSeconds);
 
     if (care) {
+      if (farmTile) {
+        care.moisture = farmTile.moisture;
+        care.fertility = farmTile.fertility;
+        care.exhaustion = farmTile.exhaustion;
+      }
       care.health = snapshot.health;
       care.stress = snapshot.stress;
       care.syncState = "confirmed";
     }
   }
+}
+
+function cellKey(x: number, y: number): string {
+  return `${x},${y}`;
 }
 
 function resolvePlantStage(

@@ -5,7 +5,7 @@ export function addressToBytes32(address: Hex): Hex {
 }
 
 export function stringToBytes32(value: string): Hex {
-  return padHex(stringToHex(value), { size: 32 });
+  return padHex(stringToHex(value), { dir: "right", size: 32 });
 }
 
 export function int32ToBytes32(value: number): Hex {

@@ -57,5 +57,16 @@ export const plantStateHealthFieldIndex = 4;
 export const plantStateStressFieldIndex = 5;
 export const plantStateExistsFieldIndex = 7;
 
+export const farmTileStateTableId =
+  "0x746270616e7468656f6e0000000000004661726d54696c655374617465000000";
+export const farmTileStateFieldLayout =
+  "0x001d060004040408080100000000000000000000000000000000000000000000";
+export const farmTileStateMoistureFieldIndex = 0;
+export const farmTileStateFertilityFieldIndex = 1;
+export const farmTileStateExhaustionFieldIndex = 2;
+export const farmTileStateLastMaintainedAtFieldIndex = 3;
+export const farmTileStateLastWateredAtFieldIndex = 4;
+export const farmTileStateExistsFieldIndex = 5;
+
 export const zeroBytes32: Hex =
   "0x0000000000000000000000000000000000000000000000000000000000000000";

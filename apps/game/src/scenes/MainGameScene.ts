@@ -702,7 +702,7 @@ export class MainGameScene extends Phaser.Scene {
 
   private createPlantStatusPanel(): PlantStatusPanel {
     const width = 316;
-    const height = 214;
+    const height = 276;
     const x = this.scale.width - width - 18;
     const y = 226;
     const container = this.add.container(0, 0).setDepth(104).setVisible(false);
@@ -725,8 +725,8 @@ export class MainGameScene extends Phaser.Scene {
         fixedWidth: width - 32,
         fixedHeight: height - 60,
         fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: "14px",
-        lineSpacing: 5,
+        fontSize: "13px",
+        lineSpacing: 4,
         wordWrap: { width: width - 32 },
       })
       .setOrigin(0);

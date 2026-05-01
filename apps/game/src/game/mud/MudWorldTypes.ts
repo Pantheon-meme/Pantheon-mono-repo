@@ -113,6 +113,7 @@ export type PlayerSnapshot = PlayerEnergy & {
 export type WorldStateSnapshot = {
   terrain: TerrainStateSnapshot[];
   plants: PlantStateSnapshot[];
+  farmTiles: FarmTileStateSnapshot[];
 };
 
 export type TerrainStateSnapshot = {
@@ -130,6 +131,16 @@ export type PlantStateSnapshot = {
   stage: number;
   health: number;
   stress: number;
+};
+
+export type FarmTileStateSnapshot = {
+  x: number;
+  y: number;
+  moisture: number;
+  fertility: number;
+  exhaustion: number;
+  lastMaintainedAt: number;
+  lastWateredAt: number;
 };
 
 export type WorldStateReadBounds = {
