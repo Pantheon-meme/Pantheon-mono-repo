@@ -151,7 +151,14 @@ export function getSurfacePlacementScore(
   surfacePlan: BiomeSurfacePlan | undefined,
   tileX: number,
   tileY: number,
-  placementKind: "spawn-ring" | "path-edge" | "pool-edge" | "grove-edge" | "scattered",
+  placementKind:
+    | "fixed-tile"
+    | "region-center"
+    | "spawn-ring"
+    | "path-edge"
+    | "pool-edge"
+    | "grove-edge"
+    | "scattered",
 ): number {
   const tile = surfacePlan?.getTile(tileX, tileY);
 
@@ -160,6 +167,9 @@ export function getSurfacePlacementScore(
   }
 
   switch (placementKind) {
+    case "fixed-tile":
+    case "region-center":
+      return 1;
     case "path-edge":
       return tile.route > 0.25 && tile.terrainId !== "water" ? tile.route : 0;
     case "pool-edge":

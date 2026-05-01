@@ -1,4 +1,5 @@
 import applewoodSpriteUrl from "./applewood/applewood-sprite-sheet.png?url";
+import centralUniBankSpriteUrl from "./central-uni-bank/central-uni-bank-sprite-sheet.png?url";
 import cityCloverSpriteUrl from "./city-clover/city-clover-sprite-sheet.png?url";
 import duskmilletSpriteUrl from "./duskmillet/duskmillet-sprite-sheet.png?url";
 import emberoakSpriteUrl from "./emberoak/emberoak-sprite-sheet.png?url";
@@ -242,6 +243,29 @@ export const objectSpriteAssets = {
                 "y": 768,
                 "width": 256,
                 "height": 256
+            }
+        ]
+    },
+  },
+  "central-uni-bank": {
+    imageUrl: centralUniBankSpriteUrl,
+    manifest: {
+        "rows": 1,
+        "columns": 1,
+        "cellSize": 512,
+        "atlasWidth": 512,
+        "atlasHeight": 512,
+        "cells": [
+            {
+                "stateId": "building",
+                "stateTitle": "Building",
+                "columnLabel": "building",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 512,
+                "height": 512
             }
         ]
     },

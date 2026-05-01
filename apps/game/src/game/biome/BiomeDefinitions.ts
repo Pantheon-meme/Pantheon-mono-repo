@@ -54,13 +54,22 @@ export type BiomeObjectDefinition = {
     groundOriginY?: number;
   };
   placement: {
-    kind: "spawn-ring" | "path-edge" | "pool-edge" | "grove-edge" | "scattered";
+    kind:
+      | "fixed-tile"
+      | "region-center"
+      | "spawn-ring"
+      | "path-edge"
+      | "pool-edge"
+      | "grove-edge"
+      | "scattered";
     count: number;
     minSpawnDistance?: number;
     maxSpawnDistance?: number;
     seedOffset: number;
     regionIds?: string[];
     terrainIds?: string[];
+    tileX?: number;
+    tileY?: number;
   };
   generation: {
     objectBrief: string;
@@ -195,6 +204,7 @@ function biomeObject(
   regionIds: string[],
   terrainIds: string[],
   groundOriginY?: number,
+  fixedTile?: { tileX: number; tileY: number },
 ): BiomeObjectDefinition {
   return {
     id,
@@ -210,6 +220,8 @@ function biomeObject(
       seedOffset,
       regionIds,
       terrainIds,
+      tileX: fixedTile?.tileX,
+      tileY: fixedTile?.tileY,
     },
     generation: {
       objectBrief: `${label}, Uniswap-inspired biome object for ${terrainIds.join(", ")} terrain.`,
@@ -511,6 +523,7 @@ export const biomeDefinitions: Record<string, BiomeDefinition> = {
       },
     ],
     objects: [
+      biomeObject("central-uni-bank", "Central Uni Bank", "landmark", 5, 5, "central-uni-bank", 0, 0, 2.5, "fixed-tile", 1, 599, ["swap-city-plain"], ["plain", "stone", "path"], 0.78, { tileX: 100, tileY: 100 }),
       biomeObject("violet-clover-bush", "Violet Clover Bush", "decoration", 1, 1, "uniswap-nature-props", 0, 0, 1.12, "grove-edge", 56, 301, ["unicorn-forest", "swap-city-plain"], ["grass", "forest-floor"]),
       biomeObject("mint-moss-stone", "Mint Moss Stone", "decoration", 1, 1, "uniswap-nature-props", 0, 1, 1.05, "scattered", 44, 317, ["unicorn-forest", "oracle-swamp"], ["forest-floor", "swamp", "stone"]),
       biomeObject("pearl-sand-shells", "Pearl Sand Shells", "decoration", 1, 1, "uniswap-nature-props", 0, 2, 0.95, "pool-edge", 28, 331, ["liquidity-lake"], ["sand"]),
@@ -615,6 +628,7 @@ export const biomeDefinitions: Record<string, BiomeDefinition> = {
         ],
         objects: [
           { objectId: "round-swap-plaza-stone", weight: 0.8, terrainIds: ["stone", "plain"] },
+          { objectId: "central-uni-bank", weight: 1, terrainIds: ["plain", "stone", "path"] },
           { objectId: "liquidity-lantern", weight: 0.3, terrainIds: ["path", "stone"] },
           { objectId: "clover-planter", weight: 0.22, terrainIds: ["plain", "stone"] },
           { objectId: "route-silk-grass", weight: 0.24, terrainIds: ["path", "grass"] },
