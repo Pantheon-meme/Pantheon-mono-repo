@@ -1,6 +1,5 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
-import { scatterForageDrops } from "../../actions/ForageActions";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { Energy } from "../../energy/components/Energy";
 import { OnchainPresentation } from "../components/OnchainPresentation";
@@ -12,7 +11,10 @@ import { MovementState } from "../../player/components/MovementState";
 import { Position } from "../../shared/components/Position";
 import { TerrainGrid } from "../../terrain/components/TerrainGrid";
 import { MudWorld } from "../components/MudWorld";
-import type { PlayerSnapshot } from "../MudWorldBridge";
+import { OnchainWorldHydrator } from "../OnchainWorldHydrator";
+import type { PlayerSnapshot } from "../MudWorldTypes";
+
+const worldStateHydrationRadius = 32;
 
 export class MudHydrationSystem implements System {
   private requested = false;
@@ -23,7 +25,7 @@ export class MudHydrationSystem implements System {
   private lastSnapshotKey?: string;
   private lastPresentedActionAt = 0;
   private lastPresentedPendingActionReadyAt = 0;
-  private readonly hydratedObjectIds = new Set<string>();
+  private readonly worldHydrator = new OnchainWorldHydrator();
 
   constructor(private readonly pollIntervalSeconds = 1) {}
 
@@ -70,7 +72,15 @@ export class MudHydrationSystem implements System {
     this.requested = true;
 
     void mud.bridge
-      .readPlayerSnapshot()
+      .readPlayerSnapshot(
+        this.hydrated
+          ? undefined
+          : {
+              width: grid.width,
+              height: grid.height,
+              radius: worldStateHydrationRadius,
+            },
+      )
       .then((snapshot) => {
         if (!snapshot) {
           this.retryInSeconds = 2;
@@ -141,7 +151,7 @@ export class MudHydrationSystem implements System {
         snapshot.actionLog?.updatedAt ?? 0,
       );
     }
-    this.hydrateWorldObjects(world, grid, snapshot);
+    this.worldHydrator.apply(world, grid, snapshot);
     this.applyOnchainPresentation(world, entity, snapshot);
 
     if (!this.hydrated) {
@@ -254,29 +264,6 @@ export class MudHydrationSystem implements System {
 
     if (action === "sleep") {
       presentation.start("sleep", getMudActionDurationSeconds(action));
-    }
-  }
-
-  private hydrateWorldObjects(
-    world: World,
-    grid: TerrainGrid,
-    snapshot: PlayerSnapshot,
-  ): void {
-    for (const object of snapshot.worldObjects) {
-      if (this.hydratedObjectIds.has(object.objectId)) {
-        continue;
-      }
-
-      this.hydratedObjectIds.add(object.objectId);
-      scatterForageDrops(
-        world,
-        grid,
-        object.itemId,
-        object.amount,
-        object.x,
-        object.y,
-        false,
-      );
     }
   }
 
