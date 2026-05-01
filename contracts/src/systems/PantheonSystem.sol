@@ -8,13 +8,13 @@ import {
   ForageState,
   ForageTable,
   LastForageResult,
-  PlantState,
   TerrainState,
   TerrainTile,
   WorldObject,
   WorldObjectCount
 } from "../codegen/index.sol";
 import { ActionLogLib } from "../libraries/ActionLogLib.sol";
+import { InventoryLib } from "../libraries/InventoryLib.sol";
 import { PantheonConstants } from "../libraries/PantheonConstants.sol";
 import { PendingActionLib } from "../libraries/PendingActionLib.sol";
 import { PlayerLib } from "../libraries/PlayerLib.sol";
@@ -112,6 +112,7 @@ contract PantheonSystem is System {
     LastForageResult.set(player, x, y, result.itemId, result.amount, true);
 
     if (result.amount > 0) {
+      InventoryLib.add(player, result.itemId, result.amount);
       _spawnForageObjects(player, x, y, result.itemId, result.amount);
       ActionLogLib.write(player, PantheonConstants.ACTION_FORAGE, "Foraged resource");
     } else {
@@ -123,47 +124,6 @@ contract PantheonSystem is System {
       PantheonConstants.ACTION_FORAGE,
       PantheonConstants.FORAGE_DURATION
     );
-  }
-
-  function plant(int32 x, int32 y, bytes32 plantId) public {
-    address player = _msgSender();
-    PlayerLib.requireExists(player);
-    PendingActionLib.resolveReady(player);
-    PendingActionLib.requireIdle(player);
-    require(!PlantState.getExists(x, y), "plant exists");
-    PlayerLib.spendEnergy(player, PantheonConstants.PLANT_ENERGY_COST);
-
-    PlantState.set(
-      x,
-      y,
-      plantId,
-      player,
-      uint64(block.timestamp),
-      PantheonConstants.PLANT_STAGE_GROWING,
-      true
-    );
-    PendingActionLib.startBusy(
-      player,
-      PantheonConstants.ACTION_PLANT,
-      PantheonConstants.PLANT_DURATION
-    );
-    ActionLogLib.write(player, PantheonConstants.ACTION_PLANT, "Planted seed");
-  }
-
-  function harvest(int32 x, int32 y) public {
-    address player = _msgSender();
-    PlayerLib.requireExists(player);
-    PendingActionLib.resolveReady(player);
-    PendingActionLib.requireIdle(player);
-    require(PlantState.getExists(x, y), "missing plant");
-
-    PlantState.setStage(x, y, PantheonConstants.PLANT_STAGE_HARVESTED);
-    PendingActionLib.startBusy(
-      player,
-      PantheonConstants.ACTION_HARVEST,
-      PantheonConstants.HARVEST_DURATION
-    );
-    ActionLogLib.write(player, PantheonConstants.ACTION_HARVEST, "Harvested plant");
   }
 
   function getLastForageResult(

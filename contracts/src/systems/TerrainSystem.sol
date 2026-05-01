@@ -6,6 +6,8 @@ import {
   ForageLootSlot,
   ForageTable,
   ItemType,
+  PlantTerrainRule,
+  PlantType,
   TerrainAdmin,
   TerrainTile,
   TerrainType
@@ -100,6 +102,74 @@ contract TerrainSystem is System {
     require(minAmount > 0 && maxAmount >= minAmount, "invalid amount");
 
     ForageLootSlot.set(tableId, slot, itemId, weight, minAmount, maxAmount, enabled);
+  }
+
+  function registerPlantType(
+    bytes32 plantId,
+    bytes32 seedItemId,
+    bytes32 harvestItemId,
+    uint64 growthSeconds,
+    uint32 baseYieldMin,
+    uint32 baseYieldMax,
+    uint64 maintenanceInterval,
+    uint32 idealMoistureMin,
+    uint32 idealMoistureMax,
+    uint32 fertilityNeed,
+    string calldata label
+  ) public {
+    _requireTerrainAdmin();
+    require(plantId != bytes32(0), "empty plant");
+    require(ItemType.getExists(seedItemId), "missing seed");
+    require(ItemType.getExists(harvestItemId), "missing harvest");
+    require(growthSeconds > 0, "empty growth");
+    require(baseYieldMin > 0 && baseYieldMax >= baseYieldMin, "invalid yield");
+    require(idealMoistureMax <= 100 && idealMoistureMin <= idealMoistureMax, "invalid moisture");
+    require(fertilityNeed <= 100, "invalid fertility");
+
+    PlantType.set(
+      plantId,
+      seedItemId,
+      harvestItemId,
+      growthSeconds,
+      baseYieldMin,
+      baseYieldMax,
+      maintenanceInterval,
+      idealMoistureMin,
+      idealMoistureMax,
+      fertilityNeed,
+      true,
+      label
+    );
+  }
+
+  function registerPlantTerrainRule(
+    bytes32 plantId,
+    bytes32 terrainId,
+    bool allowed,
+    uint32 growthModifier,
+    uint32 yieldBonus,
+    bytes32 rareItemId,
+    uint32 rareChance
+  ) public {
+    _requireTerrainAdmin();
+    require(PlantType.getExists(plantId), "missing plant");
+    require(TerrainType.getExists(terrainId), "missing terrain type");
+    require(growthModifier > 0, "empty growth modifier");
+    require(rareChance <= 10000, "chance too high");
+    if (rareItemId != bytes32(0)) {
+      require(ItemType.getExists(rareItemId), "missing rare item");
+    }
+
+    PlantTerrainRule.set(
+      plantId,
+      terrainId,
+      allowed,
+      growthModifier,
+      yieldBonus,
+      rareItemId,
+      rareChance,
+      true
+    );
   }
 
   function setTerrainTile(

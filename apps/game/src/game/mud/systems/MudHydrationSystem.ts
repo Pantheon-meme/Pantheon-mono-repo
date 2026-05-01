@@ -240,7 +240,14 @@ export class MudHydrationSystem implements System {
 
     this.lastPresentedActionAt = updatedAt;
 
-    if (action === "forage" || action === "dig" || action === "plant" || action === "harvest") {
+    if (
+      action === "forage" ||
+      action === "dig" ||
+      action === "plant" ||
+      action === "harvest" ||
+      action === "water" ||
+      action === "tend"
+    ) {
       presentation.start("action", getMudActionDurationSeconds(action));
       return;
     }

@@ -345,7 +345,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 1",
                 "row": 2,
                 "column": 0,
@@ -356,7 +356,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 2",
                 "row": 2,
                 "column": 1,
@@ -367,7 +367,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 3",
                 "row": 2,
                 "column": 2,
@@ -378,7 +378,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 4",
                 "row": 2,
                 "column": 3,
@@ -389,7 +389,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 1",
                 "row": 3,
                 "column": 0,
@@ -400,7 +400,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 2",
                 "row": 3,
                 "column": 1,
@@ -411,7 +411,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 3",
                 "row": 3,
                 "column": 2,
@@ -422,7 +422,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 4",
                 "row": 3,
                 "column": 3,

@@ -423,15 +423,15 @@ function defaultPlantStates(): ObjectSpriteState[] {
     },
     {
       id: "grown",
-      title: "Grown",
+      title: "Grown And Stressed",
       prompt:
-        "different stable variants of the mature harvest-ready plant, not animation frames",
+        "columns 1-2 are stable mature harvest-ready variants of the same plant; column 3 is the same plant stressed from poor moisture, weak fertility, or bad terrain; column 4 is the same plant wilted from severe neglect",
     },
     {
       id: "harvested",
-      title: "Harvested",
+      title: "Harvested And Flourishing",
       prompt:
-        "columns 1-2 are post-harvest plant remnants left in the ground; columns 3-4 are isolated harvested crop resource pickups",
+        "column 1 is one post-harvest plant remnant left in the ground; column 2 is one isolated harvested crop resource pickup; column 3 is a flourishing ideal-care version with richer leaves, blossoms, and healthy dew; column 4 is a recently tended version that looks freshly watered or cared for without using UI icons",
     },
   ];
 }

@@ -47,6 +47,7 @@ import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
 import { MudWorld } from "../game/mud/components/MudWorld";
 import { MudWorldBridge } from "../game/mud/MudWorldBridge";
 import { NeedState } from "../game/needs/components/NeedState";
+import { PlantStatusPanel } from "../game/ui/components/PlantStatusPanel";
 import { MovementState } from "../game/player/components/MovementState";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { plantDefinitions } from "../game/plants/PlantDefinitions";
@@ -130,6 +131,7 @@ export class MainGameScene extends Phaser.Scene {
     const journal = world.createEntity();
     const handHud = world.createEntity();
     const targetActionMenu = world.createEntity();
+    const plantStatusPanel = world.createEntity();
     const minimap = world.createEntity();
     const player = world.createEntity();
     const baseGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
@@ -145,6 +147,7 @@ export class MainGameScene extends Phaser.Scene {
     const journalPanel = this.createJournalPanel();
     const handHudDisplay = this.createHandHud();
     const targetActionMenuDisplay = this.createTargetActionMenu();
+    const plantStatusPanelDisplay = this.createPlantStatusPanel();
     const weightLabel = this.createWeightLabel();
     const needs = new NeedState();
     const freeExplore = isFreeExploreMode();
@@ -282,6 +285,11 @@ export class MainGameScene extends Phaser.Scene {
       targetActionMenu,
       TargetActionMenu,
       targetActionMenuDisplay,
+    );
+    world.addComponent(
+      plantStatusPanel,
+      PlantStatusPanel,
+      plantStatusPanelDisplay,
     );
     world.addComponent(minimap, BiomeMinimap, minimapDisplay);
 
@@ -641,6 +649,51 @@ export class MainGameScene extends Phaser.Scene {
     container.add([background, title]);
 
     return new TargetActionMenu(container, background, title, 440, 38);
+  }
+
+  private createPlantStatusPanel(): PlantStatusPanel {
+    const width = 316;
+    const height = 214;
+    const x = this.scale.width - width - 18;
+    const y = 226;
+    const container = this.add.container(0, 0).setDepth(104).setVisible(false);
+    const background = this.add
+      .rectangle(0, 0, width, height, 0x101821, 0.88)
+      .setOrigin(0)
+      .setStrokeStyle(2, 0x8bd6a0, 0.62);
+    const title = this.add
+      .text(16, 14, "", {
+        color: "#f6efd7",
+        fixedWidth: width - 32,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "17px",
+        fontStyle: "700",
+      })
+      .setOrigin(0);
+    const body = this.add
+      .text(16, 46, "", {
+        color: "#dce8e2",
+        fixedWidth: width - 32,
+        fixedHeight: height - 60,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "14px",
+        lineSpacing: 5,
+        wordWrap: { width: width - 32 },
+      })
+      .setOrigin(0);
+
+    container.add([background, title, body]);
+
+    return new PlantStatusPanel(
+      container,
+      background,
+      title,
+      body,
+      width,
+      height,
+      x,
+      y,
+    );
   }
 
   private createSleepVisual(): SleepVisual {

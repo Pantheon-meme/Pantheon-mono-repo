@@ -10,6 +10,7 @@ import {
   plantDefinitions,
   type PlantDefinition,
 } from "../plants/PlantDefinitions";
+import { PlantCareState } from "../plants/components/PlantCareState";
 
 export function formatLayerName(layerId: string): string {
   return layerId
@@ -99,6 +100,7 @@ export function createPlantEntity(
     PlantState,
     new PlantState(definition.id, tileX, tileY),
   );
+  world.addComponent(plant, PlantCareState, new PlantCareState());
   world.addComponent(
     plant,
     Footprint,

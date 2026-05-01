@@ -66,6 +66,19 @@ function getObjectActions(
     });
   }
 
+  if (findPlantByEntity(world, target, false)) {
+    actions.push({
+      id: "water",
+      label: "Water",
+      detail: "Raise moisture",
+    });
+    actions.push({
+      id: "tend",
+      label: "Tend",
+      detail: "Improve care",
+    });
+  }
+
   for (const hand of ["left", "right"] as const) {
     if (canGrabWithHand(world, actor, target, hand)) {
       actions.push({
@@ -104,6 +117,21 @@ function getTileActions(
       id: "fetch",
       label: "Fetch",
       detail: "Harvest grown plant",
+    });
+  }
+
+  const carePlant = findPlantAt(world, focus.tileX, focus.tileY, false);
+
+  if (carePlant) {
+    actions.push({
+      id: "water",
+      label: "Water",
+      detail: "Raise moisture",
+    });
+    actions.push({
+      id: "tend",
+      label: "Tend",
+      detail: "Improve care",
     });
   }
 

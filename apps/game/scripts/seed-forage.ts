@@ -10,6 +10,7 @@ import { foundry } from "viem/chains";
 import { getActiveBiome } from "../src/game/biome/BiomeDefinitions";
 import { terrainForageDefinitions } from "../src/game/forage/ForageLootDefinitions";
 import { itemDefinitions } from "../src/game/items/ItemDefinitions";
+import { plantDefinitions } from "../src/game/plants/PlantDefinitions";
 
 type SeedForageOptions = {
   rpcUrl?: string;
@@ -63,6 +64,25 @@ const forageAdminAbi = [
     ],
     outputs: [],
   },
+  {
+    type: "function",
+    name: "pantheon__registerPlantType",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "plantId", type: "bytes32" },
+      { name: "seedItemId", type: "bytes32" },
+      { name: "harvestItemId", type: "bytes32" },
+      { name: "growthSeconds", type: "uint64" },
+      { name: "baseYieldMin", type: "uint32" },
+      { name: "baseYieldMax", type: "uint32" },
+      { name: "maintenanceInterval", type: "uint64" },
+      { name: "idealMoistureMin", type: "uint32" },
+      { name: "idealMoistureMax", type: "uint32" },
+      { name: "fertilityNeed", type: "uint32" },
+      { name: "label", type: "string" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 async function main(): Promise<void> {
@@ -73,6 +93,7 @@ async function main(): Promise<void> {
     terrainIds.has(definition.terrainId),
   );
   const itemList = Object.values(itemDefinitions);
+  const plantList = Object.values(plantDefinitions);
   const concurrency = options.concurrency ?? defaultConcurrency;
   const slotCount = forageDefinitions.reduce(
     (total, table) => total + table.loot.length,
@@ -80,7 +101,7 @@ async function main(): Promise<void> {
   );
 
   console.log(
-    `Prepared ${itemList.length} item types, ${forageDefinitions.length} forage tables, and ${slotCount} loot slots`,
+    `Prepared ${itemList.length} item types, ${plantList.length} plant types, ${forageDefinitions.length} forage tables, and ${slotCount} loot slots`,
   );
   console.log(`Using transaction concurrency ${concurrency}`);
 
@@ -117,6 +138,34 @@ async function main(): Promise<void> {
     async (item, hash) => {
       await publicClient.waitForTransactionReceipt({ hash });
       console.log(`Registered item ${item.id}`);
+    },
+  );
+
+  await runTransactionBatches(
+    plantList,
+    concurrency,
+    (plant) =>
+      walletClient.writeContract({
+        address: worldAddress,
+        abi: forageAdminAbi,
+        functionName: "pantheon__registerPlantType",
+        args: [
+          toBytes32(plant.id),
+          toBytes32(plant.seedId),
+          toBytes32(`${plant.id}_harvest`),
+          BigInt(Math.ceil(plant.growthSeconds)),
+          1,
+          plant.kind === "tree" ? 2 : 3,
+          180n,
+          plant.kind === "tree" ? 30 : 35,
+          plant.kind === "tree" ? 72 : 78,
+          plant.kind === "tree" ? 50 : 42,
+          plant.label,
+        ],
+      }),
+    async (plant, hash) => {
+      await publicClient.waitForTransactionReceipt({ hash });
+      console.log(`Registered plant type ${plant.id}`);
     },
   );
 

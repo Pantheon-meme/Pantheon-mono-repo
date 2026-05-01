@@ -161,7 +161,7 @@ function getStageFrame(
   grownVariantFrame: number,
 ): number {
   if (plant.stage === "grown") {
-    return grownVariantFrame % columns;
+    return grownVariantFrame % Math.min(columns, 2);
   }
 
   if (plant.stage === "fetched") {

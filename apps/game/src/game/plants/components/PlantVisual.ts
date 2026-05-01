@@ -13,6 +13,6 @@ export class PlantVisual {
     public readonly stem: Phaser.GameObjects.Rectangle,
     public readonly marker: Phaser.GameObjects.Text,
   ) {
-    this.grownVariantFrame = Math.floor(Math.random() * 4);
+    this.grownVariantFrame = Math.floor(Math.random() * 2);
   }
 }

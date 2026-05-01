@@ -3,6 +3,8 @@ import {
   createWalletClient,
   hexToString,
   http,
+  padHex,
+  stringToHex,
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -27,6 +29,47 @@ const pantheonWorldAbi = [
   {
     type: "function",
     name: "pantheon__forage",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "pantheon__plant",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+      { name: "plantId", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "pantheon__harvest",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "pantheon__water",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "pantheon__tend",
     stateMutability: "nonpayable",
     inputs: [
       { name: "x", type: "int32" },
@@ -78,6 +121,21 @@ const pantheonWorldAbi = [
       { name: "y", type: "int32" },
       { name: "itemId", type: "bytes32" },
       { name: "amount", type: "uint32" },
+      { name: "exists", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
+    name: "pantheon__getLastHarvestResult",
+    stateMutability: "view",
+    inputs: [{ name: "player", type: "address" }],
+    outputs: [
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+      { name: "itemId", type: "bytes32" },
+      { name: "amount", type: "uint32" },
+      { name: "rareItemId", type: "bytes32" },
+      { name: "rareAmount", type: "uint32" },
       { name: "exists", type: "bool" },
     ],
   },
@@ -187,6 +245,30 @@ export type WorldObjectSnapshot = {
   createdAt: number;
 };
 
+export type ConfirmedPlant = {
+  x: number;
+  y: number;
+  plantId: string;
+  playerEnergy?: PlayerEnergy;
+};
+
+export type ConfirmedHarvest = {
+  x: number;
+  y: number;
+  itemId: string;
+  amount: number;
+  rareItemId: string;
+  rareAmount: number;
+  playerEnergy?: PlayerEnergy;
+};
+
+export type ConfirmedPlantCare = {
+  x: number;
+  y: number;
+  action: "water" | "tend";
+  playerEnergy?: PlayerEnergy;
+};
+
 export type ConfirmedMove = {
   x: number;
   y: number;
@@ -243,6 +325,21 @@ export type MudForageCallbacks = {
   onRejected: (message: string) => void;
 };
 
+export type MudPlantCallbacks = {
+  onConfirmed: (plant: ConfirmedPlant) => void;
+  onRejected: (message: string) => void;
+};
+
+export type MudHarvestCallbacks = {
+  onConfirmed: (harvest: ConfirmedHarvest) => void;
+  onRejected: (message: string) => void;
+};
+
+export type MudPlantCareCallbacks = {
+  onConfirmed: (care: ConfirmedPlantCare) => void;
+  onRejected: (message: string) => void;
+};
+
 export type MudMoveCallbacks = {
   onConfirmed: (move: ConfirmedMove) => void;
   onRejected: (message: string) => void;
@@ -258,6 +355,9 @@ export class MudWorldBridge {
   private readonly walletClient;
   private readonly pendingDigs = new Set<string>();
   private readonly pendingForages = new Set<string>();
+  private readonly pendingPlants = new Set<string>();
+  private readonly pendingHarvests = new Set<string>();
+  private readonly pendingCareActions = new Set<string>();
   private readonly cachedWorldObjects: WorldObjectSnapshot[] = [];
   private cachedWorldObjectCount = 0;
   private pendingMove = false;
@@ -311,6 +411,57 @@ export class MudWorldBridge {
     void this.confirmForage(x, y, key, callbacks);
 
     return true;
+  }
+
+  submitPlant(
+    x: number,
+    y: number,
+    plantId: string,
+    callbacks: MudPlantCallbacks,
+  ): boolean {
+    const key = `${x},${y}`;
+
+    if (this.pendingPlants.has(key)) {
+      return false;
+    }
+
+    this.pendingPlants.add(key);
+    void this.confirmPlant(x, y, plantId, key, callbacks);
+
+    return true;
+  }
+
+  submitHarvest(
+    x: number,
+    y: number,
+    callbacks: MudHarvestCallbacks,
+  ): boolean {
+    const key = `${x},${y}`;
+
+    if (this.pendingHarvests.has(key)) {
+      return false;
+    }
+
+    this.pendingHarvests.add(key);
+    void this.confirmHarvest(x, y, key, callbacks);
+
+    return true;
+  }
+
+  submitWater(
+    x: number,
+    y: number,
+    callbacks: MudPlantCareCallbacks,
+  ): boolean {
+    return this.submitPlantCare("water", x, y, callbacks);
+  }
+
+  submitTend(
+    x: number,
+    y: number,
+    callbacks: MudPlantCareCallbacks,
+  ): boolean {
+    return this.submitPlantCare("tend", x, y, callbacks);
   }
 
   submitMove(x: number, y: number, callbacks: MudMoveCallbacks): boolean {
@@ -483,6 +634,112 @@ export class MudWorldBridge {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingForages.delete(key);
+    }
+  }
+
+  private async confirmPlant(
+    x: number,
+    y: number,
+    plantId: string,
+    key: string,
+    callbacks: MudPlantCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__plant",
+        args: [x, y, stringToBytes32(plantId)],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        x,
+        y,
+        plantId,
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingPlants.delete(key);
+    }
+  }
+
+  private async confirmHarvest(
+    x: number,
+    y: number,
+    key: string,
+    callbacks: MudHarvestCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__harvest",
+        args: [x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        ...(await this.readLastHarvestResultAfterConfirmation(x, y)),
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingHarvests.delete(key);
+    }
+  }
+
+  private submitPlantCare(
+    action: "water" | "tend",
+    x: number,
+    y: number,
+    callbacks: MudPlantCareCallbacks,
+  ): boolean {
+    const key = `${action}:${x},${y}`;
+
+    if (this.pendingCareActions.has(key)) {
+      return false;
+    }
+
+    this.pendingCareActions.add(key);
+    void this.confirmPlantCare(action, x, y, key, callbacks);
+
+    return true;
+  }
+
+  private async confirmPlantCare(
+    action: "water" | "tend",
+    x: number,
+    y: number,
+    key: string,
+    callbacks: MudPlantCareCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName:
+          action === "water" ? "pantheon__water" : "pantheon__tend",
+        args: [x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        x,
+        y,
+        action,
+        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingCareActions.delete(key);
     }
   }
 
@@ -663,6 +920,30 @@ export class MudWorldBridge {
     return { x: fallbackX, y: fallbackY, itemId: "", amount: 0 };
   }
 
+  private async readLastHarvestResultAfterConfirmation(
+    fallbackX: number,
+    fallbackY: number,
+  ): Promise<Omit<ConfirmedHarvest, "playerEnergy">> {
+    try {
+      const result = await this.readLastHarvestResult();
+
+      if (result) {
+        return result;
+      }
+    } catch {
+      // Fall through to a no-yield result if the read is temporarily unavailable.
+    }
+
+    return {
+      x: fallbackX,
+      y: fallbackY,
+      itemId: "",
+      amount: 0,
+      rareItemId: "",
+      rareAmount: 0,
+    };
+  }
+
   async readWorldObjects(): Promise<WorldObjectSnapshot[]> {
     const count = await this.publicClient.readContract({
       address: this.worldAddress,
@@ -741,6 +1022,31 @@ export class MudWorldBridge {
       y,
       itemId: decodeBytes32String(itemId),
       amount,
+    };
+  }
+
+  private async readLastHarvestResult(): Promise<
+    Omit<ConfirmedHarvest, "playerEnergy"> | undefined
+  > {
+    const [x, y, itemId, amount, rareItemId, rareAmount, exists] =
+      await this.publicClient.readContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__getLastHarvestResult",
+        args: [this.walletClient.account.address],
+      });
+
+    if (!exists || amount <= 0) {
+      return undefined;
+    }
+
+    return {
+      x,
+      y,
+      itemId: decodeBytes32String(itemId),
+      amount,
+      rareItemId: decodeBytes32String(rareItemId),
+      rareAmount,
     };
   }
 
@@ -843,6 +1149,10 @@ function formatMudError(error: unknown): string {
 
 function addressToBytes32(address: Hex): Hex {
   return `0x${address.slice(2).padStart(64, "0")}`;
+}
+
+function stringToBytes32(value: string): Hex {
+  return padHex(stringToHex(value), { size: 32 });
 }
 
 function decodeUint32StaticField(blob: Hex): number {

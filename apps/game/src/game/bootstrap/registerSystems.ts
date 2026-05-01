@@ -26,6 +26,7 @@ import { MovementSystem } from "../player/systems/MovementSystem";
 import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
 import { PlantRenderSystem } from "../plants/systems/PlantRenderSystem";
+import { PlantStatusPanelSystem } from "../ui/systems/PlantStatusPanelSystem";
 import { PlayerSpriteAnimationSystem } from "../player/systems/PlayerSpriteAnimationSystem";
 import { RenderSystem } from "../shared/systems/RenderSystem";
 import { SeedDropRenderSystem } from "../plants/systems/SeedDropRenderSystem";
@@ -86,6 +87,7 @@ export function registerSystems(
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new PlantStatusPanelSystem());
   world.addSystem(new BiomeMinimapSystem());
   world.addSystem(new ActionProgressBarSystem());
   world.addSystem(new SleepProgressBarSystem());

@@ -7,6 +7,17 @@ library PantheonConstants {
   uint32 internal constant DIG_ENERGY_COST = 12;
   uint32 internal constant FORAGE_ENERGY_COST = 10;
   uint32 internal constant PLANT_ENERGY_COST = 8;
+  uint32 internal constant HARVEST_ENERGY_COST = 6;
+  uint32 internal constant WATER_ENERGY_COST = 4;
+  uint32 internal constant TEND_ENERGY_COST = 5;
+  uint32 internal constant FARM_RULE_SCALE = 10000;
+  uint32 internal constant FARM_MAX_CARE = 100;
+  uint32 internal constant FARM_DEFAULT_MOISTURE = 45;
+  uint32 internal constant FARM_DEFAULT_FERTILITY = 55;
+  uint32 internal constant FARM_WATER_AMOUNT = 28;
+  uint32 internal constant FARM_TEND_FERTILITY_GAIN = 12;
+  uint32 internal constant FARM_TEND_STRESS_RELIEF = 24;
+  uint32 internal constant FARM_HARVEST_EXHAUSTION = 8;
   uint32 internal constant MAX_DIG_LEVEL = 1;
   uint32 internal constant MOVE_SPEED_SCALE = 1000;
   uint32 internal constant DEFAULT_MOVE_SPEED = 2500;
@@ -30,6 +41,8 @@ library PantheonConstants {
   bytes32 internal constant ACTION_PLANT = bytes32("plant");
   bytes32 internal constant ACTION_SLEEP = bytes32("sleep");
   bytes32 internal constant ACTION_SPAWN = bytes32("spawn");
+  bytes32 internal constant ACTION_TEND = bytes32("tend");
+  bytes32 internal constant ACTION_WATER = bytes32("water");
   bytes32 internal constant WORLD_OBJECT_COUNTER_ID = bytes32("world_object_count");
   bytes32 internal constant TERRAIN_ADMIN_ID = bytes32("terrainAdmin");
   bytes32 internal constant TERRAIN_DIRT = bytes32("dirt");
