@@ -11,6 +11,7 @@ import {
   getDominantRegion,
 } from "../../biome/BiomeRegionGeneration";
 import type { BiomeSurfaceTile } from "../../biome/BiomeSurfacePlan";
+import { FacingDirection } from "../../player/components/FacingDirection";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { Position } from "../../shared/components/Position";
 import { TerrainGrid } from "../../terrain/components/TerrainGrid";
@@ -156,7 +157,7 @@ function renderDynamicOverlay(
   minimap: BiomeMinimap,
   grid: TerrainGrid,
 ): void {
-  const player = world.query(PlayerControlled, Position)[0];
+  const player = world.query(PlayerControlled, Position, FacingDirection)[0];
 
   minimap.overlayLayer.clear();
   minimap.playerMarker.setVisible(false);
@@ -176,10 +177,34 @@ function renderDynamicOverlay(
   const viewY = mapBounds.y + (camera.worldView.y / worldHeight) * mapBounds.height;
   const viewWidth = (camera.worldView.width / worldWidth) * mapBounds.width;
   const viewHeight = (camera.worldView.height / worldHeight) * mapBounds.height;
+  const facing = player[3];
 
   minimap.overlayLayer.lineStyle(1.5, 0xffffff, 0.72);
   minimap.overlayLayer.strokeRect(viewX, viewY, viewWidth, viewHeight);
-  minimap.playerMarker.setPosition(playerX, playerY).setVisible(true);
+  minimap.playerMarker
+    .setPosition(playerX, playerY)
+    .setRotation(getMarkerRotation(facing))
+    .setVisible(true);
+}
+
+function getMarkerRotation(facing: FacingDirection): number {
+  if (facing.y < 0) {
+    return 0;
+  }
+
+  if (facing.x > 0) {
+    return Math.PI / 2;
+  }
+
+  if (facing.y > 0) {
+    return Math.PI;
+  }
+
+  if (facing.x < 0) {
+    return -Math.PI / 2;
+  }
+
+  return 0;
 }
 
 function positionMinimap(minimap: BiomeMinimap): void {

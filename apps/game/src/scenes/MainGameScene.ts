@@ -561,7 +561,7 @@ export class MainGameScene extends Phaser.Scene {
     const terrainLayer = this.add.graphics();
     const regionLayer = this.add.graphics();
     const overlayLayer = this.add.graphics();
-    const markerWidth = 15;
+    const markerWidth = 40;
     const playerMarker = this.add
       .image(0, 0, playerMarkerTextureKey)
       .setOrigin(0.5)
