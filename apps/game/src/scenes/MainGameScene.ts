@@ -47,6 +47,7 @@ import { JournalPanel } from "../game/ui/components/JournalPanel";
 import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
 import { MudWorld } from "../game/mud/components/MudWorld";
 import { MudWorldBridge } from "../game/mud/MudWorldBridge";
+import type { PlayerSnapshot } from "../game/mud/MudWorldTypes";
 import { NeedState } from "../game/needs/components/NeedState";
 import { PlantStatusPanel } from "../game/ui/components/PlantStatusPanel";
 import { MovementState } from "../game/player/components/MovementState";
@@ -79,9 +80,11 @@ import {
   playerSpriteTextureKey,
 } from "../game/player/PlayerSpriteAssets";
 
-const tileSize = 256;
-const gridWidth = 200;
-const gridHeight = 200;
+export const tileSize = 256;
+export const gridWidth = 200;
+export const gridHeight = 200;
+export const initialWorldStateHydrationRadius = 32;
+
 const worldWidth = gridWidth * tileSize;
 const worldHeight = gridHeight * tileSize;
 const seedDropWeight = 0.02;
@@ -90,9 +93,16 @@ const terrainLayerDepthStep = 0.1;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
+  private initialMudBridge?: MudWorldBridge;
+  private initialMudSnapshot?: PlayerSnapshot;
 
   constructor() {
     super("main-game");
+  }
+
+  init(data: MainGameSceneData): void {
+    this.initialMudBridge = data.mudBridge;
+    this.initialMudSnapshot = data.initialMudSnapshot;
   }
 
   preload(): void {
@@ -278,7 +288,13 @@ export class MainGameScene extends Phaser.Scene {
     });
     world.addComponent(diggingTerrain, TerrainHardness, new TerrainHardness());
     world.addComponent(diggingTerrain, TerrainDigDepth, new TerrainDigDepth());
-    world.addComponent(mudWorld, MudWorld, new MudWorld(MudWorldBridge.fromEnv()));
+    const mudBridge = this.initialMudBridge ?? MudWorldBridge.fromEnv();
+    const initialMudSnapshot = this.initialMudSnapshot;
+
+    this.initialMudBridge = undefined;
+    this.initialMudSnapshot = undefined;
+
+    world.addComponent(mudWorld, MudWorld, new MudWorld(mudBridge));
 
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
@@ -391,8 +407,10 @@ export class MainGameScene extends Phaser.Scene {
       new Phaser.Geom.Rectangle(34, 34, worldWidth - 68, worldHeight - 68),
       weightLabel,
       biome,
+      initialMudSnapshot,
     );
 
+    world.update(0);
     this.world = world;
   }
 
@@ -832,6 +850,11 @@ export class MainGameScene extends Phaser.Scene {
     return { section, background, label: text };
   }
 }
+
+type MainGameSceneData = {
+  mudBridge?: MudWorldBridge;
+  initialMudSnapshot?: PlayerSnapshot;
+};
 
 function shouldSpawnSeedTestRow(): boolean {
   if (typeof window === "undefined") {

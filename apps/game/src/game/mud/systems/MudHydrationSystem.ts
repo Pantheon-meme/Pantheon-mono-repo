@@ -29,9 +29,19 @@ export class MudHydrationSystem implements System {
   private lastPresentedPendingActionReadyAt = 0;
   private readonly worldHydrator = new OnchainWorldHydrator();
 
-  constructor(private readonly pollIntervalSeconds = 1) {}
+  constructor(
+    private readonly pollIntervalSeconds = 1,
+    private initialSnapshot?: PlayerSnapshot,
+  ) {
+    this.hydrated = initialSnapshot !== undefined;
+  }
 
   update(world: World, deltaSeconds: number): void {
+    if (this.initialSnapshot) {
+      this.applyInitialSnapshot(world, this.initialSnapshot);
+      this.initialSnapshot = undefined;
+    }
+
     if (this.requested) {
       return;
     }
@@ -114,6 +124,39 @@ export class MudHydrationSystem implements System {
       .finally(() => {
         this.requested = false;
       });
+  }
+
+  private applyInitialSnapshot(world: World, snapshot: PlayerSnapshot): void {
+    const mud = world.query(MudWorld)[0]?.[1];
+    const grid = world.query(TerrainGrid)[0]?.[1];
+    const player = world.query(
+      PlayerControlled,
+      Position,
+      Energy,
+      MovementState,
+    )[0];
+
+    if (!mud || !grid || !player) {
+      this.hydrated = false;
+      this.initialSnapshot = snapshot;
+      return;
+    }
+
+    const [entity, , position, energy, movement] = player;
+    const input = world.getComponent(entity, InputState);
+
+    this.hydrated = false;
+    this.applySnapshot(
+      world,
+      entity,
+      position,
+      energy,
+      movement,
+      input,
+      grid,
+      snapshot,
+    );
+    this.pollInSeconds = this.pollIntervalSeconds;
   }
 
   private applySnapshot(

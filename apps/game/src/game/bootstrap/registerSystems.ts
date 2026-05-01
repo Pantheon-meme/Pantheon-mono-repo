@@ -40,6 +40,7 @@ import { TerrainBaseRenderSystem } from "../terrain/systems/TerrainBaseRenderSys
 import { WeightDisplaySystem } from "../ui/systems/WeightDisplaySystem";
 import { WorldDepthSystem } from "../shared/systems/WorldDepthSystem";
 import type { BiomeDefinition } from "../biome/BiomeDefinitions";
+import type { PlayerSnapshot } from "../mud/MudWorldTypes";
 
 export function registerSystems(
   world: World,
@@ -48,6 +49,7 @@ export function registerSystems(
   bounds: Phaser.Geom.Rectangle,
   weightLabel: Phaser.GameObjects.Text,
   biome: BiomeDefinition,
+  initialMudSnapshot?: PlayerSnapshot,
 ): void {
   world.addSystem(new TerrainBaseRenderSystem());
   world.addSystem(new AutotileRenderSystem(scene));
@@ -64,7 +66,7 @@ export function registerSystems(
     ),
   );
   world.addSystem(new ActionInputSystem(keyboard));
-  world.addSystem(new MudHydrationSystem());
+  world.addSystem(new MudHydrationSystem(1, initialMudSnapshot));
   world.addSystem(new GameClockSystem());
   world.addSystem(new EnergySystem());
   world.addSystem(new PlantGrowthSystem());
