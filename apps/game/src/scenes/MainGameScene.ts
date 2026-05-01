@@ -18,6 +18,17 @@ import {
   energyBarFillerTextureKey,
   energyBarIconAsset,
   energyBarIconTextureKey,
+  inventoryDividerAsset,
+  inventoryDividerTextureKey,
+  inventoryPanelAsset,
+  inventoryPanelSlices,
+  inventoryPanelTextureKey,
+  inventorySlotAsset,
+  inventorySlotHoverAsset,
+  inventorySlotHoverTextureKey,
+  inventorySlotSelectedAsset,
+  inventorySlotSelectedTextureKey,
+  inventorySlotTextureKey,
   joystickPlainAsset,
   joystickPlainTextureKey,
   joystickControlTextureKey,
@@ -113,6 +124,10 @@ const worldHeight = gridHeight * tileSize;
 const seedDropWeight = 0.02;
 const terrainLayerDepthBase = 2;
 const terrainLayerDepthStep = 0.1;
+const inventoryHudDisplayScale = 0.72;
+const inventoryHudPanelPadding = 16;
+const inventoryHudSlotGap = 16;
+const inventoryHudScreenYFromBottom = 126;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
@@ -780,49 +795,91 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   private createToolInventoryHud(): ToolInventoryHud {
-    const width = 238;
-    const height = 72;
+    const slotDefinitions: Array<{ id: string; kind: "tool" | "item" }> = [
+      { id: "tool:hands", kind: "tool" },
+      { id: "item:left", kind: "item" },
+      { id: "item:right", kind: "item" },
+    ];
+    const hasDivider = slotDefinitions.some((slot) => slot.kind === "tool") &&
+      slotDefinitions.some((slot) => slot.kind === "item");
+    const contentWidth =
+      inventoryHudPanelPadding * 2 +
+      slotDefinitions.length * inventorySlotAsset.width +
+      Math.max(0, slotDefinitions.length - 1) * inventoryHudSlotGap +
+      (hasDivider ? inventoryDividerAsset.width : 0);
+    const width = Math.max(
+      inventoryPanelSlices.left + inventoryPanelSlices.right + inventorySlotAsset.width,
+      contentWidth,
+    );
+    const height = inventoryPanelAsset.height;
     const container = this.add.container(0, 0).setDepth(105);
     const background = this.add
-      .rectangle(0, 0, width, height, hudColors.panelDark, 0.9)
-      .setOrigin(0.5)
-      .setStrokeStyle(2, hudColors.borderWarm, 0.55);
+      .nineslice(
+        0,
+        0,
+        inventoryPanelTextureKey,
+        undefined,
+        width,
+        height,
+        inventoryPanelSlices.left,
+        inventoryPanelSlices.right,
+        inventoryPanelSlices.top,
+        inventoryPanelSlices.bottom,
+      )
+      .setOrigin(0.5);
     const toolsLabel = this.add
-      .text(-width / 2 + 18, -height / 2 + 8, "Tools", {
+      .text(0, 0, "", {
         color: hudColors.textSoft,
         fontFamily: hudFontFamily,
-        fontSize: "11px",
-        fontStyle: "700",
+        fontSize: "1px",
       })
-      .setOrigin(0)
       .setVisible(false);
     const itemsLabel = this.add
-      .text(-width / 2 + 146, -height / 2 + 8, "Items", {
+      .text(0, 0, "", {
         color: hudColors.textSoft,
         fontFamily: hudFontFamily,
-        fontSize: "11px",
-        fontStyle: "700",
+        fontSize: "1px",
       })
-      .setOrigin(0)
       .setVisible(false);
     const capacityLabel = this.add
-      .text(width / 2 - 16, height / 2 - 18, "", {
-        align: "right",
+      .text(0, 0, "", {
         color: hudColors.textSoft,
-        fixedWidth: 280,
         fontFamily: hudFontFamily,
-        fontSize: "11px",
+        fontSize: "1px",
       })
-      .setOrigin(1, 0.5)
       .setVisible(false);
     const divider = this.add
-      .rectangle(-width / 2 + 78, -height / 2 + 12, 1, 48, hudColors.border, 0.25)
-      .setOrigin(0);
-    const slots = [
-      this.createHudSlot("tool:hands", "tool", -width / 2 + 40, 0),
-      this.createHudSlot("item:left", "item", -width / 2 + 118, 0),
-      this.createHudSlot("item:right", "item", -width / 2 + 180, 0),
-    ];
+      .image(0, 0, inventoryDividerTextureKey)
+      .setDisplaySize(inventoryDividerAsset.width, inventoryDividerAsset.height)
+      .setVisible(hasDivider);
+    const slots: HudSlot[] = [];
+    let cursorX = -width / 2 + inventoryHudPanelPadding;
+
+    for (let index = 0; index < slotDefinitions.length; index += 1) {
+      const definition = slotDefinitions[index];
+      const previous = slotDefinitions[index - 1];
+
+      if (previous) {
+        if (hasDivider && previous.kind === "tool" && definition.kind === "item") {
+          cursorX += inventoryHudSlotGap / 2;
+          divider.setPosition(cursorX + inventoryDividerAsset.width / 2, 0);
+          cursorX += inventoryDividerAsset.width + inventoryHudSlotGap / 2;
+        } else {
+          cursorX += inventoryHudSlotGap;
+        }
+      }
+
+      slots.push(
+        this.createHudSlot(
+          definition.id,
+          definition.kind,
+          cursorX + inventorySlotAsset.width / 2,
+          0,
+        ),
+      );
+      cursorX += inventorySlotAsset.width;
+    }
+
     const hud = new ToolInventoryHud(
       container,
       background,
@@ -831,12 +888,22 @@ export class MainGameScene extends Phaser.Scene {
       capacityLabel,
       divider,
       slots,
-      118,
+      inventoryHudScreenYFromBottom,
+      width,
+      inventoryHudDisplayScale,
     );
 
     for (const slot of slots) {
       slot.background.on("pointerdown", () => {
         hud.selectedSlotId = slot.id;
+      });
+      slot.background.on("pointerover", () => {
+        slot.hovered = true;
+        slot.hover.setVisible(true);
+      });
+      slot.background.on("pointerout", () => {
+        slot.hovered = false;
+        slot.hover.setVisible(false);
       });
     }
 
@@ -860,72 +927,74 @@ export class MainGameScene extends Phaser.Scene {
   ): HudSlot {
     const container = this.add.container(x, y);
     const background = this.add
-      .rectangle(0, 0, 52, 52, hudColors.trackDark, 0.92)
-      .setOrigin(0.5)
-      .setStrokeStyle(2, 0x68817d, 0.56)
+      .image(0, 0, inventorySlotTextureKey)
+      .setDisplaySize(inventorySlotAsset.width, inventorySlotAsset.height)
       .setInteractive({ useHandCursor: true });
-    const selection = this.add
-      .rectangle(0, 0, 58, 58, hudColors.selected, 0.12)
-      .setOrigin(0.5)
-      .setStrokeStyle(2, hudColors.selected, 0.8)
+    const hover = this.add
+      .image(0, 0, inventorySlotHoverTextureKey)
+      .setAlpha(0.66)
+      .setBlendMode(Phaser.BlendModes.HARD_LIGHT)
+      .setDisplaySize(inventorySlotHoverAsset.width, inventorySlotHoverAsset.height)
       .setVisible(false);
-    const iconFrame = this.add
-      .circle(0, 2, 18, hudColors.panelWarm, 0)
-      .setStrokeStyle(1, hudColors.borderWarm, 0.45);
-    const icon = this.add
-      .text(0, 2, "", {
-        align: "center",
-        color: hudColors.textWarm,
-        fixedWidth: 36,
-        fontFamily: hudFontFamily,
-        fontSize: "16px",
-        fontStyle: "700",
-      })
-      .setOrigin(0.5);
+    const selection = this.add
+      .image(0, 0, inventorySlotSelectedTextureKey)
+      .setDisplaySize(
+        inventorySlotSelectedAsset.width,
+        inventorySlotSelectedAsset.height,
+      )
+      .setVisible(false);
+    const iconPlaceholder = this.createInventoryPlaceholderIcon();
+    const iconSprite = this.add
+      .sprite(0, 4, inventorySlotTextureKey)
+      .setOrigin(0.5)
+      .setVisible(false);
     const label = this.add
-      .text(-8, -9, "", {
+      .text(0, 0, "", {
         color: hudColors.text,
-        fixedWidth: 54,
         fontFamily: hudFontFamily,
-        fontSize: "11px",
-        fontStyle: "700",
+        fontSize: "1px",
       })
-      .setOrigin(0, 0.5)
       .setVisible(false);
     const count = this.add
-      .text(-8, 10, "", {
+      .text(0, 0, "", {
         color: hudColors.textSoft,
-        fixedWidth: 54,
         fontFamily: hudFontFamily,
-        fontSize: "10px",
+        fontSize: "1px",
       })
-      .setOrigin(0, 0.5)
       .setVisible(false);
     const shortcut = this.add
-      .text(18, -18, "", {
+      .text(37, -40, "", {
         align: "right",
-        color: hudColors.textWarm,
-        fixedWidth: 18,
-        fontFamily: hudFontFamily,
-        fontSize: "11px",
+        color: "#3d2011",
+        fixedWidth: 24,
+        fontFamily: "Georgia, Times New Roman, serif",
+        fontSize: "25px",
         fontStyle: "700",
+        shadow: {
+          color: "#ead2a2",
+          blur: 1,
+          fill: true,
+          offsetX: 0,
+          offsetY: 1,
+        },
       })
       .setOrigin(1, 0.5);
     const lockOverlay = this.add
-      .rectangle(0, 0, 52, 52, 0x020405, 0.5)
+      .rectangle(0, 0, 76, 76, 0x020405, 0.42)
       .setOrigin(0.5)
       .setVisible(false);
     const pulse = this.add
-      .rectangle(0, 0, 52, 52, hudColors.selected, 0.18)
+      .rectangle(0, 0, 76, 76, hudColors.selected, 0.18)
       .setOrigin(0.5)
       .setVisible(false);
 
     container.add([
-      selection,
       background,
+      hover,
       pulse,
-      iconFrame,
-      icon,
+      selection,
+      iconPlaceholder,
+      iconSprite,
       label,
       count,
       shortcut,
@@ -937,15 +1006,31 @@ export class MainGameScene extends Phaser.Scene {
       kind,
       container,
       background,
+      hover,
       selection,
-      iconFrame,
-      icon,
+      iconPlaceholder,
+      iconSprite,
       label,
       count,
       shortcut,
       lockOverlay,
       pulse,
+      hovered: false,
     };
+  }
+
+  private createInventoryPlaceholderIcon(): Phaser.GameObjects.Container {
+    const container = this.add.container(0, 5);
+    const halo = this.add
+      .circle(0, 0, 16, 0xf5dca1, 0.14)
+      .setStrokeStyle(2, 0x8b5b2d, 0.38);
+    const core = this.add
+      .circle(0, 0, 7, 0xf8e8ba, 0.36)
+      .setStrokeStyle(1, 0x5c351c, 0.28);
+
+    container.add([halo, core]);
+
+    return container;
   }
 
   private createWeightLabel(): Phaser.GameObjects.Text {

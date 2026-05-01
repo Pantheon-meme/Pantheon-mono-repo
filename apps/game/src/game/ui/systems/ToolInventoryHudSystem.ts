@@ -2,12 +2,25 @@ import Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { Entity, World } from "../../../ecs/World";
 import { ForageDrop } from "../../items/components/ForageDrop";
-import { getItemDefinition, itemLabel } from "../../items/ItemDefinitions";
+import {
+  forageItemSpriteTextureKey,
+  getForageItemSpriteAsset,
+  getForageItemSpriteCell,
+} from "../../items/ForageItemSpriteAssets";
+import { itemLabel } from "../../items/ItemDefinitions";
 import { Hands } from "../../player/components/Hands";
+import { HarvestedPlant } from "../../plants/components/HarvestedPlant";
 import { SeedDrop } from "../../plants/components/SeedDrop";
+import {
+  getHarvestItemSpriteFrameIndex,
+  getPlantSpriteAssetBySeed,
+  getPlantSpriteAsset,
+  getSeedItemSpriteFrameIndex,
+  plantSpriteTextureKey,
+  plantSpriteTextureKeyBySeed,
+} from "../../plants/PlantSpriteAssets";
 import { WeightInspectable } from "../../shared/components/WeightInspectable";
 import { WeightedObject } from "../../shared/components/WeightedObject";
-import { hudColors } from "../HudTheme";
 import { ToolInventoryHud, type HudSlot } from "../components/ToolInventoryHud";
 
 const selectionShortcuts: Array<{ slotId: string; keyCode: number; label: string }> = [
@@ -15,6 +28,17 @@ const selectionShortcuts: Array<{ slotId: string; keyCode: number; label: string
   { slotId: "item:left", keyCode: Phaser.Input.Keyboard.KeyCodes.TWO, label: "2" },
   { slotId: "item:right", keyCode: Phaser.Input.Keyboard.KeyCodes.THREE, label: "3" },
 ];
+
+type SlotIconState =
+  | {
+      kind: "placeholder";
+    }
+  | {
+      kind: "sprite";
+      textureKey: string;
+      frame: number;
+      size: number;
+    };
 
 export class ToolInventoryHudSystem implements System {
   private readonly keys = new Map<number, Phaser.Input.Keyboard.Key>();
@@ -38,7 +62,7 @@ export class ToolInventoryHudSystem implements System {
     }
 
     this.setSlot(slot, {
-      icon: "H",
+      icon: { kind: "placeholder" },
       label: "Hands",
       count: "",
       shortcut: shortcutForSlot(slot.id),
@@ -77,7 +101,7 @@ export class ToolInventoryHudSystem implements System {
 
     if (!held) {
       this.setSlot(slot, {
-        icon: "-",
+        icon: { kind: "placeholder" },
         label: emptyLabel,
         count: "Empty",
         shortcut: shortcutForSlot(slot.id),
@@ -91,6 +115,7 @@ export class ToolInventoryHudSystem implements System {
 
     const seedDrop = world.getComponent(held, SeedDrop);
     const forageDrop = world.getComponent(held, ForageDrop);
+    const harvestedPlant = world.getComponent(held, HarvestedPlant);
     const inspectable = world.getComponent(held, WeightInspectable);
     const weight = world.getComponent(held, WeightedObject);
     const itemId = seedDrop?.seedId ?? forageDrop?.itemId;
@@ -98,7 +123,11 @@ export class ToolInventoryHudSystem implements System {
     const amount = seedDrop?.amount ?? forageDrop?.amount;
 
     this.setSlot(slot, {
-      icon: iconForItem(itemId, label),
+      icon: iconForHeldItem(
+        seedDrop?.seedId,
+        forageDrop?.itemId,
+        harvestedPlant?.plantId,
+      ),
       label,
       count:
         amount !== undefined
@@ -117,7 +146,7 @@ export class ToolInventoryHudSystem implements System {
   private setSlot(
     slot: HudSlot,
     state: {
-      icon: string;
+      icon: SlotIconState;
       label: string;
       count: string;
       shortcut: string;
@@ -127,25 +156,38 @@ export class ToolInventoryHudSystem implements System {
       unavailable: boolean;
     },
   ): void {
-    const border = state.selected
-      ? hudColors.selected
-      : state.filled
-        ? hudColors.borderWarm
-        : 0x68817d;
-    const fill = state.filled ? 0x1f3034 : hudColors.trackDark;
-
-    slot.background.setFillStyle(fill, state.unavailable ? 0.55 : 0.92);
-    slot.background.setStrokeStyle(2, border, state.selected ? 0.95 : 0.56);
+    slot.background.setAlpha(state.unavailable ? 0.55 : 1);
     slot.selection.setVisible(state.selected);
-    slot.iconFrame.setFillStyle(state.filled ? hudColors.panelWarm : hudColors.track, 0);
-    slot.iconFrame.setStrokeStyle(1, border, state.selected ? 0.9 : 0.45);
-    slot.icon.setText(state.icon);
-    slot.icon.setColor(state.filled ? hudColors.textWarm : "#93a7a1");
-    slot.label.setText("");
-    slot.count.setText("");
+    slot.hover.setVisible(slot.hovered && !state.locked);
+    slot.hover.setAlpha(state.unavailable ? 0.32 : 0.66);
+    this.setSlotIcon(slot, state.icon, state.filled);
+    slot.label.setText(state.label);
+    slot.count.setText(state.count);
     slot.shortcut.setText(state.shortcut);
     slot.lockOverlay.setVisible(state.locked);
     slot.pulse.setVisible(false);
+  }
+
+  private setSlotIcon(
+    slot: HudSlot,
+    icon: SlotIconState,
+    filled: boolean,
+  ): void {
+    if (icon.kind === "sprite") {
+      slot.iconSprite
+        .setTexture(icon.textureKey)
+        .setFrame(icon.frame)
+        .setDisplaySize(icon.size, icon.size)
+        .setAlpha(filled ? 1 : 0.45)
+        .setVisible(true);
+      slot.iconPlaceholder.setVisible(false);
+      return;
+    }
+
+    slot.iconSprite.setVisible(false);
+    slot.iconPlaceholder
+      .setAlpha(filled ? 0.82 : 0.42)
+      .setVisible(true);
   }
 
   private updateSelectionShortcuts(hud: ToolInventoryHud): void {
@@ -171,7 +213,7 @@ export class ToolInventoryHudSystem implements System {
 
   private positionHud(hud: ToolInventoryHud): void {
     const camera = hud.container.scene.cameras.main;
-    const screenScale = Math.min(1, (camera.width - 24) / hud.background.width);
+    const screenScale = Math.min(hud.displayScale, (camera.width - 24) / hud.width);
     const scale = screenScale / camera.zoom;
     const worldX = camera.worldView.x + (camera.width / 2) * (1 / camera.zoom);
     const worldY =
@@ -187,35 +229,54 @@ function shortcutForSlot(slotId: string): string {
   return selectionShortcuts.find((binding) => binding.slotId === slotId)?.label ?? "";
 }
 
-function iconForItem(itemId: string | undefined, label: string): string {
-  if (!itemId) {
-    return label.charAt(0).toUpperCase();
+function iconForHeldItem(
+  seedId: string | undefined,
+  forageItemId: string | undefined,
+  plantId: string | undefined,
+): SlotIconState {
+  if (seedId) {
+    const spriteAsset = getPlantSpriteAssetBySeed(seedId);
+    const textureKey = plantSpriteTextureKeyBySeed(seedId);
+    const frame = spriteAsset ? getSeedItemSpriteFrameIndex(spriteAsset) : undefined;
+
+    if (spriteAsset && textureKey && frame !== undefined) {
+      return {
+        kind: "sprite",
+        textureKey,
+        frame,
+        size: Math.min(48, spriteAsset.manifest.cellSize),
+      };
+    }
   }
 
-  const definition = getItemDefinition(itemId);
+  if (plantId) {
+    const spriteAsset = getPlantSpriteAsset(plantId);
+    const frame = spriteAsset ? getHarvestItemSpriteFrameIndex(spriteAsset, 0) : undefined;
 
-  switch (definition?.category) {
-    case "seed":
-      return "S";
-    case "wood":
-      return "W";
-    case "stone":
-      return "St";
-    case "fiber":
-      return "F";
-    case "ore":
-      return "O";
-    case "gem":
-      return "G";
-    case "mushroom":
-      return "M";
-    case "flower":
-      return "Fl";
-    case "reagent":
-      return "R";
-    case "shell":
-      return "Sh";
-    default:
-      return label.charAt(0).toUpperCase();
+    if (spriteAsset && frame !== undefined) {
+      return {
+        kind: "sprite",
+        textureKey: plantSpriteTextureKey(plantId),
+        frame,
+        size: Math.min(50, spriteAsset.manifest.cellSize),
+      };
+    }
   }
+
+  if (forageItemId) {
+    const spriteCell = getForageItemSpriteCell(forageItemId);
+    const spriteAsset = getForageItemSpriteAsset(forageItemId);
+    const textureKey = forageItemSpriteTextureKey(forageItemId);
+
+    if (spriteCell && spriteAsset && textureKey) {
+      return {
+        kind: "sprite",
+        textureKey,
+        frame: spriteCell.row * spriteAsset.manifest.columns + spriteCell.column,
+        size: 44,
+      };
+    }
+  }
+
+  return { kind: "placeholder" };
 }
