@@ -60,6 +60,7 @@ export type ConfirmedPlant = {
   y: number;
   plantId: string;
   playerEnergy?: PlayerEnergy;
+  inventory?: PlayerInventorySnapshot;
 };
 
 export type ConfirmedHarvest = {

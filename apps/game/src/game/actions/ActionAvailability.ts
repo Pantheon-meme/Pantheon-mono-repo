@@ -3,13 +3,17 @@ import type { World } from "../../ecs/World";
 import { FocusTarget } from "../player/components/FocusTarget";
 import { Energy } from "../energy/components/Energy";
 import { PlayerInventory } from "../inventory/components/PlayerInventory";
+import { getPlantBySeed } from "../plants/PlantDefinitions";
 import { SeedPouch } from "../plants/components/SeedPouch";
 import { SleepState } from "../sleep/components/SleepState";
 import { Position } from "../shared/components/Position";
 import { Grabbable } from "../shared/components/Grabbable";
 import { WeightedObject } from "../shared/components/WeightedObject";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
-import { getTerrainLayer } from "../terrain/TerrainLayers";
+import {
+  getTerrainLayer,
+  getTopTerrainLayerAtCell,
+} from "../terrain/TerrainLayers";
 import {
   findPlantAt,
   findPlantByEntity,
@@ -118,13 +122,12 @@ function getTileActions(
     });
   }
 
-  if (canPlantFromPouch(world, actor, focus)) {
-    const pouch = world.getComponent(actor, SeedPouch);
-
+  const plantableSeedId = getPlantableSeedId(world, actor, focus);
+  if (plantableSeedId) {
     actions.push({
       id: "plant",
       label: "Plant",
-      detail: pouch ? seedLabel(pouch.activeSeedId) : undefined,
+      detail: seedLabel(plantableSeedId),
     });
   }
 
@@ -205,18 +208,36 @@ function getInventoryGrabDetail(
   )}/${formatWeight(inventory.maxWeight)})`;
 }
 
-function canPlantFromPouch(
+function getPlantableSeedId(
   world: World,
   actor: Entity,
   focus: FocusTarget,
-): boolean {
+): string | undefined {
+  const inventory = world.getComponent(actor, PlayerInventory);
+  const activeInventorySlot = inventory?.slots.get(inventory.activeSlot);
+
+  if (
+    activeInventorySlot &&
+    activeInventorySlot.amount > 0 &&
+    getPlantBySeed(activeInventorySlot.itemId) &&
+    getTopTerrainLayerAtCell(world, focus.tileX, focus.tileY)?.layer.id ===
+      "dirt" &&
+    !findPlantAt(world, focus.tileX, focus.tileY, false)
+  ) {
+    return activeInventorySlot.itemId;
+  }
+
   const pouch = world.getComponent(actor, SeedPouch);
 
-  return Boolean(
+  if (
     pouch &&
     pouch.count(pouch.activeSeedId) > 0 &&
-    !findPlantAt(world, focus.tileX, focus.tileY, false),
-  );
+    !findPlantAt(world, focus.tileX, focus.tileY, false)
+  ) {
+    return pouch.activeSeedId;
+  }
+
+  return undefined;
 }
 
 function getDigDetail(world: World, focus: FocusTarget): string {

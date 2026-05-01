@@ -2,6 +2,10 @@ import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
 import { ActionLog } from "./components/ActionLog";
 import { Energy } from "../energy/components/Energy";
+import {
+  PlayerInventory,
+  type InventoryObjectSlot,
+} from "../inventory/components/PlayerInventory";
 import { MudWorld } from "../mud/components/MudWorld";
 import { FacingDirection } from "../player/components/FacingDirection";
 import { FocusTarget } from "../player/components/FocusTarget";
@@ -15,6 +19,8 @@ import { PlantState } from "../plants/components/PlantState";
 import { PlantVisual } from "../plants/components/PlantVisual";
 import { SeedPouch } from "../plants/components/SeedPouch";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
+import { getTopTerrainLayerAtCell } from "../terrain/TerrainLayers";
+import { itemLabel } from "../items/ItemDefinitions";
 import { WeightInspectable } from "../shared/components/WeightInspectable";
 import { WeightedObject } from "../shared/components/WeightedObject";
 import { getPlantBySeed, plantDefinitions } from "../plants/PlantDefinitions";
@@ -76,14 +82,13 @@ export const plantActionDefinitions: Record<string, ActionDefinition> = {
 };
 
 function canPlantSeed(world: World, actor: Entity): ActionEffectResult {
-  const pouch = world.getComponent(actor, SeedPouch);
   const position = world.getComponent(actor, Position);
   const facing = world.getComponent(actor, FacingDirection);
   const focus = world.getComponent(actor, FocusTarget);
   const grid = world.query(TerrainGrid)[0]?.[1];
   const mud = world.query(MudWorld)[0]?.[1];
 
-  if (!pouch || !position || !facing || !grid || !mud) {
+  if (!position || !facing || !grid || !mud) {
     return { message: "Plant: no place to plant", applied: false };
   }
 
@@ -94,9 +99,10 @@ function canPlantSeed(world: World, actor: Entity): ActionEffectResult {
     };
   }
 
-  const definition = getPlantBySeed(pouch.activeSeedId);
+  const seedSource = resolvePlantSeedSource(world, actor);
+  const definition = seedSource ? getPlantBySeed(seedSource.seedId) : undefined;
 
-  if (!definition || pouch.count(pouch.activeSeedId) <= 0) {
+  if (!seedSource || !definition) {
     return { message: "Plant: no selected seeds", applied: false };
   }
 
@@ -106,6 +112,16 @@ function canPlantSeed(world: World, actor: Entity): ActionEffectResult {
 
   if (findPlantAt(world, targetCell.x, targetCell.y, false)) {
     return { message: "Plant: tile already occupied", applied: false };
+  }
+
+  const constraintMessage = validateSeedSourceTerrain(
+    world,
+    seedSource,
+    targetCell,
+  );
+
+  if (constraintMessage) {
+    return { message: `Plant: ${constraintMessage}`, applied: false };
   }
 
   return {};
@@ -118,20 +134,20 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
     return startResult;
   }
 
-  const pouch = world.getComponent(actor, SeedPouch);
   const position = world.getComponent(actor, Position);
   const facing = world.getComponent(actor, FacingDirection);
   const focus = world.getComponent(actor, FocusTarget);
   const grid = world.query(TerrainGrid)[0]?.[1];
   const mud = world.query(MudWorld)[0]?.[1];
 
-  if (!pouch || !position || !facing || !grid || !mud) {
+  if (!position || !facing || !grid || !mud) {
     return { message: "Plant: no place to plant", applied: false };
   }
 
-  const definition = getPlantBySeed(pouch.activeSeedId);
+  const seedSource = resolvePlantSeedSource(world, actor);
+  const definition = seedSource ? getPlantBySeed(seedSource.seedId) : undefined;
 
-  if (!definition || pouch.count(pouch.activeSeedId) <= 0) {
+  if (!seedSource || !definition) {
     return { message: "Plant: no selected seeds", applied: false };
   }
 
@@ -139,7 +155,10 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
     ? { x: focus.tileX, y: focus.tileY }
     : getFacingTargetCell(grid, position, facing);
 
-  if (!pouch.consume(pouch.activeSeedId, 1)) {
+  const previousInventorySlot =
+    seedSource.kind === "inventory" ? { ...seedSource.slot } : undefined;
+
+  if (!consumeSeedSource(world, actor, seedSource)) {
     return { message: "Plant: no selected seeds", applied: false };
   }
 
@@ -164,7 +183,7 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
     targetCell.y,
     definition.id,
     {
-      onConfirmed: ({ x, y, playerEnergy }) => {
+      onConfirmed: ({ x, y, playerEnergy, inventory }) => {
         if (playerEnergy) {
           energy?.settleOptimisticDelta(
             optimisticEnergyDelta,
@@ -178,11 +197,21 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
         if (care) {
           care.syncState = "confirmed";
         }
+        if (inventory) {
+          world.getComponent(actor, PlayerInventory)?.replaceSlots(
+            inventory.slots.map((slot) => ({
+              ...slot,
+              label: itemLabel(slot.itemId),
+              syncState: "confirmed",
+            })),
+            inventory.maxWeight,
+          );
+        }
         updateActionLog(world, actor, `Plant: confirmed at ${x},${y}`);
       },
       onRejected: (message) => {
         removePlantEntity(world, plantEntity);
-        pouch.add(definition.seedId, 1);
+        restoreSeedSource(world, actor, seedSource, previousInventorySlot);
         energy?.rollbackOptimisticDelta(optimisticEnergyDelta);
         updateActionLog(world, actor, `Plant: ${message}`);
       },
@@ -191,7 +220,7 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
 
   if (!submitted) {
     removePlantEntity(world, plantEntity);
-    pouch.add(definition.seedId, 1);
+    restoreSeedSource(world, actor, seedSource, previousInventorySlot);
 
     return { message: "Plant: waiting on MUD sync", applied: false, retry: true };
   }
@@ -203,6 +232,108 @@ function plantSeed(world: World, actor: Entity): ActionEffectResult {
     message: `Plant: ${definition.label} ${noun} (syncing)`,
     energySettlement: "pending",
   };
+}
+
+type PlantSeedSource =
+  | { kind: "inventory"; seedId: string; slot: InventoryObjectSlot }
+  | { kind: "pouch"; seedId: string; pouch: SeedPouch };
+
+function resolvePlantSeedSource(
+  world: World,
+  actor: Entity,
+): PlantSeedSource | undefined {
+  const inventory = world.getComponent(actor, PlayerInventory);
+  const activeSlot = inventory?.slots.get(inventory.activeSlot);
+
+  if (
+    activeSlot &&
+    activeSlot.amount > 0 &&
+    getPlantBySeed(activeSlot.itemId)
+  ) {
+    return { kind: "inventory", seedId: activeSlot.itemId, slot: activeSlot };
+  }
+
+  const pouch = world.getComponent(actor, SeedPouch);
+
+  if (pouch && pouch.count(pouch.activeSeedId) > 0) {
+    return { kind: "pouch", seedId: pouch.activeSeedId, pouch };
+  }
+
+  return undefined;
+}
+
+function validateSeedSourceTerrain(
+  world: World,
+  source: PlantSeedSource,
+  targetCell: { x: number; y: number },
+): string | undefined {
+  if (source.kind !== "inventory") {
+    return undefined;
+  }
+
+  const activeLayer = getTopTerrainLayerAtCell(world, targetCell.x, targetCell.y)
+    ?.layer.id;
+
+  return activeLayer === "dirt" ? undefined : "seed requires dirt tile";
+}
+
+function consumeSeedSource(
+  world: World,
+  actor: Entity,
+  source: PlantSeedSource,
+): boolean {
+  if (source.kind === "pouch") {
+    return source.pouch.consume(source.seedId, 1);
+  }
+
+  const inventory = world.getComponent(actor, PlayerInventory);
+  const current = inventory?.slots.get(source.slot.slot);
+
+  if (
+    !inventory ||
+    !current ||
+    current.itemId !== source.seedId ||
+    current.amount <= 0
+  ) {
+    return false;
+  }
+
+  if (current.amount === 1) {
+    inventory.slots.delete(current.slot);
+    return true;
+  }
+
+  const unitWeight = current.weight / current.amount;
+
+  inventory.slots.set(current.slot, {
+    ...current,
+    amount: current.amount - 1,
+    weight: Math.max(0, current.weight - unitWeight),
+    syncState: "pending",
+  });
+
+  return true;
+}
+
+function restoreSeedSource(
+  world: World,
+  actor: Entity,
+  source: PlantSeedSource,
+  previousInventorySlot: InventoryObjectSlot | undefined,
+): void {
+  if (source.kind === "pouch") {
+    source.pouch.add(source.seedId, 1);
+    return;
+  }
+
+  const inventory = world.getComponent(actor, PlayerInventory);
+
+  if (inventory && previousInventorySlot) {
+    inventory.slots.set(previousInventorySlot.slot, {
+      ...previousInventorySlot,
+      syncState: "rejected",
+    });
+  }
 }
 
 function canFetchPlant(world: World, actor: Entity): ActionEffectResult {

@@ -383,6 +383,8 @@ export class MudWorldBridge {
         plantId,
         playerEnergy:
           await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
