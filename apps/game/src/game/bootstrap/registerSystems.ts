@@ -28,6 +28,7 @@ import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
 import { PlantRenderSystem } from "../plants/systems/PlantRenderSystem";
 import { PlayerSpriteAnimationSystem } from "../player/systems/PlayerSpriteAnimationSystem";
+import { OcclusionFadeSystem } from "../shared/systems/OcclusionFadeSystem";
 import { RenderSystem } from "../shared/systems/RenderSystem";
 import { SeedDropRenderSystem } from "../plants/systems/SeedDropRenderSystem";
 import { SleepProgressBarSystem } from "../ui/systems/SleepProgressBarSystem";
@@ -87,6 +88,7 @@ export function registerSystems(
   world.addSystem(new SeedDropRenderSystem(scene));
   world.addSystem(new ForageDropRenderSystem(scene));
   world.addSystem(new WorldDepthSystem());
+  world.addSystem(new OcclusionFadeSystem());
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
