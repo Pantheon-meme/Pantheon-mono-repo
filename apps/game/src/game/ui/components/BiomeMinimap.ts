@@ -4,6 +4,12 @@ import type { BiomeSurfacePlan } from "../../biome/BiomeSurfacePlan";
 
 export class BiomeMinimap {
   rendered = false;
+  hovered = false;
+  scaleMultiplier = 1;
+  scaleTransitionDuration = 0;
+  scaleTransitionElapsed = 0;
+  scaleTransitionFrom = 1;
+  scaleTransitionTo = 1;
   visible = true;
 
   constructor(

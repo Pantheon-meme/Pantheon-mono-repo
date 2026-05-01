@@ -29,6 +29,9 @@ const terrainColors: Record<string, number> = {
   path: 0xf4d88d,
 };
 const regionColors = [0xff71ce, 0x7bdff2, 0xb2f7aa, 0xf7d794, 0xcdb4db, 0xf29e4c];
+const hoveredMinimapScale = 1.5;
+const minimapScaleInDuration = 0.1;
+const minimapScaleOutDuration = 0.14;
 
 type MinimapMapBounds = {
   x: number;
@@ -38,7 +41,7 @@ type MinimapMapBounds = {
 };
 
 export class BiomeMinimapSystem implements System {
-  update(world: World): void {
+  update(world: World, deltaSeconds: number): void {
     const grid = world.query(TerrainGrid)[0]?.[1];
 
     if (!grid) {
@@ -48,6 +51,7 @@ export class BiomeMinimapSystem implements System {
     for (const [, minimap] of world.query(BiomeMinimap)) {
       applyVisibility(minimap);
       layoutMinimapFrame(minimap);
+      updateScaleTransition(minimap, deltaSeconds);
       positionMinimap(minimap);
 
       if (!minimap.rendered) {
@@ -210,7 +214,8 @@ function getMarkerRotation(facing: FacingDirection): number {
 function positionMinimap(minimap: BiomeMinimap): void {
   const camera = minimap.container.scene.cameras.main;
   const cameraScale = 1 / camera.zoom;
-  const displayScale = minimap.displayScale * cameraScale;
+  const displayScale =
+    minimap.displayScale * minimap.scaleMultiplier * cameraScale;
   const localRight = minimap.background.x + minimap.background.width;
   const localBottom = minimap.background.y + minimap.background.height;
   const worldX =
@@ -224,6 +229,59 @@ function positionMinimap(minimap: BiomeMinimap): void {
 
   minimap.container.setPosition(worldX, worldY);
   minimap.container.setScale(displayScale);
+}
+
+function updateScaleTransition(
+  minimap: BiomeMinimap,
+  deltaSeconds: number,
+): void {
+  const targetScale = minimap.hovered ? hoveredMinimapScale : 1;
+
+  if (targetScale !== minimap.scaleTransitionTo) {
+    minimap.scaleTransitionFrom = minimap.scaleMultiplier;
+    minimap.scaleTransitionTo = targetScale;
+    minimap.scaleTransitionElapsed = 0;
+    minimap.scaleTransitionDuration = minimap.hovered
+      ? minimapScaleInDuration
+      : minimapScaleOutDuration;
+  }
+
+  if (minimap.scaleMultiplier === minimap.scaleTransitionTo) {
+    return;
+  }
+
+  const duration = minimap.scaleTransitionDuration;
+  minimap.scaleTransitionElapsed = Math.min(
+    duration,
+    minimap.scaleTransitionElapsed + deltaSeconds,
+  );
+
+  const progress =
+    duration <= 0
+      ? 1
+      : Math.min(1, minimap.scaleTransitionElapsed / duration);
+  const easedProgress =
+    minimap.scaleTransitionTo > minimap.scaleTransitionFrom
+      ? easeOutCubic(progress)
+      : easeInOutCubic(progress);
+
+  minimap.scaleMultiplier =
+    minimap.scaleTransitionFrom +
+    (minimap.scaleTransitionTo - minimap.scaleTransitionFrom) * easedProgress;
+
+  if (progress >= 1) {
+    minimap.scaleMultiplier = minimap.scaleTransitionTo;
+  }
+}
+
+function easeOutCubic(progress: number): number {
+  return 1 - (1 - progress) ** 3;
+}
+
+function easeInOutCubic(progress: number): number {
+  return progress < 0.5
+    ? 4 * progress ** 3
+    : 1 - (-2 * progress + 2) ** 3 / 2;
 }
 
 function layoutMinimapFrame(minimap: BiomeMinimap): void {

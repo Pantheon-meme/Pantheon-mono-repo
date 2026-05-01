@@ -595,6 +595,14 @@ export class MainGameScene extends Phaser.Scene {
       y,
     );
 
+    background.setInteractive();
+    background.on("pointerover", () => {
+      minimap.hovered = true;
+    });
+    background.on("pointerout", () => {
+      minimap.hovered = false;
+    });
+
     return minimap;
   }
 
