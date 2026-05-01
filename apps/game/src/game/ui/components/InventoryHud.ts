@@ -3,6 +3,8 @@ import Phaser from "phaser";
 export type InventorySlotView = {
   slot: number;
   background: Phaser.GameObjects.Rectangle;
+  icon?: Phaser.GameObjects.Sprite;
+  fallbackIcon?: Phaser.GameObjects.Ellipse;
   label: Phaser.GameObjects.Text;
 };
 

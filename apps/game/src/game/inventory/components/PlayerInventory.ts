@@ -12,6 +12,7 @@ export type InventoryObjectSlot = {
 export class PlayerInventory {
   readonly slots = new Map<number, InventoryObjectSlot>();
   activeSlot = 0;
+  readonly maxSlots = 256;
 
   constructor(public maxWeight = 2) {}
 
@@ -30,8 +31,8 @@ export class PlayerInventory {
       this.slots.set(slot.slot, slot);
     }
 
-    if (this.activeSlot >= Math.max(1, Math.ceil(this.maxWeight))) {
-      this.activeSlot = 0;
+    if (this.slots.size > 0 && !this.slots.has(this.activeSlot)) {
+      this.activeSlot = this.sortedSlots()[0]?.slot ?? 0;
     }
   }
 
@@ -40,7 +41,7 @@ export class PlayerInventory {
   }
 
   selectSlot(slot: number): void {
-    if (slot < 0 || slot >= Math.ceil(this.maxWeight)) {
+    if (slot < 0 || slot >= this.maxSlots) {
       return;
     }
 
@@ -48,7 +49,30 @@ export class PlayerInventory {
   }
 
   selectNext(direction: -1 | 1): void {
-    const slotCount = Math.max(1, Math.ceil(this.maxWeight));
-    this.activeSlot = (this.activeSlot + direction + slotCount) % slotCount;
+    const occupiedSlots = this.sortedSlots().map((slot) => slot.slot);
+
+    if (occupiedSlots.length === 0) {
+      this.activeSlot = 0;
+      return;
+    }
+
+    const currentIndex = occupiedSlots.indexOf(this.activeSlot);
+    const nextIndex =
+      currentIndex === -1
+        ? 0
+        : (currentIndex + direction + occupiedSlots.length) %
+          occupiedSlots.length;
+
+    this.activeSlot = occupiedSlots[nextIndex];
+  }
+
+  nextFreeSlot(): number | undefined {
+    for (let slot = 0; slot < this.maxSlots; slot += 1) {
+      if (!this.slots.has(slot)) {
+        return slot;
+      }
+    }
+
+    return undefined;
   }
 }

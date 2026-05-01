@@ -183,7 +183,7 @@ function canGrabIntoInventory(
     world.getComponent(target, Grabbable) &&
     weight &&
     inventory.usedWeight + weight.weight <= inventory.maxWeight &&
-    nextFreeInventorySlot(inventory) !== undefined,
+    inventory.nextFreeSlot() !== undefined,
   );
 }
 
@@ -203,16 +203,6 @@ function getInventoryGrabDetail(
   return `${fallbackLabel} (${formatWeight(
     inventory.usedWeight + weight,
   )}/${formatWeight(inventory.maxWeight)})`;
-}
-
-function nextFreeInventorySlot(inventory: PlayerInventory): number | undefined {
-  for (let slot = 0; slot < Math.ceil(inventory.maxWeight); slot += 1) {
-    if (!inventory.slots.has(slot)) {
-      return slot;
-    }
-  }
-
-  return undefined;
 }
 
 function canPlantFromPouch(

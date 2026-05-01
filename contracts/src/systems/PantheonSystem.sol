@@ -24,6 +24,8 @@ import { PendingActionLib } from "../libraries/PendingActionLib.sol";
 import { PlayerLib } from "../libraries/PlayerLib.sol";
 
 contract PantheonSystem is System {
+  uint16 private constant INVENTORY_SLOT_COUNT = 256;
+
   struct ForageResult {
     bytes32 itemId;
     uint32 amount;
@@ -144,10 +146,10 @@ contract PantheonSystem is System {
     );
 
     uint32 maxWeight = _playerInventoryMaxWeight(player);
-    uint8 slot = _firstFreeInventorySlot(player, maxWeight);
-    uint32 currentWeight = _playerInventoryWeight(player, maxWeight);
+    uint32 currentWeight = _playerInventoryWeight(player);
     uint32 objectWeight = _objectWeight(objectId);
     require(currentWeight + objectWeight <= maxWeight, "inventory full");
+    uint8 slot = _firstFreeInventorySlot(player);
 
     PlayerInventory.set(player, slot, objectId, true);
     InventoryObject.set(objectId, player, true);
@@ -171,11 +173,10 @@ contract PantheonSystem is System {
     )
   {
     maxWeight = _playerInventoryMaxWeight(player);
-    uint8 maxSlots = uint8(maxWeight);
-    uint8 count = 0;
+    uint16 count = 0;
 
-    for (uint8 slot = 0; slot < maxSlots; slot++) {
-      if (PlayerInventory.getExists(player, slot)) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      if (PlayerInventory.getExists(player, uint8(slot))) {
         count += 1;
       }
     }
@@ -187,14 +188,16 @@ contract PantheonSystem is System {
     amounts = new uint32[](count);
     weights = new uint32[](count);
 
-    uint8 index = 0;
-    for (uint8 slot = 0; slot < maxSlots; slot++) {
-      if (!PlayerInventory.getExists(player, slot)) {
+    uint16 index = 0;
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
+
+      if (!PlayerInventory.getExists(player, inventorySlot)) {
         continue;
       }
 
-      bytes32 objectId = PlayerInventory.getObjectId(player, slot);
-      slots[index] = slot;
+      bytes32 objectId = PlayerInventory.getObjectId(player, inventorySlot);
+      slots[index] = inventorySlot;
       objectIds[index] = objectId;
       objectTypeIds[index] = ObjectState.getObjectTypeId(objectId);
       itemIds[index] = ObjectState.getItemId(objectId);
@@ -291,30 +294,24 @@ contract PantheonSystem is System {
     return maxWeight == 0 ? PantheonConstants.DEFAULT_INVENTORY_MAX_WEIGHT : maxWeight;
   }
 
-  function _firstFreeInventorySlot(
-    address player,
-    uint32 maxWeight
-  ) private view returns (uint8) {
-    require(maxWeight <= type(uint8).max, "inventory too large");
+  function _firstFreeInventorySlot(address player) private view returns (uint8) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
 
-    for (uint8 slot = 0; slot < uint8(maxWeight); slot++) {
-      if (!PlayerInventory.getExists(player, slot)) {
-        return slot;
+      if (!PlayerInventory.getExists(player, inventorySlot)) {
+        return inventorySlot;
       }
     }
 
-    revert("inventory full");
+    revert("inventory slots exhausted");
   }
 
-  function _playerInventoryWeight(
-    address player,
-    uint32 maxWeight
-  ) private view returns (uint32 totalWeight) {
-    require(maxWeight <= type(uint8).max, "inventory too large");
+  function _playerInventoryWeight(address player) private view returns (uint32 totalWeight) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
 
-    for (uint8 slot = 0; slot < uint8(maxWeight); slot++) {
-      if (PlayerInventory.getExists(player, slot)) {
-        totalWeight += _objectWeight(PlayerInventory.getObjectId(player, slot));
+      if (PlayerInventory.getExists(player, inventorySlot)) {
+        totalWeight += _objectWeight(PlayerInventory.getObjectId(player, inventorySlot));
       }
     }
   }

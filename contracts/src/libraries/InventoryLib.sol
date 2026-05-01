@@ -12,6 +12,8 @@ import {
 import { PantheonConstants } from "./PantheonConstants.sol";
 
 library InventoryLib {
+  uint16 private constant INVENTORY_SLOT_COUNT = 256;
+
   function add(address player, bytes32 itemId, uint32 amount) internal {
     if (amount == 0) {
       return;
@@ -24,11 +26,11 @@ library InventoryLib {
       count += 1;
       bytes32 objectId = bytes32(uint256(count));
       uint32 maxWeight = _maxWeight(player);
-      uint8 slot = _firstFreeSlot(player, maxWeight);
       require(
-        _usedWeight(player, maxWeight) + _itemWeight(itemId) <= maxWeight,
+        _usedWeight(player) + _itemWeight(itemId) <= maxWeight,
         "inventory full"
       );
+      uint8 slot = _firstFreeSlot(player);
 
       ObjectState.set(objectId, itemId, itemId, 1, true);
       InventoryObject.set(objectId, player, true);
@@ -44,20 +46,21 @@ library InventoryLib {
     }
 
     uint32 remaining = amount;
-    uint32 maxWeight = _maxWeight(player);
 
-    for (uint8 slot = 0; slot < uint8(maxWeight) && remaining > 0; slot++) {
-      if (!PlayerInventory.getExists(player, slot)) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT && remaining > 0; slot++) {
+      uint8 inventorySlot = uint8(slot);
+
+      if (!PlayerInventory.getExists(player, inventorySlot)) {
         continue;
       }
 
-      bytes32 objectId = PlayerInventory.getObjectId(player, slot);
+      bytes32 objectId = PlayerInventory.getObjectId(player, inventorySlot);
 
       if (ObjectState.getItemId(objectId) != itemId) {
         continue;
       }
 
-      PlayerInventory.deleteRecord(player, slot);
+      PlayerInventory.deleteRecord(player, inventorySlot);
       InventoryObject.deleteRecord(objectId);
       ObjectState.deleteRecord(objectId);
       remaining -= 1;
@@ -74,28 +77,25 @@ library InventoryLib {
     return maxWeight == 0 ? PantheonConstants.DEFAULT_INVENTORY_MAX_WEIGHT : maxWeight;
   }
 
-  function _firstFreeSlot(address player, uint32 maxWeight) private view returns (uint8) {
-    require(maxWeight <= type(uint8).max, "inventory too large");
+  function _firstFreeSlot(address player) private view returns (uint8) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
 
-    for (uint8 slot = 0; slot < uint8(maxWeight); slot++) {
-      if (!PlayerInventory.getExists(player, slot)) {
-        return slot;
+      if (!PlayerInventory.getExists(player, inventorySlot)) {
+        return inventorySlot;
       }
     }
 
-    revert("inventory full");
+    revert("inventory slots exhausted");
   }
 
-  function _usedWeight(
-    address player,
-    uint32 maxWeight
-  ) private view returns (uint32 totalWeight) {
-    require(maxWeight <= type(uint8).max, "inventory too large");
+  function _usedWeight(address player) private view returns (uint32 totalWeight) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
 
-    for (uint8 slot = 0; slot < uint8(maxWeight); slot++) {
-      if (PlayerInventory.getExists(player, slot)) {
+      if (PlayerInventory.getExists(player, inventorySlot)) {
         totalWeight += _itemWeight(
-          ObjectState.getItemId(PlayerInventory.getObjectId(player, slot))
+          ObjectState.getItemId(PlayerInventory.getObjectId(player, inventorySlot))
         );
       }
     }

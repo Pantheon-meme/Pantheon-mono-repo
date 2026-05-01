@@ -49,8 +49,8 @@ export function canGrabIntoInventory(
     };
   }
 
-  if (nextFreeSlot(inventory) === undefined) {
-    return { message: "Grab: inventory is full", applied: false };
+  if (inventory.nextFreeSlot() === undefined) {
+    return { message: "Grab: inventory slots exhausted", applied: false };
   }
 
   return {};
@@ -68,7 +68,7 @@ function grabIntoInventory(
 
   const target = getFocusedGrabbable(world, actor);
   const inventory = getInventory(world, actor);
-  const slot = nextFreeSlot(inventory);
+  const slot = inventory.nextFreeSlot();
 
   if (!target || slot === undefined) {
     return { message: "Grab: no grabbable object focused", applied: false };
@@ -155,16 +155,6 @@ function getInventory(world: World, actor: Entity): PlayerInventory {
   }
 
   return inventory;
-}
-
-function nextFreeSlot(inventory: PlayerInventory): number | undefined {
-  for (let slot = 0; slot < Math.ceil(inventory.maxWeight); slot += 1) {
-    if (!inventory.slots.has(slot)) {
-      return slot;
-    }
-  }
-
-  return undefined;
 }
 
 function resolveObjectTypeId(world: World, entity: Entity): string {
