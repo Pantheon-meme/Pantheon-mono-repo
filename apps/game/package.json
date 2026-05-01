@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "export-terrain-seed": "../../packages/assets/node_modules/.bin/tsx scripts/export-terrain-seed.ts",
+    "reset-mud-runtime": "../../packages/assets/node_modules/.bin/tsx scripts/reset-mud-runtime.ts",
     "seed-terrain": "../../packages/assets/node_modules/.bin/tsx scripts/seed-terrain.ts",
     "seed-forage": "../../packages/assets/node_modules/.bin/tsx scripts/seed-forage.ts",
     "lint": "tsc --noEmit",
