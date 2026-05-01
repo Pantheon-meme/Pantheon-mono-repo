@@ -12,6 +12,12 @@ import {
   minimapFrameTextureKey,
 } from "../assets/ui/UiFrameAssets";
 import {
+  energyBarBarAsset,
+  energyBarBarTextureKey,
+  energyBarFillerSlices,
+  energyBarFillerTextureKey,
+  energyBarIconAsset,
+  energyBarIconTextureKey,
   joystickPlainAsset,
   joystickPlainTextureKey,
   joystickControlTextureKey,
@@ -440,59 +446,57 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   private createEnergyBar(): EnergyBar {
-    const width = 360;
-    const height = 26;
-    const x = 18;
-    const y = 18;
+    const width = energyBarBarAsset.width;
+    const height = energyBarBarAsset.height;
+    const iconWidth = energyBarIconAsset.width;
+    const iconHeight = energyBarIconAsset.height;
+    const barX = Math.round(iconWidth * 0.5);
+    const barY = Math.round((iconHeight - height) * 0.5);
+    const visualWidth = barX + width;
+    const visualHeight = iconHeight;
+    const x = 14;
+    const y = 12;
     const container = this.add.container(0, 0).setDepth(101);
-    const frame = this.add
-      .rectangle(0, 0, width, 56, hudColors.panel, 0.9)
-      .setOrigin(0)
-      .setStrokeStyle(2, hudColors.border, 0.52);
-    const track = this.add
-      .rectangle(48, 18, width - 62, height, hudColors.trackDark, 0.96)
-      .setOrigin(0)
-      .setStrokeStyle(1, 0x68817d, 0.5);
-    const fill = this.add
-      .rectangle(48, 18, width - 62, height, hudColors.energy, 1)
+    const background = this.add
+      .image(barX, barY, energyBarBarTextureKey)
       .setOrigin(0);
-    const warning = this.add
-      .rectangle(0, 0, width, 56, hudColors.energyLow, 0.12)
-      .setOrigin(0)
-      .setVisible(false);
-    const iconFrame = this.add
-      .circle(24, 31, 17, hudColors.panelWarm, 0.96)
-      .setStrokeStyle(1, hudColors.borderWarm, 0.7);
+    const fill = this.add
+      .nineslice(
+        barX,
+        barY,
+        energyBarFillerTextureKey,
+        undefined,
+        width,
+        height,
+        energyBarFillerSlices.left,
+        energyBarFillerSlices.right,
+      )
+      .setOrigin(0);
     const icon = this.add
-      .text(24, 31, "E", {
+      .image(iconWidth * 0.5, iconHeight * 0.5, energyBarIconTextureKey)
+      .setDisplaySize(iconWidth, iconHeight)
+      .setOrigin(0.5);
+    const value = this.add
+      .text(barX + width * 0.5, barY + height * 0.5 - 1, "", {
         align: "center",
-        color: hudColors.textWarm,
-        fixedWidth: 26,
+        color: "#fffbed",
+        fixedWidth: 180,
         fontFamily: hudFontFamily,
-        fontSize: "14px",
-        fontStyle: "700",
+        fontSize: "22px",
+        fontStyle: "800",
+        shadow: {
+          color: "#261806",
+          blur: 2,
+          fill: true,
+          offsetX: 1,
+          offsetY: 2,
+        },
+        stroke: "#4b3214",
+        strokeThickness: 4,
       })
       .setOrigin(0.5);
-    const title = this.add
-      .text(52, 7, "Energy", {
-        color: hudColors.textSoft,
-        fontFamily: hudFontFamily,
-        fontSize: "12px",
-        fontStyle: "700",
-      })
-      .setOrigin(0);
-    const value = this.add
-      .text(width - 16, 7, "", {
-        align: "right",
-        color: hudColors.textWarm,
-        fixedWidth: 120,
-        fontFamily: hudFontFamily,
-        fontSize: "12px",
-        fontStyle: "700",
-      })
-      .setOrigin(1, 0);
     const region = this.add
-      .text(0, 62, "", {
+      .text(barX + 10, visualHeight + 4, "", {
         color: hudColors.textSoft,
         fontFamily: hudFontFamily,
         fontSize: "13px",
@@ -501,30 +505,24 @@ export class MainGameScene extends Phaser.Scene {
       .setOrigin(0);
 
     container.add([
-      frame,
-      warning,
-      track,
+      background,
       fill,
-      iconFrame,
-      icon,
-      title,
       value,
+      icon,
       region,
     ]);
 
     return new EnergyBar(
       container,
-      frame,
-      track,
+      background,
       fill,
-      iconFrame,
       icon,
-      title,
       value,
       region,
-      warning,
-      width - 62,
+      width,
       height,
+      visualWidth,
+      visualHeight,
       x,
       y,
     );
