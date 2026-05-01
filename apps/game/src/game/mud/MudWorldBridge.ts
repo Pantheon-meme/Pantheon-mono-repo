@@ -110,6 +110,18 @@ export class MudWorldBridge {
     );
   }
 
+  static fromPrivateKey(privateKey: Hex): MudWorldBridge {
+    return new MudWorldBridge(
+      import.meta.env.VITE_MUD_RPC_URL ?? defaultRpcUrl,
+      import.meta.env.VITE_MUD_WORLD_ADDRESS ?? defaultWorldAddress,
+      privateKey,
+    );
+  }
+
+  get accountAddress(): Hex {
+    return this.walletClient.account.address;
+  }
+
   submitDig(x: number, y: number, callbacks: MudDigCallbacks): boolean {
     const key = `${x},${y}`;
 

@@ -55,6 +55,7 @@ import { NeedState } from "../game/needs/components/NeedState";
 import { PlantStatusPanel } from "../game/ui/components/PlantStatusPanel";
 import { MovementState } from "../game/player/components/MovementState";
 import { PlayerInventory } from "../game/inventory/components/PlayerInventory";
+import { PlayerAvatar } from "../game/player/components/PlayerAvatar";
 import { PlayerControlled } from "../game/player/components/PlayerControlled";
 import { plantDefinitions } from "../game/plants/PlantDefinitions";
 import { seedWorldTrees } from "../game/plants/WorldTreeGeneration";
@@ -98,14 +99,16 @@ export class MainGameScene extends Phaser.Scene {
   private world?: World;
   private initialMudBridge?: MudWorldBridge;
   private initialMudSnapshot?: PlayerSnapshot;
+  private playerSpriteId = "player";
 
   constructor() {
     super("main-game");
   }
 
-  init(data: MainGameSceneData): void {
+  init(data: MainGameSceneData = {}): void {
     this.initialMudBridge = data.mudBridge;
     this.initialMudSnapshot = data.initialMudSnapshot;
+    this.playerSpriteId = data.playerSpriteId ?? "player";
   }
 
   preload(): void {
@@ -121,6 +124,10 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     for (const [plantId, asset] of Object.entries(objectSpriteAssets)) {
+      if (this.textures.exists(plantSpriteTextureKey(plantId))) {
+        continue;
+      }
+
       this.load.spritesheet(plantSpriteTextureKey(plantId), asset.imageUrl, {
         frameWidth: asset.manifest.cellSize,
         frameHeight: asset.manifest.cellSize,
@@ -155,7 +162,11 @@ export class MainGameScene extends Phaser.Scene {
     const dirtGrid = new TerrainGrid(gridWidth, gridHeight, tileSize);
     const spawnX = worldWidth / 2;
     const spawnY = worldHeight / 2;
-    const playerSprite = this.createPlayerSprite(spawnX, spawnY);
+    const playerSprite = this.createPlayerSprite(
+      spawnX,
+      spawnY,
+      this.playerSpriteId,
+    );
     const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
     const currencyDisplay = this.createCurrencyDisplay();
@@ -324,6 +335,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(minimap, BiomeMinimap, minimapDisplay);
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
+    world.addComponent(player, PlayerAvatar, new PlayerAvatar(this.playerSpriteId));
     world.addComponent(player, InputState, new InputState());
     world.addComponent(player, MovementState, new MovementState());
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
@@ -434,12 +446,13 @@ export class MainGameScene extends Phaser.Scene {
   private createPlayerSprite(
     x: number,
     y: number,
+    spriteId: string,
   ): Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform {
-    const spriteAsset = getPlayerSpriteAsset();
+    const spriteAsset = getPlayerSpriteAsset(spriteId);
 
     if (spriteAsset) {
       return this.add
-        .sprite(x, y, playerSpriteTextureKey())
+        .sprite(x, y, playerSpriteTextureKey(spriteId))
         .setOrigin(0.5, 1)
         .setDepth(10)
         .setDisplaySize(
@@ -1000,6 +1013,7 @@ export class MainGameScene extends Phaser.Scene {
 type MainGameSceneData = {
   mudBridge?: MudWorldBridge;
   initialMudSnapshot?: PlayerSnapshot;
+  playerSpriteId?: string;
 };
 
 function shouldSpawnSeedTestRow(): boolean {

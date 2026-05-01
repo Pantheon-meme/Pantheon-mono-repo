@@ -9,6 +9,7 @@ import { Velocity } from "../../shared/components/Velocity";
 import { SleepState } from "../../sleep/components/SleepState";
 import { FacingDirection } from "../components/FacingDirection";
 import { InputState } from "../components/InputState";
+import { PlayerAvatar } from "../components/PlayerAvatar";
 import { PlayerControlled } from "../components/PlayerControlled";
 import {
   getPlayerSpriteAsset,
@@ -26,12 +27,6 @@ export class PlayerSpriteAnimationSystem implements System {
   private readonly animationSecondsByEntity = new Map<Entity, number>();
 
   update(world: World, deltaSeconds: number): void {
-    const spriteAsset = getPlayerSpriteAsset();
-
-    if (!spriteAsset) {
-      return;
-    }
-
     for (const [entity, , input, facing, renderable] of world.query(
       PlayerControlled,
       InputState,
@@ -39,6 +34,13 @@ export class PlayerSpriteAnimationSystem implements System {
       Renderable,
     )) {
       if (!(renderable.sprite instanceof Phaser.GameObjects.Sprite)) {
+        continue;
+      }
+
+      const avatar = world.getComponent(entity, PlayerAvatar);
+      const spriteAsset = getPlayerSpriteAsset(avatar?.spriteId);
+
+      if (!spriteAsset) {
         continue;
       }
 

@@ -1,6 +1,10 @@
 import Phaser from "phaser";
 import { MudWorldBridge } from "../game/mud/MudWorldBridge";
 import {
+  getPlayableCharacter,
+  type PlayableCharacter,
+} from "../game/player/PlayableCharacters";
+import {
   gridHeight,
   gridWidth,
   initialWorldStateHydrationRadius,
@@ -9,9 +13,14 @@ import {
 export class InitialLoadingScene extends Phaser.Scene {
   private statusText?: Phaser.GameObjects.Text;
   private detailText?: Phaser.GameObjects.Text;
+  private character: PlayableCharacter = getPlayableCharacter(undefined);
 
   constructor() {
     super("initial-loading");
+  }
+
+  init(data: InitialLoadingSceneData = {}): void {
+    this.character = getPlayableCharacter(data.character?.id);
   }
 
   create(): void {
@@ -21,7 +30,7 @@ export class InitialLoadingScene extends Phaser.Scene {
     const centerY = this.scale.height / 2;
 
     this.add
-      .text(centerX, centerY - 34, "Loading onchain world", {
+      .text(centerX, centerY - 34, `Loading ${this.character.name}`, {
         align: "center",
         color: "#f6efd7",
         fontFamily: "Inter, system-ui, sans-serif",
@@ -54,7 +63,9 @@ export class InitialLoadingScene extends Phaser.Scene {
 
     if (isFreeExploreMode()) {
       this.statusText.setText("Starting local exploration...");
-      this.scene.start("main-game");
+      this.scene.start("main-game", {
+        playerSpriteId: this.character.spriteId,
+      });
       return;
     }
 
@@ -62,9 +73,11 @@ export class InitialLoadingScene extends Phaser.Scene {
   }
 
   private async loadInitialOnchainState(): Promise<void> {
-    const mudBridge = MudWorldBridge.fromEnv();
+    const mudBridge = MudWorldBridge.fromPrivateKey(this.character.privateKey);
 
-    this.detailText?.setText("Waiting for confirmed tables...");
+    this.detailText?.setText(
+      `Wallet ${mudBridge.accountAddress.slice(0, 6)}...${mudBridge.accountAddress.slice(-4)}`,
+    );
     const initialMudSnapshot = await mudBridge.readPlayerSnapshot({
       width: gridWidth,
       height: gridHeight,
@@ -84,9 +97,14 @@ export class InitialLoadingScene extends Phaser.Scene {
     this.scene.start("main-game", {
       mudBridge,
       initialMudSnapshot,
+      playerSpriteId: this.character.spriteId,
     });
   }
 }
+
+type InitialLoadingSceneData = {
+  character?: PlayableCharacter;
+};
 
 function isFreeExploreMode(): boolean {
   if (typeof window === "undefined") {
