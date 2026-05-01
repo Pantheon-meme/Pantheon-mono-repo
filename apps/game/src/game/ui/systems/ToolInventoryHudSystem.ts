@@ -21,17 +21,39 @@ import {
 } from "../../plants/PlantSpriteAssets";
 import { WeightInspectable } from "../../shared/components/WeightInspectable";
 import { WeightedObject } from "../../shared/components/WeightedObject";
+import {
+  toolIconAxeAsset,
+  toolIconAxeTextureKey,
+  toolIconWateringCanAsset,
+  toolIconWateringCanTextureKey,
+} from "../../../assets/ui/UiImageAssets";
 import { ToolInventoryHud, type HudSlot } from "../components/ToolInventoryHud";
 
 const selectionShortcuts: Array<{ slotId: string; keyCode: number; label: string }> = [
-  { slotId: "tool:hands", keyCode: Phaser.Input.Keyboard.KeyCodes.ONE, label: "1" },
-  { slotId: "item:left", keyCode: Phaser.Input.Keyboard.KeyCodes.TWO, label: "2" },
-  { slotId: "item:right", keyCode: Phaser.Input.Keyboard.KeyCodes.THREE, label: "3" },
+  { slotId: "tool:axe", keyCode: Phaser.Input.Keyboard.KeyCodes.ONE, label: "1" },
+  {
+    slotId: "tool:watering-can",
+    keyCode: Phaser.Input.Keyboard.KeyCodes.TWO,
+    label: "2",
+  },
+  {
+    slotId: "tool:hands",
+    keyCode: Phaser.Input.Keyboard.KeyCodes.THREE,
+    label: "3",
+  },
+  { slotId: "item:left", keyCode: Phaser.Input.Keyboard.KeyCodes.FOUR, label: "4" },
+  { slotId: "item:right", keyCode: Phaser.Input.Keyboard.KeyCodes.SIX, label: "6" },
 ];
 
 type SlotIconState =
   | {
       kind: "placeholder";
+    }
+  | {
+      kind: "image";
+      textureKey: string;
+      width: number;
+      height: number;
     }
   | {
       kind: "sprite";
@@ -55,22 +77,22 @@ export class ToolInventoryHudSystem implements System {
   }
 
   private updateTools(hud: ToolInventoryHud): void {
-    const slot = hud.slots.find((entry) => entry.id === "tool:hands");
+    for (const slot of hud.slots) {
+      if (slot.kind !== "tool") {
+        continue;
+      }
 
-    if (!slot) {
-      return;
+      this.setSlot(slot, {
+        icon: iconForTool(slot.id),
+        label: labelForTool(slot.id),
+        count: "",
+        shortcut: shortcutForSlot(slot.id),
+        filled: true,
+        selected: hud.selectedSlotId === slot.id,
+        locked: false,
+        unavailable: false,
+      });
     }
-
-    this.setSlot(slot, {
-      icon: { kind: "placeholder" },
-      label: "Hands",
-      count: "",
-      shortcut: shortcutForSlot(slot.id),
-      filled: true,
-      selected: hud.selectedSlotId === slot.id,
-      locked: false,
-      unavailable: false,
-    });
   }
 
   private updateItems(
@@ -173,6 +195,16 @@ export class ToolInventoryHudSystem implements System {
     icon: SlotIconState,
     filled: boolean,
   ): void {
+    if (icon.kind === "image") {
+      slot.iconSprite
+        .setTexture(icon.textureKey)
+        .setDisplaySize(icon.width, icon.height)
+        .setAlpha(filled ? 1 : 0.45)
+        .setVisible(true);
+      slot.iconPlaceholder.setVisible(false);
+      return;
+    }
+
     if (icon.kind === "sprite") {
       slot.iconSprite
         .setTexture(icon.textureKey)
@@ -227,6 +259,40 @@ export class ToolInventoryHudSystem implements System {
 
 function shortcutForSlot(slotId: string): string {
   return selectionShortcuts.find((binding) => binding.slotId === slotId)?.label ?? "";
+}
+
+function iconForTool(slotId: string): SlotIconState {
+  if (slotId === "tool:axe") {
+    return {
+      kind: "image",
+      textureKey: toolIconAxeTextureKey,
+      width: toolIconAxeAsset.width * 1.04,
+      height: toolIconAxeAsset.height * 1.04,
+    };
+  }
+
+  if (slotId === "tool:watering-can") {
+    return {
+      kind: "image",
+      textureKey: toolIconWateringCanTextureKey,
+      width: toolIconWateringCanAsset.width,
+      height: toolIconWateringCanAsset.height,
+    };
+  }
+
+  return { kind: "placeholder" };
+}
+
+function labelForTool(slotId: string): string {
+  if (slotId === "tool:axe") {
+    return "Axe";
+  }
+
+  if (slotId === "tool:watering-can") {
+    return "Water";
+  }
+
+  return "Hands";
 }
 
 function iconForHeldItem(

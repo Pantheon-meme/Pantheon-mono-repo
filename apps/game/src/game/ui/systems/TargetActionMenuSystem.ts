@@ -9,13 +9,36 @@ import { ActionBindings } from "../../actions/components/ActionBindings";
 import { ActionProgress } from "../../actions/components/ActionProgress";
 import { ActionQueue } from "../../actions/components/ActionQueue";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
-import { hudColors } from "../HudTheme";
+import {
+  actionButtonBgSlices,
+  actionButtonBgTextureKey,
+  actionButtonKeyboardShortcutKeyAsset,
+  actionButtonKeyboardShortcutKeyTextureKey,
+  toolIconAxeAsset,
+  toolIconWateringCanAsset,
+} from "../../../assets/ui/UiImageAssets";
 import { TargetActionMenu } from "../components/TargetActionMenu";
+import { ToolInventoryHud } from "../components/ToolInventoryHud";
 
-const buttonWidth = 184;
-const buttonHeight = 44;
-const buttonGap = 8;
-const horizontalPadding = 20;
+type ToolIconAsset = typeof toolIconAxeAsset | typeof toolIconWateringCanAsset;
+
+const buttonMinWidth = 300;
+const buttonMaxWidth = 520;
+const buttonHeight = 128;
+const buttonGap = 14;
+const horizontalPadding = 18;
+const displayScale = 0.48;
+const screenBottomMargin = 6;
+const hoverScale = 1.035;
+const pressScale = 0.965;
+const iconLeftInset = 84;
+const labelLeftInset = 126;
+const labelShortcutGap = 18;
+const shortcutRightInset = iconLeftInset;
+const shortcutKeyWidth = actionButtonKeyboardShortcutKeyAsset.width * 1.38;
+const shortcutKeyHeight = actionButtonKeyboardShortcutKeyAsset.height * 1.36;
+const labelFontFamily =
+  "Trebuchet MS, Chalkboard SE, Comic Sans MS, sans-serif";
 
 export class TargetActionMenuSystem implements System {
   update(world: World): void {
@@ -39,13 +62,14 @@ export class TargetActionMenuSystem implements System {
     }
 
     const hints = getActionHints(world);
+    const selectedToolIcon = getSelectedToolIcon(world);
     const signature = `${actions
       .map((action) => `${action.id}:${action.label}:${action.detail ?? ""}`)
-      .join("|")}|${[...hints.entries()].map(([id, hint]) => `${id}:${hint}`)}|${queue.pendingActionIds.join(",")}|${progress.actionId ?? ""}:${progress.active}`;
+      .join("|")}|${[...hints.entries()].map(([id, hint]) => `${id}:${hint}`)}|${selectedToolIcon.textureKey}|${queue.pendingActionIds.join(",")}|${progress.actionId ?? ""}:${progress.active}`;
 
     if (signature !== menu.signature) {
       menu.signature = signature;
-      this.rebuildMenu(menu, actions, hints, queue, progress);
+      this.rebuildMenu(menu, actions, hints, queue, progress, selectedToolIcon);
     }
 
     this.placeMenu(menu);
@@ -59,6 +83,7 @@ export class TargetActionMenuSystem implements System {
     hints: Map<string, string>,
     queue: ActionQueue,
     progress: ActionProgress,
+    selectedToolIcon: ToolIconAsset,
   ): void {
     for (const button of menu.buttons) {
       button.container.destroy(true);
@@ -66,7 +91,17 @@ export class TargetActionMenuSystem implements System {
 
     menu.buttons.length = 0;
 
-    const contentWidth = actions.length * buttonWidth + (actions.length - 1) * buttonGap;
+    const scene = menu.container.scene;
+    const layouts = actions.map((action) => ({
+      action,
+      hint: hints.get(action.id) ?? "",
+      width: measureButtonWidth(scene, action.label),
+    }));
+    const contentWidth = layouts.reduce(
+      (total, layout, index) =>
+        total + layout.width + (index > 0 ? buttonGap : 0),
+      0,
+    );
     const width = Math.min(menu.width, contentWidth + horizontalPadding * 2);
     const height = buttonHeight;
 
@@ -77,105 +112,140 @@ export class TargetActionMenuSystem implements System {
     menu.maxScrollX = Math.max(0, contentWidth - (width - horizontalPadding * 2));
     menu.scrollX = Math.min(menu.scrollX, menu.maxScrollX);
 
-    actions.forEach((action, index) => {
-      const x = index * (buttonWidth + buttonGap);
-      const scene = menu.container.scene;
-      const queued = queue.pendingActionIds.includes(action.id);
+    let cursorX = 0;
+
+    layouts.forEach(({ action, hint, width: actionButtonWidth }) => {
+      const x = cursorX + actionButtonWidth / 2;
       const executing = progress.active && progress.actionId === action.id;
       const container = scene.add.container(x, 0);
       const background = scene.add
-        .rectangle(0, 0, buttonWidth, buttonHeight, buttonFill(queued, executing), 0.94)
+        .nineslice(
+          0,
+          0,
+          actionButtonBgTextureKey,
+          undefined,
+          actionButtonWidth,
+          buttonHeight,
+          actionButtonBgSlices.left,
+          actionButtonBgSlices.right,
+          actionButtonBgSlices.top,
+          actionButtonBgSlices.bottom,
+        )
         .setOrigin(0.5)
-        .setStrokeStyle(1, buttonBorder(queued, executing), executing ? 0.95 : 0.64)
+        .setAlpha(executing ? 1 : 0.98)
         .setInteractive({ useHandCursor: true });
-      const hint = hints.get(action.id);
-      const iconFrame = scene.add
-        .circle(-buttonWidth / 2 + 24, 0, 15, hudColors.panelWarm, 0.96)
-        .setStrokeStyle(1, buttonBorder(queued, executing), 0.68);
       const icon = scene.add
-        .text(-buttonWidth / 2 + 24, 0, iconForAction(action.id), {
-          align: "center",
-          color: hudColors.textWarm,
-          fixedWidth: 28,
-          fontFamily: "Inter, system-ui, sans-serif",
-          fontSize: "13px",
-          fontStyle: "700",
-        })
+        .image(
+          -actionButtonWidth / 2 + iconLeftInset,
+          0,
+          selectedToolIcon.textureKey,
+        )
+        .setDisplaySize(
+          selectedToolIcon.width * 1.18,
+          selectedToolIcon.height * 1.18,
+        )
         .setOrigin(0.5);
       const label = scene.add
-        .text(-buttonWidth / 2 + 46, -13, action.label, {
-          color: "#f6efd7",
-          fixedWidth: buttonWidth - 82,
-          fontFamily: "Inter, system-ui, sans-serif",
-          fontSize: "13px",
-          fontStyle: "700",
+        .text(-actionButtonWidth / 2 + labelLeftInset, -2, action.label, {
+          color: "#3d2011",
+          fixedWidth: labelWidth(actionButtonWidth),
+          fontFamily: labelFontFamily,
+          fontSize: "35px",
+          fontStyle: "bold",
+          shadow: {
+            color: "#f4d79f",
+            blur: 2,
+            fill: true,
+            offsetX: 0,
+            offsetY: 2,
+          },
         })
         .setOrigin(0, 0.5);
-      const detail = scene.add
-        .text(-buttonWidth / 2 + 46, 9, action.detail ?? "", {
-          color: hudColors.textSoft,
-          fixedWidth: buttonWidth - 92,
-          fontFamily: "Inter, system-ui, sans-serif",
-          fontSize: "11px",
-        })
-        .setOrigin(0, 0.5);
+      const shortcutX = actionButtonWidth / 2 - shortcutRightInset;
+      const shortcutKey = scene.add
+        .image(shortcutX, 0, actionButtonKeyboardShortcutKeyTextureKey)
+        .setDisplaySize(shortcutKeyWidth, shortcutKeyHeight)
+        .setOrigin(0.5);
       const shortcut = scene.add
-        .text(buttonWidth / 2 - 24, 0, hint ?? "", {
+        .text(shortcutX, -1, hint, {
           align: "center",
-          color: "#f6efd7",
-          fixedWidth: 36,
-          fontFamily: "Inter, system-ui, sans-serif",
-          fontSize: "11px",
-          fontStyle: "700",
+          color: "#3d2011",
+          fixedWidth: 60,
+          fontFamily: labelFontFamily,
+          fontSize: shortcutFontSize(hint),
+          fontStyle: "bold",
+          shadow: {
+            color: "#f8e1b6",
+            blur: 1,
+            fill: true,
+            offsetX: 0,
+            offsetY: 1,
+          },
         })
         .setOrigin(0.5);
-      const status = scene.add
-        .rectangle(-buttonWidth / 2, -buttonHeight / 2, 4, buttonHeight, buttonBorder(queued, executing), 0.96)
-        .setOrigin(0);
+      let pointerOver = false;
+      let pressed = false;
 
       background.on("pointerover", () => {
-        background.setFillStyle(0x314556, 0.98);
+        pointerOver = true;
+
+        if (!pressed) {
+          tweenButton(scene, container, hoverScale, 90, "Cubic.easeOut");
+        }
       });
       background.on("pointerout", () => {
-        background.setFillStyle(buttonFill(queued, executing), 0.94);
+        pointerOver = false;
+        pressed = false;
+        tweenButton(scene, container, 1, 120, "Cubic.easeOut");
       });
       background.on("pointerdown", () => {
+        pressed = true;
+        tweenButton(scene, container, pressScale, 70, "Quad.easeOut");
         queue.push(action.id);
       });
+      background.on("pointerup", () => {
+        pressed = false;
+        tweenButton(
+          scene,
+          container,
+          pointerOver ? hoverScale : 1,
+          160,
+          "Back.easeOut",
+        );
+      });
+      background.on("pointerupoutside", () => {
+        pointerOver = false;
+        pressed = false;
+        tweenButton(scene, container, 1, 140, "Cubic.easeOut");
+      });
 
-      container.add([
-        background,
-        status,
-        iconFrame,
-        icon,
-        label,
-        detail,
-        shortcut,
-      ]);
+      container.add([background, icon, label, shortcutKey, shortcut]);
       menu.content.add(container);
       menu.buttons.push({
         actionId: action.id,
         container,
         background,
-        iconFrame,
         icon,
         label,
-        detail,
+        shortcutKey,
         shortcut,
-        status,
         x,
-        width: buttonWidth,
+        width: actionButtonWidth,
       });
+      cursorX += actionButtonWidth + buttonGap;
     });
   }
 
   private placeMenu(menu: TargetActionMenu): void {
     const camera = menu.container.scene.cameras.main;
-    const screenScale = Math.min(1, (camera.width - 24) / menu.background.width);
+    const screenScale = Math.min(
+      displayScale,
+      (camera.width - 24) / menu.background.width,
+    );
     const worldScale = 1 / camera.zoom;
     const scale = screenScale * worldScale;
     const height = menu.background.height;
-    const margin = 18 * scale;
+    const margin = screenBottomMargin * worldScale;
     const worldX = camera.worldView.x + (camera.width * worldScale) / 2;
     const worldY =
       camera.worldView.y +
@@ -188,7 +258,7 @@ export class TargetActionMenuSystem implements System {
   }
 
   private updateScroll(menu: TargetActionMenu): void {
-    const startX = -menu.background.width / 2 + horizontalPadding + buttonWidth / 2;
+    const startX = -menu.background.width / 2 + horizontalPadding;
     const viewportLeft = -menu.background.width / 2 + horizontalPadding;
     const viewportRight = menu.background.width / 2 - horizontalPadding;
 
@@ -232,7 +302,7 @@ function getActionHints(world: World): Map<string, string> {
 
 function formatKeyHint(keyCode: number): string {
   const keyNames: Record<number, string> = {
-    [Phaser.Input.Keyboard.KeyCodes.SPACE]: "Space",
+    [Phaser.Input.Keyboard.KeyCodes.SPACE]: "⎵",
     [Phaser.Input.Keyboard.KeyCodes.ONE]: "1",
     [Phaser.Input.Keyboard.KeyCodes.TWO]: "2",
     [Phaser.Input.Keyboard.KeyCodes.THREE]: "3",
@@ -243,54 +313,76 @@ function formatKeyHint(keyCode: number): string {
   return keyNames[keyCode] ?? String.fromCharCode(keyCode);
 }
 
-function iconForAction(actionId: string): string {
-  if (actionId.includes("dig")) {
-    return "D";
+function getSelectedToolIcon(world: World): ToolIconAsset {
+  const hud = world.query(ToolInventoryHud)[0]?.[1];
+
+  if (hud?.selectedSlotId === "tool:watering-can") {
+    return toolIconWateringCanAsset;
   }
 
-  if (actionId.includes("forage")) {
-    return "F";
-  }
-
-  if (actionId.includes("plant")) {
-    return "P";
-  }
-
-  if (actionId.includes("fetch")) {
-    return "H";
-  }
-
-  if (actionId.includes("sleep")) {
-    return "Z";
-  }
-
-  if (actionId.includes("hand")) {
-    return "G";
-  }
-
-  return ">";
+  return toolIconAxeAsset;
 }
 
-function buttonFill(queued: boolean, executing: boolean): number {
-  if (executing) {
-    return 0x314556;
-  }
+function measureButtonWidth(scene: Phaser.Scene, label: string): number {
+  const measurement = scene.add
+    .text(0, 0, label, {
+      color: "#3d2011",
+      fontFamily: labelFontFamily,
+      fontSize: "35px",
+      fontStyle: "bold",
+    })
+    .setVisible(false);
+  const measuredWidth = Math.ceil(measurement.width);
 
-  if (queued) {
-    return 0x203840;
-  }
+  measurement.destroy();
 
-  return 0x1a2630;
+  return Phaser.Math.Clamp(
+    measuredWidth +
+      labelLeftInset +
+      shortcutRightInset +
+      shortcutKeyWidth +
+      labelShortcutGap,
+    buttonMinWidth,
+    buttonMaxWidth,
+  );
 }
 
-function buttonBorder(queued: boolean, executing: boolean): number {
-  if (executing) {
-    return hudColors.progress;
+function labelWidth(buttonWidth: number): number {
+  return Math.max(
+    1,
+    buttonWidth -
+      labelLeftInset -
+      shortcutRightInset -
+      shortcutKeyWidth -
+      labelShortcutGap,
+  );
+}
+
+function shortcutFontSize(hint: string): string {
+  if (hint.length <= 1) {
+    return "36px";
   }
 
-  if (queued) {
-    return hudColors.pending;
+  if (hint.length <= 3) {
+    return "26px";
   }
 
-  return hudColors.borderWarm;
+  return "20px";
+}
+
+function tweenButton(
+  scene: Phaser.Scene,
+  container: Phaser.GameObjects.Container,
+  scale: number,
+  duration: number,
+  ease: string,
+): void {
+  scene.tweens.killTweensOf(container);
+  scene.tweens.add({
+    targets: container,
+    scaleX: scale,
+    scaleY: scale,
+    duration,
+    ease,
+  });
 }

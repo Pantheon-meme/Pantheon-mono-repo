@@ -20,7 +20,7 @@ export type HudSlot = {
 };
 
 export class ToolInventoryHud {
-  selectedSlotId = "tool:hands";
+  selectedSlotId = "tool:axe";
   signature = "";
 
   constructor(

@@ -796,6 +796,8 @@ export class MainGameScene extends Phaser.Scene {
 
   private createToolInventoryHud(): ToolInventoryHud {
     const slotDefinitions: Array<{ id: string; kind: "tool" | "item" }> = [
+      { id: "tool:axe", kind: "tool" },
+      { id: "tool:watering-can", kind: "tool" },
       { id: "tool:hands", kind: "tool" },
       { id: "item:left", kind: "item" },
       { id: "item:right", kind: "item" },
@@ -1048,7 +1050,7 @@ export class MainGameScene extends Phaser.Scene {
   private createTargetActionMenu(): TargetActionMenu {
     const container = this.add.container(0, 0).setDepth(104).setVisible(false);
     const background = this.add
-      .rectangle(0, 0, 620, 80, hudColors.panelDark, 0.9)
+      .rectangle(0, 0, 1040, 128, hudColors.panelDark, 0.9)
       .setOrigin(0.5)
       .setStrokeStyle(2, hudColors.borderWarm, 0.58)
       .setVisible(false);
@@ -1067,9 +1069,9 @@ export class MainGameScene extends Phaser.Scene {
       .text(0, 0, "<", {
         align: "center",
         color: hudColors.textWarm,
-        fixedWidth: 18,
+        fixedWidth: 34,
         fontFamily: hudFontFamily,
-        fontSize: "20px",
+        fontSize: "42px",
         fontStyle: "700",
       })
       .setOrigin(0.5)
@@ -1078,9 +1080,9 @@ export class MainGameScene extends Phaser.Scene {
       .text(0, 0, ">", {
         align: "center",
         color: hudColors.textWarm,
-        fixedWidth: 18,
+        fixedWidth: 34,
         fontFamily: hudFontFamily,
-        fontSize: "20px",
+        fontSize: "42px",
         fontStyle: "700",
       })
       .setOrigin(0.5)
@@ -1092,15 +1094,15 @@ export class MainGameScene extends Phaser.Scene {
       content,
       leftIndicator,
       rightIndicator,
-      620,
-      44,
+      1040,
+      128,
     );
 
     leftIndicator.on("pointerdown", () => {
-      menu.scrollX = Math.max(0, menu.scrollX - 192);
+      menu.scrollX = Math.max(0, menu.scrollX - 384);
     });
     rightIndicator.on("pointerdown", () => {
-      menu.scrollX = Math.min(menu.maxScrollX, menu.scrollX + 192);
+      menu.scrollX = Math.min(menu.maxScrollX, menu.scrollX + 384);
     });
 
     container.add([background, title, content, leftIndicator, rightIndicator]);

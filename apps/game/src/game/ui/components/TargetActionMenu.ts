@@ -3,13 +3,11 @@ import Phaser from "phaser";
 export type TargetActionButton = {
   actionId: string;
   container: Phaser.GameObjects.Container;
-  background: Phaser.GameObjects.Rectangle;
-  iconFrame: Phaser.GameObjects.Arc;
-  icon: Phaser.GameObjects.Text;
+  background: Phaser.GameObjects.NineSlice;
+  icon: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
-  detail: Phaser.GameObjects.Text;
+  shortcutKey: Phaser.GameObjects.Image;
   shortcut: Phaser.GameObjects.Text;
-  status: Phaser.GameObjects.Rectangle;
   x: number;
   width: number;
 };
