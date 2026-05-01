@@ -523,7 +523,7 @@ export const biomeDefinitions: Record<string, BiomeDefinition> = {
       },
     ],
     objects: [
-      biomeObject("central-uni-bank", "Central Uni Bank", "landmark", 5, 5, "central-uni-bank", 0, 0, 2.5, "fixed-tile", 1, 599, ["swap-city-plain"], ["plain", "stone", "path"], 0.78, { tileX: 100, tileY: 100 }),
+      biomeObject("central-uni-bank", "Central Uni Bank", "landmark", 5, 5, "central-uni-bank", 0, 0, 2.5, "fixed-tile", 1, 599, ["swap-city-plain"], ["plain", "stone", "path"], 0.5, { tileX: 100, tileY: 100 }),
       biomeObject("violet-clover-bush", "Violet Clover Bush", "decoration", 1, 1, "uniswap-nature-props", 0, 0, 1.12, "grove-edge", 56, 301, ["unicorn-forest", "swap-city-plain"], ["grass", "forest-floor"]),
       biomeObject("mint-moss-stone", "Mint Moss Stone", "decoration", 1, 1, "uniswap-nature-props", 0, 1, 1.05, "scattered", 44, 317, ["unicorn-forest", "oracle-swamp"], ["forest-floor", "swamp", "stone"]),
       biomeObject("pearl-sand-shells", "Pearl Sand Shells", "decoration", 1, 1, "uniswap-nature-props", 0, 2, 0.95, "pool-edge", 28, 331, ["liquidity-lake"], ["sand"]),

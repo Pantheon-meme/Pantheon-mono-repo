@@ -40,10 +40,15 @@ library PantheonConstants {
   bytes32 internal constant ACTION_HARVEST = bytes32("harvest");
   bytes32 internal constant ACTION_MOVE = bytes32("move");
   bytes32 internal constant ACTION_PLANT = bytes32("plant");
+  bytes32 internal constant ACTION_BANK_BUY = bytes32("bankBuy");
+  bytes32 internal constant ACTION_BANK_SELL = bytes32("bankSell");
   bytes32 internal constant ACTION_SLEEP = bytes32("sleep");
   bytes32 internal constant ACTION_SPAWN = bytes32("spawn");
   bytes32 internal constant ACTION_TEND = bytes32("tend");
   bytes32 internal constant ACTION_WATER = bytes32("water");
+  bytes32 internal constant BANK_AGENT_ID = bytes32("centralUniBankAgent");
+  bytes32 internal constant BANK_INVENTORY_COUNTER_ID = bytes32("centralUniBankInventory");
+  bytes32 internal constant BANK_TRADE_COUNTER_ID = bytes32("centralUniBankTrades");
   bytes32 internal constant WORLD_OBJECT_COUNTER_ID = bytes32("world_object_count");
   bytes32 internal constant TERRAIN_ADMIN_ID = bytes32("terrainAdmin");
   bytes32 internal constant TERRAIN_DIRT = bytes32("dirt");

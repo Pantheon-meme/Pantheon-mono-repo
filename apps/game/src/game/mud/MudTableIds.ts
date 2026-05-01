@@ -38,6 +38,46 @@ export const actionLogActionFieldIndex = 0;
 export const actionLogUpdatedAtFieldIndex = 1;
 export const actionLogMessageFieldIndex = 0;
 
+export const cucBalanceTableId =
+  "0x746270616e7468656f6e00000000000043756342616c616e6365000000000000";
+export const cucBalanceFieldLayout =
+  "0x0021020020010000000000000000000000000000000000000000000000000000";
+export const cucBalanceBalanceFieldIndex = 0;
+export const cucBalanceExistsFieldIndex = 1;
+
+export const bankItemPriceTableId =
+  "0x746270616e7468656f6e00000000000042616e6b4974656d5072696365000000";
+export const bankItemPriceFieldLayout =
+  "0x0055070020200404080401000000000000000000000000000000000000000000";
+export const bankItemPriceBuyPriceFieldIndex = 0;
+export const bankItemPriceSellPriceFieldIndex = 1;
+export const bankItemPriceBuyMaxQuantityFieldIndex = 2;
+export const bankItemPriceSellMaxQuantityFieldIndex = 3;
+export const bankItemPriceValidUntilFieldIndex = 4;
+export const bankItemPriceEpochFieldIndex = 5;
+export const bankItemPriceExistsFieldIndex = 6;
+
+export const bankItemInventoryTableId =
+  "0x746270616e7468656f6e00000000000042616e6b4974656d496e76656e746f72";
+export const bankItemInventoryFieldLayout =
+  "0x0005020004010000000000000000000000000000000000000000000000000000";
+export const bankItemInventoryQuantityFieldIndex = 0;
+export const bankItemInventoryExistsFieldIndex = 1;
+
+export const bankInventorySlotTableId =
+  "0x746270616e7468656f6e00000000000042616e6b496e76656e746f7279536c6f";
+export const bankInventorySlotFieldLayout =
+  "0x0021020020010000000000000000000000000000000000000000000000000000";
+export const bankInventorySlotObjectIdFieldIndex = 0;
+export const bankInventorySlotExistsFieldIndex = 1;
+
+export const bankObjectTableId =
+  "0x746270616e7468656f6e00000000000042616e6b4f626a656374000000000000";
+export const bankObjectFieldLayout =
+  "0x0005020004010000000000000000000000000000000000000000000000000000";
+export const bankObjectSlotFieldIndex = 0;
+export const bankObjectExistsFieldIndex = 1;
+
 export const terrainStateTableId =
   "0x746270616e7468656f6e0000000000005465727261696e537461746500000000";
 export const terrainStateFieldLayout =

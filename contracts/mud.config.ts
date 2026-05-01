@@ -173,6 +173,91 @@ export default defineWorld({
       },
       key: ["objectId"],
     },
+    BankAgent: {
+      schema: {
+        id: "bytes32",
+        agent: "address",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
+    CucBalance: {
+      schema: {
+        account: "address",
+        balance: "uint256",
+        exists: "bool",
+      },
+      key: ["account"],
+    },
+    BankItemPrice: {
+      schema: {
+        itemId: "bytes32",
+        buyPrice: "uint256",
+        sellPrice: "uint256",
+        buyMaxQuantity: "uint32",
+        sellMaxQuantity: "uint32",
+        validUntil: "uint64",
+        epoch: "uint32",
+        exists: "bool",
+      },
+      key: ["itemId"],
+    },
+    BankItemInventory: {
+      schema: {
+        itemId: "bytes32",
+        quantity: "uint32",
+        exists: "bool",
+      },
+      key: ["itemId"],
+    },
+    BankInventorySlot: {
+      schema: {
+        slot: "uint32",
+        objectId: "bytes32",
+        exists: "bool",
+      },
+      key: ["slot"],
+    },
+    BankObject: {
+      schema: {
+        objectId: "bytes32",
+        slot: "uint32",
+        exists: "bool",
+      },
+      key: ["objectId"],
+    },
+    BankInventoryCount: {
+      schema: {
+        id: "bytes32",
+        count: "uint32",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
+    BankTradeCount: {
+      schema: {
+        id: "bytes32",
+        count: "uint32",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
+    BankTradeReceipt: {
+      schema: {
+        tradeId: "uint32",
+        player: "address",
+        itemId: "bytes32",
+        objectId: "bytes32",
+        quantity: "uint32",
+        unitPrice: "uint256",
+        totalCuc: "uint256",
+        isPlayerSale: "bool",
+        epoch: "uint32",
+        createdAt: "uint64",
+        exists: "bool",
+      },
+      key: ["tradeId"],
+    },
     WorldObject: {
       schema: {
         objectId: "bytes32",
