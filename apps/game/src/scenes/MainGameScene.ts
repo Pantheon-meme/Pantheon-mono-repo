@@ -227,7 +227,9 @@ export class MainGameScene extends Phaser.Scene {
       .filter((terrain) => terrain.placement.kind !== "background")
       .sort((a, b) => a.stackOrder - b.stackOrder);
     const digTerrainOverlayStackOrder =
-      Math.max(...visibleTerrainDefinitions.map((terrain) => terrain.stackOrder)) + 1;
+      Math.max(
+        ...visibleTerrainDefinitions.map((terrain) => terrain.stackOrder),
+      ) + 1;
     const terrainGrids = new Map<string, TerrainGrid>();
     const spawnTileX = Math.floor(spawnX / tileSize);
     const spawnTileY = Math.floor(spawnY / tileSize);
@@ -361,6 +363,7 @@ export class MainGameScene extends Phaser.Scene {
         [Phaser.Input.Keyboard.KeyCodes.Z]: "sleep",
         [Phaser.Input.Keyboard.KeyCodes.T]: "reflect",
         [Phaser.Input.Keyboard.KeyCodes.ONE]: "inventory-grab",
+        [Phaser.Input.Keyboard.KeyCodes.X]: "inventory-drop",
       }),
     );
     world.addComponent(player, ActionLog, new ActionLog());
@@ -429,7 +432,10 @@ export class MainGameScene extends Phaser.Scene {
         .sprite(x, y, playerSpriteTextureKey())
         .setOrigin(0.5, 1)
         .setDepth(10)
-        .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
+        .setDisplaySize(
+          spriteAsset.manifest.cellSize,
+          spriteAsset.manifest.cellSize,
+        );
     }
 
     return this.add
@@ -913,7 +919,11 @@ function spawnSeedTestRow(
         new ItemUseConstraints("dirt"),
       );
       world.addComponent(drop, Grabbable, new Grabbable());
-      world.addComponent(drop, WeightedObject, new WeightedObject(seedDropWeight));
+      world.addComponent(
+        drop,
+        WeightedObject,
+        new WeightedObject(seedDropWeight),
+      );
       world.addComponent(drop, Footprint, new Footprint(54, 54));
       world.addComponent(
         drop,

@@ -17,6 +17,13 @@ export type ConfirmedPickupObject = {
   inventory?: PlayerInventorySnapshot;
 };
 
+export type ConfirmedDropObject = {
+  objectId: string;
+  x: number;
+  y: number;
+  inventory?: PlayerInventorySnapshot;
+};
+
 export type WorldObjectSnapshot = {
   objectId: string;
   objectTypeId?: string;
@@ -185,5 +192,10 @@ export type MudStartSleepCallbacks = {
 
 export type MudPickupObjectCallbacks = {
   onConfirmed: (pickup: ConfirmedPickupObject) => void;
+  onRejected: (message: string) => void;
+};
+
+export type MudDropObjectCallbacks = {
+  onConfirmed: (drop: ConfirmedDropObject) => void;
   onRejected: (message: string) => void;
 };

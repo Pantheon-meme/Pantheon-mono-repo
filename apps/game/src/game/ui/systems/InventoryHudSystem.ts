@@ -53,9 +53,11 @@ export class InventoryHudSystem implements System {
       this.rebuildIfNeeded(hud, inventory);
       this.updateSlotStyles(hud, inventory);
 
-      hud.title.setText(`Inventory ${formatWeight(inventory.usedWeight)} / ${formatWeight(
-        inventory.maxWeight,
-      )}  Q/E select`);
+      hud.title.setText(
+        `Inventory ${formatWeight(inventory.usedWeight)} / ${formatWeight(
+          inventory.maxWeight,
+        )}  Q/E select  X drop`,
+      );
     }
   }
 
@@ -75,7 +77,10 @@ export class InventoryHudSystem implements System {
   private rebuildIfNeeded(hud: InventoryHud, inventory: PlayerInventory): void {
     const signature = `${inventory.maxWeight}|${inventory
       .sortedSlots()
-      .map((slot) => `${slot.slot}:${slot.itemId}:${slot.amount}:${slot.weight}:${slot.label ?? ""}`)
+      .map(
+        (slot) =>
+          `${slot.slot}:${slot.itemId}:${slot.amount}:${slot.weight}:${slot.label ?? ""}:${slot.syncState ?? ""}`,
+      )
       .join("|")}`;
 
     if (signature === hud.signature) {
@@ -122,7 +127,12 @@ export class InventoryHudSystem implements System {
         .setOrigin(0, 0)
         .setStrokeStyle(1, 0x8fbfd0, 0.72)
         .setInteractive({ useHandCursor: true });
-      const icon = createItemIcon(hud.container.scene, entry.itemId, x + 26, 61);
+      const icon = createItemIcon(
+        hud.container.scene,
+        entry.itemId,
+        x + 26,
+        61,
+      );
       const fallbackIcon = icon
         ? undefined
         : hud.container.scene.add
@@ -230,7 +240,8 @@ function createForageItemIcon(
     return undefined;
   }
 
-  const frameIndex = spriteCell.row * spriteAsset.manifest.columns + spriteCell.column;
+  const frameIndex =
+    spriteCell.row * spriteAsset.manifest.columns + spriteCell.column;
 
   return scene.add
     .sprite(x, y, textureKey)

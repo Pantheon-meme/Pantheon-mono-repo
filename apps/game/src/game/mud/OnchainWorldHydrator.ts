@@ -1,12 +1,16 @@
 import type { World } from "../../ecs/World";
 import { createPlantEntity, findPlantAt } from "../actions/ActionHelpers";
 import { scatterForageDrops } from "../actions/ForageActions";
+import { ForageDrop } from "../items/components/ForageDrop";
+import { SeedDrop } from "../plants/components/SeedDrop";
 import { PlantCareState } from "../plants/components/PlantCareState";
 import { PlantState, type PlantStage } from "../plants/components/PlantState";
 import { plantDefinitions } from "../plants/PlantDefinitions";
+import { Position } from "../shared/components/Position";
 import { TerrainDigDepth } from "../terrain/components/TerrainDigDepth";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { getTerrainLayer } from "../terrain/TerrainLayers";
+import { OnchainObjectRef } from "./components/OnchainObjectRef";
 import type { PlantStateSnapshot, PlayerSnapshot } from "./MudWorldTypes";
 
 export class OnchainWorldHydrator {
@@ -24,6 +28,20 @@ export class OnchainWorldHydrator {
   ): void {
     for (const object of snapshot.worldObjects) {
       if (this.hydratedObjectIds.has(object.objectId)) {
+        continue;
+      }
+
+      const existingEntity = this.findExistingObject(world, object.objectId);
+
+      if (existingEntity !== undefined) {
+        this.hydratedObjectIds.add(object.objectId);
+        this.restoreExistingObject(
+          world,
+          grid,
+          existingEntity,
+          object.x,
+          object.y,
+        );
         continue;
       }
 
@@ -45,6 +63,45 @@ export class OnchainWorldHydrator {
           new OnchainObjectRef(object.objectId as `0x${string}`),
         );
       }
+    }
+  }
+
+  private findExistingObject(
+    world: World,
+    objectId: string,
+  ): number | undefined {
+    return world
+      .query(OnchainObjectRef)
+      .find(([, ref]) => ref.objectId === objectId)?.[0];
+  }
+
+  private restoreExistingObject(
+    world: World,
+    grid: TerrainGrid,
+    entity: number,
+    tileX: number,
+    tileY: number,
+  ): void {
+    world.addComponent(
+      entity,
+      Position,
+      new Position(
+        tileX * grid.tileSize + grid.tileSize / 2,
+        tileY * grid.tileSize + grid.tileSize / 2,
+      ),
+    );
+
+    const forageDrop = world.getComponent(entity, ForageDrop);
+
+    if (forageDrop) {
+      forageDrop.collected = false;
+      forageDrop.pending = false;
+    }
+
+    const seedDrop = world.getComponent(entity, SeedDrop);
+
+    if (seedDrop) {
+      seedDrop.collected = false;
     }
   }
 
@@ -127,4 +184,3 @@ function resolvePlantStage(
 
   return elapsedSeconds >= growthSeconds ? "grown" : "growing";
 }
-import { OnchainObjectRef } from "./components/OnchainObjectRef";

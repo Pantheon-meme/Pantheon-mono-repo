@@ -1,9 +1,4 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  type Hex,
-} from "viem";
+import { createPublicClient, createWalletClient, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { stringToBytes32 } from "./MudCodec";
@@ -17,6 +12,7 @@ import { MudSnapshotReader } from "./MudSnapshotReader";
 import type {
   MovePathStep,
   MudDigCallbacks,
+  MudDropObjectCallbacks,
   MudForageCallbacks,
   MudHarvestCallbacks,
   MudMoveCallbacks,
@@ -33,6 +29,7 @@ import type {
 export type {
   ActionLogSnapshot,
   ConfirmedDig,
+  ConfirmedDropObject,
   ConfirmedForage,
   ConfirmedHarvest,
   ConfirmedMove,
@@ -41,6 +38,7 @@ export type {
   ConfirmedPlantCare,
   MovePathStep,
   MudDigCallbacks,
+  MudDropObjectCallbacks,
   MudForageCallbacks,
   MudHarvestCallbacks,
   MudMoveCallbacks,
@@ -70,6 +68,7 @@ export class MudWorldBridge {
   private readonly pendingHarvests = new Set<string>();
   private readonly pendingCareActions = new Set<string>();
   private readonly pendingPickups = new Set<string>();
+  private readonly pendingDrops = new Set<string>();
   private readonly snapshotReader: MudSnapshotReader;
   private pendingMove = false;
   private pendingSleep = false;
@@ -147,11 +146,7 @@ export class MudWorldBridge {
     return true;
   }
 
-  submitHarvest(
-    x: number,
-    y: number,
-    callbacks: MudHarvestCallbacks,
-  ): boolean {
+  submitHarvest(x: number, y: number, callbacks: MudHarvestCallbacks): boolean {
     const key = `${x},${y}`;
 
     if (this.pendingHarvests.has(key)) {
@@ -164,19 +159,11 @@ export class MudWorldBridge {
     return true;
   }
 
-  submitWater(
-    x: number,
-    y: number,
-    callbacks: MudPlantCareCallbacks,
-  ): boolean {
+  submitWater(x: number, y: number, callbacks: MudPlantCareCallbacks): boolean {
     return this.submitPlantCare("water", x, y, callbacks);
   }
 
-  submitTend(
-    x: number,
-    y: number,
-    callbacks: MudPlantCareCallbacks,
-  ): boolean {
+  submitTend(x: number, y: number, callbacks: MudPlantCareCallbacks): boolean {
     return this.submitPlantCare("tend", x, y, callbacks);
   }
 
@@ -227,6 +214,22 @@ export class MudWorldBridge {
     return true;
   }
 
+  submitDropObject(
+    objectId: Hex,
+    x: number,
+    y: number,
+    callbacks: MudDropObjectCallbacks,
+  ): boolean {
+    if (this.pendingDrops.has(objectId)) {
+      return false;
+    }
+
+    this.pendingDrops.add(objectId);
+    void this.confirmDropObject(objectId, x, y, callbacks);
+
+    return true;
+  }
+
   async readWorldTime(): Promise<WorldTimeConfig | undefined> {
     return this.snapshotReader.readWorldTime();
   }
@@ -260,7 +263,8 @@ export class MudWorldBridge {
       callbacks.onConfirmed({
         x,
         y,
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -285,12 +289,43 @@ export class MudWorldBridge {
       await this.publicClient.waitForTransactionReceipt({ hash });
       callbacks.onConfirmed({
         objectId,
-        inventory: await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingPickups.delete(objectId);
+    }
+  }
+
+  private async confirmDropObject(
+    objectId: Hex,
+    x: number,
+    y: number,
+    callbacks: MudDropObjectCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__dropObject",
+        args: [objectId, x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        objectId,
+        x,
+        y,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingDrops.delete(objectId);
     }
   }
 
@@ -311,8 +346,12 @@ export class MudWorldBridge {
 
       await this.publicClient.waitForTransactionReceipt({ hash });
       callbacks.onConfirmed({
-        ...(await this.snapshotReader.readLastForageResultAfterConfirmation(x, y)),
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        ...(await this.snapshotReader.readLastForageResultAfterConfirmation(
+          x,
+          y,
+        )),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -342,7 +381,8 @@ export class MudWorldBridge {
         x,
         y,
         plantId,
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -368,8 +408,12 @@ export class MudWorldBridge {
 
       await this.publicClient.waitForTransactionReceipt({ hash });
       callbacks.onConfirmed({
-        ...(await this.snapshotReader.readLastHarvestResultAfterConfirmation(x, y)),
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        ...(await this.snapshotReader.readLastHarvestResultAfterConfirmation(
+          x,
+          y,
+        )),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -407,8 +451,7 @@ export class MudWorldBridge {
       const hash = await this.walletClient.writeContract({
         address: this.worldAddress,
         abi: pantheonWorldAbi,
-        functionName:
-          action === "water" ? "pantheon__water" : "pantheon__tend",
+        functionName: action === "water" ? "pantheon__water" : "pantheon__tend",
         args: [x, y],
         chain: foundry,
       });
@@ -418,7 +461,8 @@ export class MudWorldBridge {
         x,
         y,
         action,
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -445,7 +489,8 @@ export class MudWorldBridge {
       callbacks.onConfirmed({
         x,
         y,
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -472,7 +517,8 @@ export class MudWorldBridge {
       await this.publicClient.waitForTransactionReceipt({ hash });
       callbacks.onConfirmed({
         ...target,
-        playerEnergy: await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -481,9 +527,7 @@ export class MudWorldBridge {
     }
   }
 
-  private async confirmSleep(
-    callbacks: MudStartSleepCallbacks,
-  ): Promise<void> {
+  private async confirmSleep(callbacks: MudStartSleepCallbacks): Promise<void> {
     try {
       const hash = await this.walletClient.writeContract({
         address: this.worldAddress,
@@ -494,21 +538,24 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed(await this.snapshotReader.readPendingActionAfterConfirmation());
+      callbacks.onConfirmed(
+        await this.snapshotReader.readPendingActionAfterConfirmation(),
+      );
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingSleep = false;
     }
   }
-
 }
 
 function formatMudError(error: unknown): string {
   if (typeof error === "object" && error) {
     const maybeError = error as { shortMessage?: string; message?: string };
 
-    return maybeError.shortMessage ?? maybeError.message ?? "MUD transaction failed";
+    return (
+      maybeError.shortMessage ?? maybeError.message ?? "MUD transaction failed"
+    );
   }
 
   return "MUD transaction failed";

@@ -101,6 +101,17 @@ export const pantheonWorldAbi = [
   },
   {
     type: "function",
+    name: "pantheon__dropObject",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "objectId", type: "bytes32" },
+      { name: "x", type: "int32" },
+      { name: "y", type: "int32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "pantheon__resolveAction",
     stateMutability: "nonpayable",
     inputs: [],
