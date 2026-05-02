@@ -14,6 +14,8 @@ import { ItemUseConstraints } from "../shared/components/ItemUseConstraints";
 import { Position } from "../shared/components/Position";
 import { SeedDrop } from "../plants/components/SeedDrop";
 import { SkillSet } from "../ideas/components/SkillSet";
+import { OnchainObjectRef } from "../mud/components/OnchainObjectRef";
+import type { WorldObjectSnapshot } from "../mud/MudWorldTypes";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import { WeightInspectable } from "../shared/components/WeightInspectable";
 import { WeightedObject } from "../shared/components/WeightedObject";
@@ -114,7 +116,7 @@ function forage(world: World, actor: Entity): ActionEffectResult {
   const energy = world.getComponent(actor, Energy);
   const optimisticEnergyDelta = -forageEnergyCost;
   const submitted = mud.bridge.submitForage(tileX, tileY, {
-    onConfirmed: ({ itemId, amount, playerEnergy }) => {
+    onConfirmed: ({ itemId, amount, playerEnergy, worldObjects }) => {
       if (playerEnergy) {
         energy?.settleOptimisticDelta(
           optimisticEnergyDelta,
@@ -131,6 +133,15 @@ function forage(world: World, actor: Entity): ActionEffectResult {
         return;
       }
 
+      materializeConfirmedForageDrops(
+        world,
+        grid,
+        itemId,
+        amount,
+        tileX,
+        tileY,
+        worldObjects,
+      );
       skills.addExperience("foraging", 0.3);
       updateActionLog(
         world,
@@ -203,6 +214,54 @@ export function scatterForageDrops(
   }
 
   return drops;
+}
+
+function materializeConfirmedForageDrops(
+  world: World,
+  grid: TerrainGrid,
+  itemId: string,
+  amount: number,
+  tileX: number,
+  tileY: number,
+  worldObjects: WorldObjectSnapshot[] | undefined,
+): void {
+  const matchingObjects = (worldObjects ?? [])
+    .filter(
+      (object) =>
+        object.x === tileX &&
+        object.y === tileY &&
+        object.itemId === itemId &&
+        !hasOnchainObject(world, object.objectId),
+    )
+    .sort((left, right) => right.createdAt - left.createdAt)
+    .slice(0, amount)
+    .reverse();
+
+  for (const object of matchingObjects) {
+    const drops = scatterForageDrops(
+      world,
+      grid,
+      object.itemId,
+      object.amount,
+      object.x,
+      object.y,
+      false,
+    );
+
+    for (const drop of drops) {
+      world.addComponent(
+        drop,
+        OnchainObjectRef,
+        new OnchainObjectRef(object.objectId as `0x${string}`),
+      );
+    }
+  }
+}
+
+function hasOnchainObject(world: World, objectId: string): boolean {
+  return world
+    .query(OnchainObjectRef)
+    .some(([, ref]) => ref.objectId === objectId);
 }
 
 function addForageDropPayload(

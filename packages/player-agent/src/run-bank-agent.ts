@@ -1,10 +1,14 @@
 import { bankAgent } from './mastra/agents/bank-agent';
 import {
   executeBankPriceSync,
-  readBankInventorySignature,
+  readBankPricingStatus,
 } from './mastra/tools/bank-tools';
 
 const turnDelayMs = readIntegerEnv('BANK_AGENT_TURN_DELAY_MS', 30000);
+const priceRefreshBufferSeconds = readIntegerEnv(
+  'BANK_AGENT_PRICE_REFRESH_BUFFER_SECONDS',
+  Math.max(300, Math.ceil((turnDelayMs * 2) / 1000)),
+);
 const maxTurns = readIntegerEnv('BANK_AGENT_MAX_TURNS', 0);
 const maxSteps = readIntegerEnv('BANK_AGENT_MAX_STEPS', 3);
 const threadId = process.env.BANK_AGENT_THREAD_ID ?? 'central-uni-bank';
@@ -31,7 +35,7 @@ async function runBankAgent() {
 
   console.log('[bank-agent] autonomous pricing loop started');
   console.log(
-    `[bank-agent] checkDelay=${turnDelayMs}ms maxTurns=${maxTurns || 'infinite'} mode=${useLlmLoop ? 'llm' : 'inventory-watch'} maxSteps=${maxSteps}`,
+    `[bank-agent] checkDelay=${turnDelayMs}ms priceRefreshBuffer=${priceRefreshBufferSeconds}s maxTurns=${maxTurns || 'infinite'} mode=${useLlmLoop ? 'llm' : 'inventory-watch'} maxSteps=${maxSteps}`,
   );
 
   while (!stopping && (maxTurns === 0 || turn < maxTurns)) {
@@ -41,23 +45,33 @@ async function runBankAgent() {
         console.log(`\n[bank-agent] turn ${turn}`);
         await runLlmTurn(turn);
       } else {
-        const inventorySignature = await readBankInventorySignature();
+        const pricingStatus = await readBankPricingStatus(priceRefreshBufferSeconds);
+        const inventorySignature = pricingStatus.inventorySignature;
+        const inventoryChanged =
+          lastInventorySignature !== undefined &&
+          inventorySignature !== lastInventorySignature;
+        const needsPriceRefresh = pricingStatus.stalePriceCount > 0;
         const shouldSync =
           lastInventorySignature === undefined ||
-          inventorySignature !== lastInventorySignature;
+          inventoryChanged ||
+          needsPriceRefresh;
 
         if (!shouldSync) {
+          const expiryDetail = pricingStatus.nextExpiresAt
+            ? ` next price ${pricingStatus.nextExpiringItemId} expires at ${pricingStatus.nextExpiresAt}`
+            : ' no expiring prices';
+
           console.log(
-            `[bank-agent] inventory unchanged; waiting ${turnDelayMs}ms before next check`,
+            `[bank-agent] inventory unchanged and prices fresh;${expiryDetail}; waiting ${turnDelayMs}ms before next check`,
           );
         } else {
           turn += 1;
           console.log(`\n[bank-agent] turn ${turn}`);
-          console.log(
-            lastInventorySignature === undefined
-              ? '[bank-agent] initial inventory snapshot detected; syncing prices'
-              : '[bank-agent] bank inventory changed; syncing prices',
-          );
+          logDirectSyncReason({
+            lastInventorySignature,
+            inventoryChanged,
+            pricingStatus,
+          });
           await runDirectTurn(turn);
           lastInventorySignature = inventorySignature;
         }
@@ -74,17 +88,47 @@ async function runBankAgent() {
   console.log('[bank-agent] autonomous pricing loop stopped');
 }
 
+function logDirectSyncReason({
+  lastInventorySignature,
+  inventoryChanged,
+  pricingStatus,
+}: {
+  lastInventorySignature: string | undefined;
+  inventoryChanged: boolean;
+  pricingStatus: Awaited<ReturnType<typeof readBankPricingStatus>>;
+}): void {
+  if (lastInventorySignature === undefined) {
+    console.log('[bank-agent] initial inventory snapshot detected; syncing prices');
+    return;
+  }
+
+  if (inventoryChanged) {
+    console.log('[bank-agent] bank inventory changed; syncing prices');
+    return;
+  }
+
+  const examples = pricingStatus.staleItemIds.slice(0, 5).join(', ');
+  const suffix =
+    pricingStatus.staleItemIds.length > 5
+      ? `, ...and ${pricingStatus.staleItemIds.length - 5} more`
+      : '';
+
+  console.log(
+    `[bank-agent] ${pricingStatus.stalePriceCount} price(s) missing, expired, or near expiry by ${pricingStatus.refreshBy}; syncing prices${examples ? ` (${examples}${suffix})` : ''}`,
+  );
+}
+
 async function runDirectTurn(turn: number): Promise<void> {
   const ensureAgent = turn === 1 && ensureAgentOnFirstTurn;
 
   console.log(
-    `[bank-agent] syncing prices directly ensureAgent=${ensureAgent} validForSeconds=1800 maxUpdates=64`,
+    `[bank-agent] syncing prices directly ensureAgent=${ensureAgent} validForSeconds=1800 maxUpdates=256`,
   );
   const result = await executeBankPriceSync({
     postPrices: true,
     ensureAgent,
     validForSeconds: 1800,
-    maxUpdates: 64,
+    maxUpdates: 256,
   });
 
   logBankSync(result);
@@ -123,7 +167,7 @@ function nextTurnPrompt(turn: number): string {
 
   return `Central Uni Bank pricing cycle ${turn}.
 
-Run sync-bank-prices with postPrices=true, ensureAgent=${ensureAgent}, validForSeconds=1800, maxUpdates=64.
+Run sync-bank-prices with postPrices=true, ensureAgent=${ensureAgent}, validForSeconds=1800, maxUpdates=256.
 Summarize posted price updates and current inventory pressure briefly.
 Do not ask me for input. Use tools to act.`;
 }

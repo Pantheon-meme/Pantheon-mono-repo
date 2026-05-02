@@ -16,6 +16,16 @@ export type BankPriceSyncOptions = {
   maxUpdates?: number;
 };
 
+export type BankPricingStatus = {
+  inventorySignature: string;
+  itemCount: number;
+  stalePriceCount: number;
+  staleItemIds: string[];
+  nextExpiringItemId?: string;
+  nextExpiresAt?: number;
+  refreshBy: number;
+};
+
 export const getBankStateTool = createTool({
   id: 'get-bank-state',
   description: 'Read Central Uni Bank item inventory and current onchain buy/sell prices.',
@@ -45,12 +55,39 @@ export const ensureBankAgentTool = createTool({
 });
 
 export async function readBankInventorySignature(): Promise<string> {
-  const quotes = await client.getBankItemQuotes(bankPricedItems.map((item) => item.itemId));
+  return (await readBankPricingStatus()).inventorySignature;
+}
 
-  return quotes
-    .map((quote) => `${quote.itemId}:${quote.inventoryQuantity}`)
-    .sort()
-    .join('|');
+export async function readBankPricingStatus(
+  refreshBufferSeconds = 0,
+): Promise<BankPricingStatus> {
+  const quotes = await client.getBankItemQuotes(bankPricedItems.map((item) => item.itemId));
+  const now = Math.floor(Date.now() / 1000);
+  const refreshBy = now + Math.max(0, refreshBufferSeconds);
+  const expiringQuotes = quotes
+    .filter((quote) => quote.priceExists && quote.validUntil > 0)
+    .sort((a, b) => a.validUntil - b.validUntil);
+  const staleItemIds = quotes
+    .filter(
+      (quote) =>
+        !quote.priceExists ||
+        (quote.validUntil > 0 && quote.validUntil <= refreshBy),
+    )
+    .map((quote) => quote.itemId)
+    .sort();
+
+  return {
+    inventorySignature: quotes
+      .map((quote) => `${quote.itemId}:${quote.inventoryQuantity}`)
+      .sort()
+      .join('|'),
+    itemCount: quotes.length,
+    stalePriceCount: staleItemIds.length,
+    staleItemIds,
+    nextExpiringItemId: expiringQuotes[0]?.itemId,
+    nextExpiresAt: expiringQuotes[0]?.validUntil,
+    refreshBy,
+  };
 }
 
 export const syncBankPricesTool = createTool({
@@ -61,7 +98,7 @@ export const syncBankPricesTool = createTool({
     postPrices: z.boolean().default(true),
     ensureAgent: z.boolean().default(false),
     validForSeconds: z.number().int().min(60).max(86_400).default(1800),
-    maxUpdates: z.number().int().min(1).max(64).default(64),
+    maxUpdates: z.number().int().min(1).max(256).default(256),
   }),
   outputSchema: z.unknown(),
   execute: async ({ postPrices, ensureAgent, validForSeconds, maxUpdates }) =>
@@ -93,7 +130,7 @@ export async function executeBankPriceSync({
   const shouldPostPrices = postPrices ?? true;
   const shouldEnsureAgent = ensureAgent ?? false;
   const priceValiditySeconds = validForSeconds ?? 1800;
-  const updateLimit = maxUpdates ?? 64;
+  const updateLimit = maxUpdates ?? 256;
 
   if (shouldEnsureAgent) {
     await client.setBankAgent();

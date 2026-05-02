@@ -472,6 +472,7 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
+      const worldObjects = await this.readWorldObjectsForConfirmation();
       callbacks.onConfirmed({
         ...(await this.snapshotReader.readLastForageResultAfterConfirmation(
           x,
@@ -479,11 +480,22 @@ export class MudWorldBridge {
         )),
         playerEnergy:
           await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        worldObjects,
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingForages.delete(key);
+    }
+  }
+
+  private async readWorldObjectsForConfirmation(): Promise<
+    WorldObjectSnapshot[] | undefined
+  > {
+    try {
+      return await this.snapshotReader.readWorldObjects();
+    } catch {
+      return undefined;
     }
   }
 

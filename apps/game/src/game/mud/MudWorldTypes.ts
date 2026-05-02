@@ -12,6 +12,7 @@ export type ConfirmedForage = {
   itemId: string;
   amount: number;
   playerEnergy?: PlayerEnergy;
+  worldObjects?: WorldObjectSnapshot[];
 };
 
 export type ConfirmedPickupObject = {
