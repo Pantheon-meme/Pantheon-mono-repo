@@ -135,6 +135,10 @@ const inventoryHudDisplayScale = 0.72;
 const inventoryHudPanelPadding = 16;
 const inventoryHudSlotGap = 16;
 const inventoryHudScreenYFromBottom = 126;
+const energyBarScreenX = 14;
+const energyBarScreenY = 12;
+const actionToastScreenX = 18;
+const actionToastScreenY = energyBarScreenY + energyBarIconAsset.height + 18;
 const dateTimeHudDisplayScale = 0.44;
 const dateTimeHudWidth = 560;
 const dateTimeHudPanelY = 258;
@@ -503,8 +507,8 @@ export class MainGameScene extends Phaser.Scene {
     const barY = Math.round((iconHeight - height) * 0.5);
     const visualWidth = barX + width;
     const visualHeight = iconHeight;
-    const x = 14;
-    const y = 12;
+    const x = energyBarScreenX;
+    const y = energyBarScreenY;
     const container = this.add.container(0, 0).setDepth(101);
     const background = this.add
       .image(barX, barY, energyBarBarTextureKey)
@@ -924,8 +928,8 @@ export class MainGameScene extends Phaser.Scene {
   private createActionToastStack(): ActionToastStack {
     return new ActionToastStack(
       this.add.container(0, 0).setDepth(104),
-      18,
-      94,
+      actionToastScreenX,
+      actionToastScreenY,
       360,
     );
   }
