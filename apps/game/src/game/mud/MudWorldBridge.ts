@@ -555,6 +555,7 @@ export class MudWorldBridge {
         )),
         playerEnergy:
           await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        worldObjects: await this.readWorldObjectsForConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));

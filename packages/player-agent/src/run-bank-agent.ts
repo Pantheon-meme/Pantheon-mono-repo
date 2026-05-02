@@ -114,7 +114,7 @@ function logDirectSyncReason({
       : '';
 
   console.log(
-    `[bank-agent] ${pricingStatus.stalePriceCount} price(s) missing, expired, or near expiry by ${pricingStatus.refreshBy}; syncing prices${examples ? ` (${examples}${suffix})` : ''}`,
+    `[bank-agent] ${pricingStatus.stalePriceCount} price(s) missing, expired, or near expiry by chain time ${pricingStatus.refreshBy}; syncing prices${examples ? ` (${examples}${suffix})` : ''}`,
   );
 }
 

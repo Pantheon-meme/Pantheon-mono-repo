@@ -86,6 +86,69 @@ export const runForageExpeditionTool = createTool({
   },
 });
 
+export const runEconomicCycleTool = createTool({
+  id: 'run-economic-cycle',
+  description:
+    'Run one deterministic money-making cycle with minimal LLM use: resolve/spawn, harvest or plant when obvious, pick up valuable owned drops, sell profitable inventory at the bank, otherwise forage.',
+  inputSchema: z.object({
+    radius: z.number().int().min(1).max(8).default(5),
+    maxForages: z.number().int().min(1).max(10).default(4),
+    maxPickups: z.number().int().min(0).max(12).default(4),
+    maxMoveStepsPerTarget: z.number().int().min(1).max(24).default(10),
+    minEnergy: z.number().int().min(0).default(20),
+    sleepWhenLowEnergy: z.boolean().default(true),
+    spawnIfMissing: z.boolean().default(true),
+    worldObjectLookback: z.number().int().min(1).max(400).default(80),
+    sellWhenValueAtLeast: z.number().int().min(0).default(48),
+    sellWhenWeightRatioAtLeast: z.number().min(0).max(1).default(0.75),
+    plantWhenSeedsAvailable: z.boolean().default(true),
+    harvestRadius: z.number().int().min(1).max(8).default(5),
+    useLlmStrategyHint: z.string().max(500).optional(),
+  }),
+  outputSchema: z.unknown(),
+  execute: async (
+    {
+      radius,
+      maxForages,
+      maxPickups,
+      maxMoveStepsPerTarget,
+      minEnergy,
+      sleepWhenLowEnergy,
+      spawnIfMissing,
+      worldObjectLookback,
+      sellWhenValueAtLeast,
+      sellWhenWeightRatioAtLeast,
+      plantWhenSeedsAvailable,
+      harvestRadius,
+      useLlmStrategyHint,
+    },
+    context,
+  ) => {
+    const result = await client.runEconomicCycle({
+      radius,
+      maxForages,
+      maxPickups,
+      maxMoveStepsPerTarget,
+      minEnergy,
+      sleepWhenLowEnergy,
+      spawnIfMissing,
+      worldObjectLookback,
+      sellWhenValueAtLeast,
+      sellWhenWeightRatioAtLeast,
+      plantWhenSeedsAvailable,
+      harvestRadius,
+      useLlmStrategyHint,
+    });
+
+    result.memory = await rememberForageExpedition(result, {
+      threadId: context.agent?.threadId,
+      resourceId: context.agent?.resourceId,
+    });
+
+    return result;
+  },
+});
+
 export const movePlayerTool = createTool({
   id: 'move-player',
   description: 'Move the player one orthogonal tile to an exact adjacent x/y tile.',
@@ -142,6 +205,7 @@ export const pantheonTools = {
   spawnPlayerTool,
   scanNearbyLandsTool,
   runForageExpeditionTool,
+  runEconomicCycleTool,
   movePlayerTool,
   moveTowardTool,
   forageTileTool,

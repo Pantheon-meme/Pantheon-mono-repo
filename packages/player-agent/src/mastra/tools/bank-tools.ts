@@ -7,7 +7,9 @@ import {
 } from '../pantheon/bank-pricing';
 import { makePantheonMudClient } from '../pantheon/mud-client';
 
-const client = makePantheonMudClient();
+const client = makePantheonMudClient({
+  privateKeyEnv: 'BANK_AGENT_MUD_PRIVATE_KEY',
+});
 
 export type BankPriceSyncOptions = {
   postPrices?: boolean;
@@ -24,6 +26,7 @@ export type BankPricingStatus = {
   nextExpiringItemId?: string;
   nextExpiresAt?: number;
   refreshBy: number;
+  chainTimestamp: number;
 };
 
 export const getBankStateTool = createTool({
@@ -62,8 +65,8 @@ export async function readBankPricingStatus(
   refreshBufferSeconds = 0,
 ): Promise<BankPricingStatus> {
   const quotes = await client.getBankItemQuotes(bankPricedItems.map((item) => item.itemId));
-  const now = Math.floor(Date.now() / 1000);
-  const refreshBy = now + Math.max(0, refreshBufferSeconds);
+  const chainTimestamp = await client.getChainTimestamp();
+  const refreshBy = chainTimestamp + Math.max(0, refreshBufferSeconds);
   const expiringQuotes = quotes
     .filter((quote) => quote.priceExists && quote.validUntil > 0)
     .sort((a, b) => a.validUntil - b.validUntil);
@@ -87,6 +90,7 @@ export async function readBankPricingStatus(
     nextExpiringItemId: expiringQuotes[0]?.itemId,
     nextExpiresAt: expiringQuotes[0]?.validUntil,
     refreshBy,
+    chainTimestamp,
   };
 }
 
@@ -136,7 +140,7 @@ export async function executeBankPriceSync({
     await client.setBankAgent();
   }
 
-  const epoch = Math.floor(Date.now() / 1000);
+  const epoch = await client.getChainTimestamp();
   const validUntil = epoch + priceValiditySeconds;
   const quotes = await client.getBankItemQuotes(bankPricedItems.map((item) => item.itemId));
   const quoteByItemId = new Map(quotes.map((quote) => [quote.itemId, quote]));

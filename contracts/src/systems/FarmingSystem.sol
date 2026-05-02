@@ -1,21 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { System } from "@latticexyz/world/src/System.sol";
-import {
-  FarmTileState,
-  LastHarvestResult,
-  PlantState,
-  PlantTerrainRule,
-  PlantType,
-  TerrainTile,
-  TerrainType
-} from "../codegen/index.sol";
-import { ActionLogLib } from "../libraries/ActionLogLib.sol";
-import { InventoryLib } from "../libraries/InventoryLib.sol";
-import { PantheonConstants } from "../libraries/PantheonConstants.sol";
-import { PendingActionLib } from "../libraries/PendingActionLib.sol";
-import { PlayerLib } from "../libraries/PlayerLib.sol";
+import {System} from "@latticexyz/world/src/System.sol";
+import {FarmTileState, LastHarvestResult, ObjectState, PlantState, PlantTerrainRule, PlantType, TerrainTile, TerrainType, WorldObject, WorldObjectCount} from "../codegen/index.sol";
+import {ActionLogLib} from "../libraries/ActionLogLib.sol";
+import {InventoryLib} from "../libraries/InventoryLib.sol";
+import {PantheonConstants} from "../libraries/PantheonConstants.sol";
+import {PendingActionLib} from "../libraries/PendingActionLib.sol";
+import {PlayerLib} from "../libraries/PlayerLib.sol";
 
 contract FarmingSystem is System {
   struct HarvestResult {
@@ -37,7 +29,10 @@ contract FarmingSystem is System {
 
     bytes32 terrainId = TerrainTile.getTerrainId(x, y);
     require(TerrainType.getPlantable(terrainId), "terrain not plantable");
-    require(_plantAllowedOnTerrain(plantId, terrainId), "plant dislikes terrain");
+    require(
+      _plantAllowedOnTerrain(plantId, terrainId),
+      "plant dislikes terrain"
+    );
 
     InventoryLib.spend(player, PlantType.getSeedItemId(plantId), 1);
     PlayerLib.spendEnergy(player, PantheonConstants.PLANT_ENERGY_COST);
@@ -82,7 +77,10 @@ contract FarmingSystem is System {
     FarmTileState.setExhaustion(
       x,
       y,
-      _clamp100(FarmTileState.getExhaustion(x, y) + PantheonConstants.FARM_HARVEST_EXHAUSTION)
+      _clamp100(
+        FarmTileState.getExhaustion(x, y) +
+          PantheonConstants.FARM_HARVEST_EXHAUSTION
+      )
     );
     PendingActionLib.startBusy(
       player,
@@ -99,7 +97,11 @@ contract FarmingSystem is System {
       result.rareAmount,
       true
     );
-    ActionLogLib.write(player, PantheonConstants.ACTION_HARVEST, "Harvested plant");
+    ActionLogLib.write(
+      player,
+      PantheonConstants.ACTION_HARVEST,
+      "Harvested plant"
+    );
   }
 
   function water(int32 x, int32 y) public {
@@ -144,7 +146,10 @@ contract FarmingSystem is System {
     FarmTileState.setFertility(
       x,
       y,
-      _clamp100(FarmTileState.getFertility(x, y) + PantheonConstants.FARM_TEND_FERTILITY_GAIN)
+      _clamp100(
+        FarmTileState.getFertility(x, y) +
+          PantheonConstants.FARM_TEND_FERTILITY_GAIN
+      )
     );
     FarmTileState.setLastMaintainedAt(x, y, uint64(block.timestamp));
     PlantState.setLastMaintainedAt(x, y, uint64(block.timestamp));
@@ -196,9 +201,10 @@ contract FarmingSystem is System {
     bytes32 plantId,
     bytes32 terrainId
   ) private view returns (bool) {
-    return PlantTerrainRule.getExists(plantId, terrainId)
-      ? PlantTerrainRule.getAllowed(plantId, terrainId)
-      : true;
+    return
+      PlantTerrainRule.getExists(plantId, terrainId)
+        ? PlantTerrainRule.getAllowed(plantId, terrainId)
+        : true;
   }
 
   function _ensureFarmTile(int32 x, int32 y, bytes32 terrainId) private {
@@ -242,12 +248,13 @@ contract FarmingSystem is System {
     int32 x,
     int32 y
   ) private view returns (uint32) {
-    return _careStress(
-      plantId,
-      FarmTileState.getMoisture(x, y),
-      FarmTileState.getFertility(x, y),
-      FarmTileState.getExhaustion(x, y)
-    );
+    return
+      _careStress(
+        plantId,
+        FarmTileState.getMoisture(x, y),
+        FarmTileState.getFertility(x, y),
+        FarmTileState.getExhaustion(x, y)
+      );
   }
 
   function _recalculatePlantCare(int32 x, int32 y) private {
@@ -294,14 +301,16 @@ contract FarmingSystem is System {
       ? PlantTerrainRule.getGrowthModifier(plantId, terrainId)
       : PantheonConstants.FARM_RULE_SCALE;
     uint64 adjustedGrowthSeconds = uint64(
-      (uint256(growthSeconds) * PantheonConstants.FARM_RULE_SCALE) / growthModifier
+      (uint256(growthSeconds) * PantheonConstants.FARM_RULE_SCALE) /
+        growthModifier
     );
 
     if (adjustedGrowthSeconds == 0) {
       adjustedGrowthSeconds = 1;
     }
 
-    return block.timestamp >= PlantState.getPlantedAt(x, y) + adjustedGrowthSeconds;
+    return
+      block.timestamp >= PlantState.getPlantedAt(x, y) + adjustedGrowthSeconds;
   }
 
   function _resolveHarvest(
@@ -332,7 +341,7 @@ contract FarmingSystem is System {
 
     result.itemId = PlantType.getHarvestItemId(plantId);
     result.amount = amount;
-    InventoryLib.add(player, result.itemId, result.amount);
+    _spawnHarvestObjects(player, x, y, result.itemId, result.amount, entropy);
 
     if (
       PlantTerrainRule.getExists(plantId, terrainId) &&
@@ -346,15 +355,101 @@ contract FarmingSystem is System {
       if (rareRoll < rareChance) {
         result.rareItemId = PlantTerrainRule.getRareItemId(plantId, terrainId);
         result.rareAmount = 1;
-        InventoryLib.add(player, result.rareItemId, result.rareAmount);
+        _spawnHarvestObjects(
+          player,
+          x,
+          y,
+          result.rareItemId,
+          result.rareAmount,
+          keccak256(abi.encodePacked(entropy, "rareDrop"))
+        );
       }
     }
   }
 
-  function _clamp100(uint32 value) private pure returns (uint32) {
-    return value > PantheonConstants.FARM_MAX_CARE
-      ? PantheonConstants.FARM_MAX_CARE
-      : value;
+  function _spawnHarvestObjects(
+    address player,
+    int32 x,
+    int32 y,
+    bytes32 itemId,
+    uint32 amount,
+    bytes32 entropy
+  ) private {
+    if (amount == 0 || itemId == bytes32(0)) {
+      return;
+    }
+
+    bytes32 counterId = PantheonConstants.WORLD_OBJECT_COUNTER_ID;
+    uint32 count = WorldObjectCount.getCount(counterId);
+
+    for (uint32 index = 0; index < amount; index++) {
+      count += 1;
+      (int32 dropX, int32 dropY) = _harvestDropTile(x, y, entropy, index);
+      _spawnWorldObject(bytes32(uint256(count)), player, dropX, dropY, itemId);
+    }
+
+    WorldObjectCount.set(counterId, count, true);
   }
 
+  function _spawnWorldObject(
+    bytes32 objectId,
+    address player,
+    int32 x,
+    int32 y,
+    bytes32 itemId
+  ) private {
+    ObjectState.set(objectId, itemId, itemId, 1, true);
+    WorldObject.setX(objectId, x);
+    WorldObject.setY(objectId, y);
+    WorldObject.setSpawnedBy(objectId, player);
+    WorldObject.setCreatedAt(objectId, uint64(block.timestamp));
+    WorldObject.setExists(objectId, true);
+  }
+
+  function _harvestDropTile(
+    int32 x,
+    int32 y,
+    bytes32 entropy,
+    uint32 index
+  ) private view returns (int32 dropX, int32 dropY) {
+    int32[9] memory offsetsX = [
+      int32(0),
+      int32(1),
+      int32(-1),
+      int32(0),
+      int32(0),
+      int32(1),
+      int32(-1),
+      int32(1),
+      int32(-1)
+    ];
+    int32[9] memory offsetsY = [
+      int32(0),
+      int32(0),
+      int32(0),
+      int32(1),
+      int32(-1),
+      int32(1),
+      int32(1),
+      int32(-1),
+      int32(-1)
+    ];
+    uint256 offsetIndex = uint256(keccak256(abi.encodePacked(entropy, index))) %
+      offsetsX.length;
+
+    dropX = x + offsetsX[offsetIndex];
+    dropY = y + offsetsY[offsetIndex];
+
+    if (!TerrainTile.getExists(dropX, dropY)) {
+      dropX = x;
+      dropY = y;
+    }
+  }
+
+  function _clamp100(uint32 value) private pure returns (uint32) {
+    return
+      value > PantheonConstants.FARM_MAX_CARE
+        ? PantheonConstants.FARM_MAX_CARE
+        : value;
+  }
 }

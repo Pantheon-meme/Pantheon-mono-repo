@@ -101,6 +101,7 @@ export type ConfirmedHarvest = {
   rareItemId: string;
   rareAmount: number;
   playerEnergy?: PlayerEnergy;
+  worldObjects?: WorldObjectSnapshot[];
 };
 
 export type ConfirmedPlantCare = {
