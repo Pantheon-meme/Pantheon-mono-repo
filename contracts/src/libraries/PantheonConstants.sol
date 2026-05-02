@@ -34,6 +34,10 @@ library PantheonConstants {
   uint8 internal constant FORAGE_MAX_LOOT_SLOTS = 32;
   uint8 internal constant PLANT_STAGE_GROWING = 0;
   uint8 internal constant PLANT_STAGE_HARVESTED = 2;
+  int32 internal constant CENTRAL_BANK_X = 100;
+  int32 internal constant CENTRAL_BANK_Y = 100;
+  int32 internal constant CENTRAL_BANK_WIDTH = 5;
+  int32 internal constant CENTRAL_BANK_HEIGHT = 5;
 
   bytes32 internal constant ACTION_DIG = bytes32("dig");
   bytes32 internal constant ACTION_FORAGE = bytes32("forage");

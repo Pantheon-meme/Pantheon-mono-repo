@@ -73,6 +73,7 @@ contract BankSystem is System {
     PlayerLib.requireExists(player);
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
+    _requireNearCentralBank(player);
     require(objectIds.length > 0, "missing objects");
 
     uint256 totalCuc = 0;
@@ -112,6 +113,7 @@ contract BankSystem is System {
     PlayerLib.requireExists(player);
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
+    _requireNearCentralBank(player);
     require(quantity > 0, "missing quantity");
 
     uint256 unitPrice = _validSellPrice(itemId, quantity);
@@ -199,6 +201,17 @@ contract BankSystem is System {
   function _requirePriceFresh(bytes32 itemId) private view {
     uint64 validUntil = BankItemPrice.getValidUntil(itemId);
     require(validUntil == 0 || block.timestamp <= validUntil, "price expired");
+  }
+
+  function _requireNearCentralBank(address player) private view {
+    PlayerLib.requireNearArea(
+      player,
+      PantheonConstants.CENTRAL_BANK_X,
+      PantheonConstants.CENTRAL_BANK_Y,
+      PantheonConstants.CENTRAL_BANK_WIDTH,
+      PantheonConstants.CENTRAL_BANK_HEIGHT,
+      "bank too far"
+    );
   }
 
   function _addObjectToBank(
