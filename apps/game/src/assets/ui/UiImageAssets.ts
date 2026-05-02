@@ -1,5 +1,9 @@
 import actionButtonBgUrl from "./actionButton_bg.png?url";
 import actionButtonKeyboardShortcutKeyUrl from "./actionButton_keyboardShortcutKey.png?url";
+import actionProgressBarFillerUrl from "./actionprogress_barfiller.png?url";
+import actionProgressBarTrackUrl from "./actionprogress_bartrack.png?url";
+import actionProgressFinalStatusIconUrl from "./actionprogress_finalstatusicon.png?url";
+import actionProgressIconContainerUrl from "./actionprogress_iconcontainer.png?url";
 import datetimeArtworkUrl from "./datetime_artwork.png?url";
 import datetimeHalfcircleFrameUrl from "./datetime_halfcircleframe.png?url";
 import datetimePanelUrl from "./datetime_panel.png?url";
@@ -51,6 +55,13 @@ import iconWateringCanUrl from "./Icons/watering_can.png?url";
 export const actionButtonBgTextureKey = "ui:action-button-bg";
 export const actionButtonKeyboardShortcutKeyTextureKey =
   "ui:action-button-keyboard-shortcut-key";
+export const actionProgressBarFillerTextureKey =
+  "ui:action-progress-bar-filler";
+export const actionProgressBarTrackTextureKey = "ui:action-progress-bar-track";
+export const actionProgressFinalStatusIconTextureKey =
+  "ui:action-progress-final-status-icon";
+export const actionProgressIconContainerTextureKey =
+  "ui:action-progress-icon-container";
 export const dateTimeArtworkTextureKey = "ui:datetime-artwork";
 export const dateTimeHalfcircleFrameTextureKey = "ui:datetime-halfcircle-frame";
 export const dateTimePanelTextureKey = "ui:datetime-panel";
@@ -210,6 +221,11 @@ export const actionButtonBgSlices = {
   left: 36,
 } as const;
 
+export const actionProgressBarFillerSlices = {
+  left: 19,
+  right: 19,
+} as const;
+
 export const dateTimePanelSlices = {
   top: 64,
   right: 52,
@@ -248,6 +264,34 @@ export const actionButtonKeyboardShortcutKeyAsset = {
   imageUrl: actionButtonKeyboardShortcutKeyUrl,
   width: 48,
   height: 50,
+} as const;
+
+export const actionProgressBarFillerAsset = {
+  textureKey: actionProgressBarFillerTextureKey,
+  imageUrl: actionProgressBarFillerUrl,
+  width: 322,
+  height: 42,
+} as const;
+
+export const actionProgressBarTrackAsset = {
+  textureKey: actionProgressBarTrackTextureKey,
+  imageUrl: actionProgressBarTrackUrl,
+  width: 341,
+  height: 63,
+} as const;
+
+export const actionProgressFinalStatusIconAsset = {
+  textureKey: actionProgressFinalStatusIconTextureKey,
+  imageUrl: actionProgressFinalStatusIconUrl,
+  width: 69,
+  height: 72,
+} as const;
+
+export const actionProgressIconContainerAsset = {
+  textureKey: actionProgressIconContainerTextureKey,
+  imageUrl: actionProgressIconContainerUrl,
+  width: 136,
+  height: 112,
 } as const;
 
 export const dateTimeArtworkAsset = {
@@ -358,6 +402,10 @@ export const toastCardPanelAsset = {
 export const uiImageAssets = [
   actionButtonBgAsset,
   actionButtonKeyboardShortcutKeyAsset,
+  actionProgressBarFillerAsset,
+  actionProgressBarTrackAsset,
+  actionProgressFinalStatusIconAsset,
+  actionProgressIconContainerAsset,
   dateTimeArtworkAsset,
   dateTimeHalfcircleFrameAsset,
   dateTimePanelAsset,

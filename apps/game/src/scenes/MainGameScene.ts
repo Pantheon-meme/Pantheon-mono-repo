@@ -12,6 +12,15 @@ import {
   minimapFrameTextureKey,
 } from "../assets/ui/UiFrameAssets";
 import {
+  actionProgressBarFillerAsset,
+  actionProgressBarFillerSlices,
+  actionProgressBarFillerTextureKey,
+  actionProgressBarTrackAsset,
+  actionProgressBarTrackTextureKey,
+  actionProgressFinalStatusIconAsset,
+  actionProgressFinalStatusIconTextureKey,
+  actionProgressIconContainerAsset,
+  actionProgressIconContainerTextureKey,
   dateTimeArtworkTextureKey,
   dateTimeHalfcircleFrameAsset,
   dateTimeHalfcircleFrameTextureKey,
@@ -652,62 +661,65 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   private createActionProgressBar(): ActionProgressBar {
-    const width = 168;
-    const height = 10;
+    const width = actionProgressBarTrackAsset.width;
+    const height = actionProgressBarTrackAsset.height;
+    const fillWidth = actionProgressBarFillerAsset.width;
+    const fillHeight = actionProgressBarFillerAsset.height;
+    const iconContainerWidth = actionProgressIconContainerAsset.width;
+    const iconCenterX = -184;
+    const iconCenterY = 0;
+    const trackLeftX = iconCenterX + iconContainerWidth * 0.5 - 6;
+    const trackCenterX = trackLeftX + width * 0.5;
+    const fillX = trackLeftX + (width - fillWidth) * 0.5;
+    const fillY = -fillHeight * 0.5;
+    const finalStatusCenterX = trackLeftX + width - 2;
     const container = this.add.container(0, 0).setDepth(106).setVisible(false);
-    const panel = this.add
-      .rectangle(0, 0, width + 42, 52, hudColors.panelDark, 0.88)
-      .setOrigin(0.5)
-      .setStrokeStyle(1, hudColors.borderWarm, 0.72);
     const track = this.add
-      .rectangle(-width / 2, 10, width, height, hudColors.trackDark, 0.96)
-      .setOrigin(0)
-      .setStrokeStyle(1, 0x6f8f88, 0.5);
+      .image(trackCenterX, 0, actionProgressBarTrackTextureKey)
+      .setOrigin(0.5);
     const fill = this.add
-      .rectangle(-width / 2, 10, 0, height, hudColors.progress, 1)
+      .nineslice(
+        fillX,
+        fillY,
+        actionProgressBarFillerTextureKey,
+        undefined,
+        fillWidth,
+        fillHeight,
+        actionProgressBarFillerSlices.left,
+        actionProgressBarFillerSlices.right,
+      )
       .setOrigin(0);
     const iconFrame = this.add
-      .circle(-width / 2 - 14, 0, 15, hudColors.panelWarm, 0.96)
-      .setStrokeStyle(1, hudColors.borderWarm, 0.62);
-    const icon = this.add
-      .image(-width / 2 - 14, 0, uiIconAssets.gather.textureKey)
-      .setDisplaySize(24, 24)
+      .image(iconCenterX, iconCenterY, actionProgressIconContainerTextureKey)
       .setOrigin(0.5);
-    const label = this.add
-      .text(-width / 2 + 2, -8, "", {
-        color: hudColors.textWarm,
-        fixedWidth: width - 48,
-        fontFamily: hudFontFamily,
-        fontSize: "14px",
-        fontStyle: "700",
-        shadow: hudShadow(),
-      })
-      .setOrigin(0, 0.5);
-    const detail = this.add
-      .text(width / 2, -8, "", {
-        align: "right",
-        color: hudColors.textSoft,
-        fixedWidth: 44,
-        fontFamily: hudFontFamily,
-        fontSize: "12px",
-        fontStyle: "700",
-        shadow: hudShadow(),
-      })
-      .setOrigin(1, 0.5);
+    const icon = this.add
+      .image(iconCenterX, iconCenterY + 1, uiIconAssets.gather.textureKey)
+      .setDisplaySize(62, 62)
+      .setOrigin(0.5);
+    const finalStatusIcon = this.add
+      .image(finalStatusCenterX, 0, actionProgressFinalStatusIconTextureKey)
+      .setDisplaySize(
+        actionProgressFinalStatusIconAsset.width,
+        actionProgressFinalStatusIconAsset.height,
+      )
+      .setOrigin(0.5)
+      .setVisible(false);
 
-    container.add([panel, track, fill, iconFrame, icon, label, detail]);
+    container.add([track, fill, iconFrame, icon, finalStatusIcon]);
 
     return new ActionProgressBar(
       container,
-      panel,
       track,
       fill,
       iconFrame,
       icon,
-      label,
-      detail,
+      finalStatusIcon,
       width,
       height,
+      fillWidth,
+      fillHeight,
+      fillX,
+      fillY,
       -78,
     );
   }

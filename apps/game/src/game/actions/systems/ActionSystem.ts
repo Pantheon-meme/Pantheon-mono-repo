@@ -4,7 +4,10 @@ import type { Entity } from "../../../ecs/World";
 import type { World } from "../../../ecs/World";
 import { actionDefinitions } from "../ActionDefinition";
 import { ActionLog } from "../components/ActionLog";
-import { ActionProgress } from "../components/ActionProgress";
+import {
+  ActionProgress,
+  type ActionProgressFinalStatus,
+} from "../components/ActionProgress";
 import { ActionQueue } from "../components/ActionQueue";
 import { Energy } from "../../energy/components/Energy";
 import { MovementState } from "../../player/components/MovementState";
@@ -58,14 +61,15 @@ export class ActionSystem implements System {
       ? actionDefinitions[progress.actionId]
       : undefined;
 
-    progress.clear();
-
     if (!action) {
+      progress.finish("failure");
       log.lastMessage = "Action fizzled";
       return;
     }
 
-    this.completeAction(world, entity, queue, energy, log, action);
+    progress.finish(
+      this.completeAction(world, entity, queue, energy, log, action),
+    );
   }
 
   private startNextAction(
@@ -139,10 +143,10 @@ export class ActionSystem implements System {
     energy: Energy,
     log: ActionLog,
     action: ActionDefinition,
-  ): void {
+  ): ActionProgressFinalStatus {
     if (!hasEnoughEnergy(energy, action)) {
       log.lastMessage = `${action.label} needs ${Math.abs(action.energyDelta)} energy`;
-      return;
+      return "failure";
     }
 
     const result = action.apply?.(world, entity);
@@ -153,7 +157,7 @@ export class ActionSystem implements System {
         queue.unshift(action.id);
       }
 
-      return;
+      return "failure";
     }
 
     energy.current = Phaser.Math.Clamp(
@@ -166,6 +170,7 @@ export class ActionSystem implements System {
       (action.energyDelta === 0
         ? `${action.label}: no energy change`
         : `${action.label}: ${action.energyDelta > 0 ? "+" : ""}${action.energyDelta} energy`);
+    return "success";
   }
 }
 
