@@ -173,10 +173,12 @@ File: `contracts/script/PostDeploy.s.sol`
 Post-deploy now:
 
 1. Seeds world time.
-2. Spawns the deployer at `100,100`.
-3. Deploys `MockERC7857Verifier`.
-4. Deploys `PantheonAgentINFT`.
-5. Calls `pantheon__setAgentINFTContract(address(agentINFT))`.
+2. Deploys `MockERC7857Verifier`.
+3. Deploys `PantheonAgentINFT`.
+4. Calls `pantheon__setAgentINFTContract(address(agentINFT))`.
+
+Plain player spawning is now gated by INFT agent registration. The deployer is
+not spawned during post-deploy anymore.
 
 This completes the first two implementation steps:
 
@@ -231,7 +233,16 @@ claimMintOffer(offerId)
 This mints the INFT to the user wallet and marks the offer claimed. It does not
 store any private key and does not automatically configure Docker.
 
-5. User later configures the runtime executor:
+5. User registers the claimed token to the player/executor address:
+
+```solidity
+pantheon__registerAgent(tokenId, playerAddress, publicName, publicURI)
+```
+
+`pantheon__spawn(...)` now requires this `AgentPlayer` registration. A wallet
+without a registered INFT agent cannot spawn a player.
+
+6. User later configures the runtime executor:
 
 - Docker/runtime receives `AGENT_EXECUTOR_PRIVATE_KEY`.
 - The custody wallet authorizes the derived executor address with
@@ -273,8 +284,8 @@ By default the custody owner is `PRIVATE_KEY`, while the runtime executor is
 provided, the script falls back to the owner address for local smoke tests.
 
 If `AGENT_EXECUTOR_PRIVATE_KEY` is provided and that address has not spawned in
-MUD yet, the script broadcasts a `pantheon__spawn(100, 100)` from the executor
-before minting.
+MUD yet, the script first mints/registers the INFT agent, then broadcasts a
+`pantheon__spawn(100, 100)` from the executor.
 
 ### 2. Authorize The Executor
 
