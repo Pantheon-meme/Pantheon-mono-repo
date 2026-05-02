@@ -12,6 +12,11 @@ import {
   minimapFrameTextureKey,
 } from "../assets/ui/UiFrameAssets";
 import {
+  dateTimeArtworkTextureKey,
+  dateTimeHalfcircleFrameAsset,
+  dateTimeHalfcircleFrameTextureKey,
+  dateTimePanelSlices,
+  dateTimePanelTextureKey,
   energyBarBarAsset,
   energyBarBarTextureKey,
   energyBarFillerSlices,
@@ -36,6 +41,7 @@ import {
   playerMarkerTextureKey,
   uiIconAssets,
   uiImageAssets,
+  uiSystemButtonAssets,
 } from "../assets/ui/UiImageAssets";
 import { World } from "../ecs/World";
 import {
@@ -59,6 +65,7 @@ import { ActionToastStack } from "../game/ui/components/ActionToastStack";
 import { AutotileLayer } from "../game/terrain/components/AutotileLayer";
 import {
   DayNightOverlay,
+  type HudSystemButton,
   type HudSystemButtonId,
 } from "../game/ui/components/DayNightOverlay";
 import { DiggingCapability } from "../game/player/components/DiggingCapability";
@@ -95,12 +102,11 @@ import { SleepProgressBar } from "../game/ui/components/SleepProgressBar";
 import { SleepState } from "../game/sleep/components/SleepState";
 import { SleepVisual } from "../game/ui/components/SleepVisual";
 import { TargetActionMenu } from "../game/ui/components/TargetActionMenu";
+import { hudColors, hudFontFamily, hudShadow } from "../game/ui/HudTheme";
 import {
-  hudColors,
-  hudFontFamily,
-  hudShadow,
-} from "../game/ui/HudTheme";
-import { ToolInventoryHud, type HudSlot } from "../game/ui/components/ToolInventoryHud";
+  ToolInventoryHud,
+  type HudSlot,
+} from "../game/ui/components/ToolInventoryHud";
 import { TerrainBackground } from "../game/terrain/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/terrain/components/TerrainBaseLayer";
 import { TerrainDigDepth } from "../game/terrain/components/TerrainDigDepth";
@@ -129,6 +135,22 @@ const inventoryHudDisplayScale = 0.72;
 const inventoryHudPanelPadding = 16;
 const inventoryHudSlotGap = 16;
 const inventoryHudScreenYFromBottom = 126;
+const dateTimeHudDisplayScale = 0.44;
+const dateTimeHudWidth = 560;
+const dateTimeHudPanelY = 258;
+const dateTimePanelHeight = 150;
+const dateTimeHudHeight = dateTimeHudPanelY + dateTimePanelHeight;
+const dateTimeArtworkDiameter = 394;
+const dateTimePanelTextInset = 68;
+const dateTimeFrameX =
+  (dateTimeHudWidth - dateTimeHalfcircleFrameAsset.width) / 2;
+const dateTimeArtworkCenterX = dateTimeHudWidth / 2;
+const dateTimeArtworkCenterY = dateTimeHudPanelY;
+const systemButtonWidth = 48;
+const systemButtonHeight = 52;
+const systemButtonGap = 8;
+const systemButtonRowWidth = systemButtonWidth * 3 + systemButtonGap * 2;
+const systemButtonGapY = 6;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
@@ -320,7 +342,11 @@ export class MainGameScene extends Phaser.Scene {
     });
     world.addComponent(diggingTerrain, TerrainHardness, new TerrainHardness());
     world.addComponent(diggingTerrain, TerrainDigDepth, new TerrainDigDepth());
-    world.addComponent(mudWorld, MudWorld, new MudWorld(MudWorldBridge.fromEnv()));
+    world.addComponent(
+      mudWorld,
+      MudWorld,
+      new MudWorld(MudWorldBridge.fromEnv()),
+    );
 
     world.addComponent(time, GameClock, new GameClock());
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
@@ -338,7 +364,11 @@ export class MainGameScene extends Phaser.Scene {
       targetActionMenuDisplay,
     );
     world.addComponent(minimap, BiomeMinimap, minimapDisplay);
-    world.addComponent(virtualJoystick, VirtualJoystick, virtualJoystickDisplay);
+    world.addComponent(
+      virtualJoystick,
+      VirtualJoystick,
+      virtualJoystickDisplay,
+    );
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
     world.addComponent(player, InputState, new InputState());
@@ -452,7 +482,10 @@ export class MainGameScene extends Phaser.Scene {
         .sprite(x, y, playerSpriteTextureKey())
         .setOrigin(0.5, 1)
         .setDepth(10)
-        .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
+        .setDisplaySize(
+          spriteAsset.manifest.cellSize,
+          spriteAsset.manifest.cellSize,
+        );
     }
 
     return this.add
@@ -520,13 +553,7 @@ export class MainGameScene extends Phaser.Scene {
       })
       .setOrigin(0);
 
-    container.add([
-      background,
-      fill,
-      value,
-      icon,
-      region,
-    ]);
+    container.add([background, fill, value, icon, region]);
 
     return new EnergyBar(
       container,
@@ -686,67 +713,165 @@ export class MainGameScene extends Phaser.Scene {
       .rectangle(0, 0, this.scale.width, this.scale.height, 0x07142a, 0)
       .setOrigin(0)
       .setDepth(90);
+    const container = this.add.container(0, 0).setDepth(101);
+    const buttonsContainer = this.add.container(0, 0).setDepth(102);
+    const artwork = this.add
+      .image(
+        dateTimeArtworkCenterX,
+        dateTimeArtworkCenterY,
+        dateTimeArtworkTextureKey,
+      )
+      .setDisplaySize(dateTimeArtworkDiameter, dateTimeArtworkDiameter)
+      .setOrigin(0.5);
+    const artworkMask = this.add.graphics().fillStyle(0xffffff, 1).setAlpha(0);
+
+    artwork.setMask(artworkMask.createGeometryMask());
+
+    const frame = this.add
+      .image(dateTimeFrameX, 0, dateTimeHalfcircleFrameTextureKey)
+      .setDisplaySize(
+        dateTimeHalfcircleFrameAsset.width,
+        dateTimeHalfcircleFrameAsset.height,
+      )
+      .setOrigin(0);
     const panel = this.add
-      .rectangle(0, 0, 172, 70, hudColors.panelDark, 0.86)
-      .setOrigin(0)
-      .setDepth(101)
-      .setStrokeStyle(1, hudColors.border, 0.48);
+      .nineslice(
+        0,
+        dateTimeHudPanelY,
+        dateTimePanelTextureKey,
+        undefined,
+        dateTimeHudWidth,
+        dateTimePanelHeight,
+        dateTimePanelSlices.left,
+        dateTimePanelSlices.right,
+        dateTimePanelSlices.top,
+        dateTimePanelSlices.bottom,
+      )
+      .setOrigin(0);
     const label = this.add
-      .text(0, 0, "", {
-        align: "right",
-        color: hudColors.textWarm,
-        fontFamily: hudFontFamily,
-        fontSize: "15px",
-        fontStyle: "700",
-        shadow: hudShadow(),
-      })
-      .setOrigin(0)
-      .setDepth(101);
-    const phase = this.add
-      .text(0, 0, "", {
-        align: "right",
-        color: hudColors.textSoft,
-        fixedWidth: 94,
-        fontFamily: hudFontFamily,
-        fontSize: "12px",
-        fontStyle: "700",
-        shadow: hudShadow(),
-      })
-      .setOrigin(1, 0.5)
-      .setDepth(101);
+      .text(
+        dateTimePanelTextInset,
+        dateTimeHudPanelY + dateTimePanelHeight / 2 + 1,
+        "",
+        {
+          align: "center",
+          color: "#3b2414",
+          fixedWidth: dateTimeHudWidth - dateTimePanelTextInset * 2,
+          fontFamily: "Trebuchet MS, Verdana, system-ui, sans-serif",
+          fontSize: "30px",
+          fontStyle: "700",
+          shadow: {
+            color: "#f7e7c3",
+            fill: true,
+            offsetX: 0,
+            offsetY: 2,
+          },
+          stroke: "#f8e8c2",
+          strokeThickness: 3,
+        },
+      )
+      .setOrigin(0, 0.5);
     const buttons = [
       this.createSystemButton("journal"),
-      this.createSystemButton("map"),
       this.createSystemButton("settings"),
+      this.createSystemButton("map"),
     ];
 
-    return new DayNightOverlay(shade, panel, label, phase, buttons, 18, 18);
+    buttons.forEach((button, index) => {
+      button.container.setPosition(
+        index * (systemButtonWidth + systemButtonGap) + systemButtonWidth / 2,
+        systemButtonHeight / 2,
+      );
+      buttonsContainer.add(button.container);
+    });
+
+    container.add([artwork, frame, panel, label]);
+
+    return new DayNightOverlay(
+      shade,
+      container,
+      buttonsContainer,
+      artwork,
+      artworkMask,
+      frame,
+      panel,
+      label,
+      buttons,
+      dateTimeHudWidth,
+      dateTimeHudHeight,
+      dateTimeHudDisplayScale,
+      systemButtonRowWidth,
+      systemButtonHeight,
+      systemButtonGapY,
+      dateTimeHudPanelY,
+      18,
+      18,
+    );
   }
 
-  private createSystemButton(id: HudSystemButtonId) {
-    const background = this.add
-      .rectangle(0, 0, 28, 26, hudColors.panel, 0.9)
+  private createSystemButton(id: HudSystemButtonId): HudSystemButton {
+    const asset = uiSystemButtonAssets[id];
+    const container = this.add.container(0, 0);
+    const inactive = this.add
+      .image(0, 0, asset.inactive.textureKey)
+      .setDisplaySize(systemButtonWidth, systemButtonHeight)
+      .setOrigin(0.5);
+    const active = this.add
+      .image(0, 0, asset.active.textureKey)
+      .setDisplaySize(systemButtonWidth, systemButtonHeight)
       .setOrigin(0.5)
-      .setDepth(102)
-      .setStrokeStyle(1, hudColors.border, 0.45)
+      .setVisible(false);
+    const hitArea = this.add
+      .zone(0, 0, systemButtonWidth, systemButtonHeight)
+      .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    const icon = this.add
-      .image(0, 0, systemButtonIcon(id).textureKey)
-      .setOrigin(0.5)
-      .setDepth(103);
-    const button = { id, background, icon, pendingClick: false };
+    const button: HudSystemButton = {
+      id,
+      container,
+      active,
+      inactive,
+      hitArea,
+      pendingClick: false,
+      pressed: false,
+    };
 
-    background.on("pointerover", () => {
-      background.setFillStyle(0x314556, 0.98);
+    hitArea.on("pointerdown", () => {
+      button.pressed = true;
+      this.tweenSystemButton(button, 0.94, 80);
     });
-    background.on("pointerout", () => {
-      background.setFillStyle(hudColors.panel, 0.9);
+    hitArea.on("pointerup", () => {
+      if (button.pressed) {
+        button.pendingClick = true;
+      }
+      button.pressed = false;
+      this.tweenSystemButton(button, 1, 130);
     });
-    background.on("pointerdown", () => {
-      button.pendingClick = true;
+    hitArea.on("pointerout", () => {
+      button.pressed = false;
+      this.tweenSystemButton(button, 1, 130);
     });
+    hitArea.on("pointerupoutside", () => {
+      button.pressed = false;
+      this.tweenSystemButton(button, 1, 130);
+    });
+
+    container.add([inactive, active, hitArea]);
 
     return button;
+  }
+
+  private tweenSystemButton(
+    button: HudSystemButton,
+    scale: number,
+    duration: number,
+  ): void {
+    button.pressTween?.stop();
+    button.pressTween = this.tweens.add({
+      duration,
+      ease: "Sine.easeOut",
+      scale,
+      targets: button.container,
+    });
   }
 
   private createSleepProgressBar(): SleepProgressBar {
@@ -797,7 +922,12 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   private createActionToastStack(): ActionToastStack {
-    return new ActionToastStack(this.add.container(0, 0).setDepth(104), 18, 94, 360);
+    return new ActionToastStack(
+      this.add.container(0, 0).setDepth(104),
+      18,
+      94,
+      360,
+    );
   }
 
   private createToolInventoryHud(): ToolInventoryHud {
@@ -808,7 +938,8 @@ export class MainGameScene extends Phaser.Scene {
       { id: "item:left", kind: "item" },
       { id: "item:right", kind: "item" },
     ];
-    const hasDivider = slotDefinitions.some((slot) => slot.kind === "tool") &&
+    const hasDivider =
+      slotDefinitions.some((slot) => slot.kind === "tool") &&
       slotDefinitions.some((slot) => slot.kind === "item");
     const contentWidth =
       inventoryHudPanelPadding * 2 +
@@ -816,7 +947,9 @@ export class MainGameScene extends Phaser.Scene {
       Math.max(0, slotDefinitions.length - 1) * inventoryHudSlotGap +
       (hasDivider ? inventoryDividerAsset.width : 0);
     const width = Math.max(
-      inventoryPanelSlices.left + inventoryPanelSlices.right + inventorySlotAsset.width,
+      inventoryPanelSlices.left +
+        inventoryPanelSlices.right +
+        inventorySlotAsset.width,
       contentWidth,
     );
     const height = inventoryPanelAsset.height;
@@ -868,7 +1001,11 @@ export class MainGameScene extends Phaser.Scene {
       const previous = slotDefinitions[index - 1];
 
       if (previous) {
-        if (hasDivider && previous.kind === "tool" && definition.kind === "item") {
+        if (
+          hasDivider &&
+          previous.kind === "tool" &&
+          definition.kind === "item"
+        ) {
           cursorX += inventoryHudSlotGap / 2;
           divider.setPosition(cursorX + inventoryDividerAsset.width / 2, 0);
           cursorX += inventoryDividerAsset.width + inventoryHudSlotGap / 2;
@@ -942,7 +1079,10 @@ export class MainGameScene extends Phaser.Scene {
       .image(0, 0, inventorySlotHoverTextureKey)
       .setAlpha(0.66)
       .setBlendMode(Phaser.BlendModes.HARD_LIGHT)
-      .setDisplaySize(inventorySlotHoverAsset.width, inventorySlotHoverAsset.height)
+      .setDisplaySize(
+        inventorySlotHoverAsset.width,
+        inventorySlotHoverAsset.height,
+      )
       .setVisible(false);
     const selection = this.add
       .image(0, 0, inventorySlotSelectedTextureKey)
@@ -1271,17 +1411,6 @@ export class MainGameScene extends Phaser.Scene {
   }
 }
 
-function systemButtonIcon(id: HudSystemButtonId) {
-  switch (id) {
-    case "journal":
-      return uiIconAssets.journal;
-    case "map":
-      return uiIconAssets.map;
-    case "settings":
-      return uiIconAssets.settings;
-  }
-}
-
 function shouldSpawnSeedTestRow(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -1339,7 +1468,11 @@ function spawnSeedTestRow(
         new ItemUseConstraints("dirt"),
       );
       world.addComponent(drop, Grabbable, new Grabbable());
-      world.addComponent(drop, WeightedObject, new WeightedObject(seedDropWeight));
+      world.addComponent(
+        drop,
+        WeightedObject,
+        new WeightedObject(seedDropWeight),
+      );
       world.addComponent(drop, Footprint, new Footprint(54, 54));
       world.addComponent(
         drop,

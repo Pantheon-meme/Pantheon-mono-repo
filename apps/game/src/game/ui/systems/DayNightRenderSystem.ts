@@ -5,15 +5,14 @@ import { GameClock } from "../../time/components/GameClock";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { JournalPanel } from "../components/JournalPanel";
 import { BiomeMinimap } from "../components/BiomeMinimap";
-import { hudColors } from "../HudTheme";
-
-const systemButtonIconSize = 18;
 
 type Lighting = {
   alpha: number;
   color: number;
   phase: string;
 };
+
+const artworkPanelUnderlap = 18;
 
 export class DayNightRenderSystem implements System {
   update(world: World): void {
@@ -37,68 +36,79 @@ export class DayNightRenderSystem implements System {
       overlay.shade.setFillStyle(lighting.color, lighting.alpha);
       overlay.shade.setVisible(lighting.alpha > 0);
 
-      overlay.label.setText(`Day ${clock.day}  ${timeLabel}`);
-      overlay.phase.setText(lighting.phase);
+      overlay.label.setText(
+        `Day ${clock.day}  |  ${timeLabel}  |  ${lighting.phase}`,
+      );
+      overlay.artwork.setRotation(clock.normalizedDayTime * Math.PI * 2);
       this.handleButtonClicks(world, overlay);
-      const panelPosition = this.positionPanel(
+      this.positionOverlay(
         overlay,
         worldX,
         worldY,
         camera.width,
+        camera.height,
         scale,
       );
-      overlay.panel.setStrokeStyle(1, phaseColor(lighting.phase), 0.68);
-      overlay.label.setScale(scale);
-      overlay.phase.setScale(scale);
-      overlay.label.setVisible(true);
-      overlay.phase.setVisible(true);
-      overlay.panel.setVisible(true);
+      overlay.container.setVisible(true);
+      overlay.buttonsContainer.setVisible(true);
 
-      overlay.buttons.forEach((button, index) => {
-        const buttonX =
-          panelPosition.x + (70 + index * 34) * scale;
-        const buttonY = panelPosition.y + 48 * scale;
+      overlay.buttons.forEach((button) => {
         const isActive = isButtonActive(world, button.id);
+        const showActive = isActive || button.pressed;
 
-        button.background.setPosition(buttonX, buttonY);
-        button.background.setScale(scale);
-        button.background.setFillStyle(
-          isActive ? hudColors.selected : hudColors.panel,
-          isActive ? 0.94 : 0.9,
-        );
-        button.background.setStrokeStyle(
-          1,
-          isActive ? hudColors.selected : hudColors.border,
-          isActive ? 0.9 : 0.45,
-        );
-        button.icon.setPosition(buttonX, buttonY);
-        button.icon.setDisplaySize(
-          systemButtonIconSize * scale,
-          systemButtonIconSize * scale,
-        );
-        button.icon.setAlpha(isActive ? 1 : 0.86);
-        button.background.setVisible(true);
-        button.icon.setVisible(true);
+        button.active.setVisible(showActive);
+        button.inactive.setVisible(!showActive);
       });
     }
   }
 
-  private positionPanel(
+  private positionOverlay(
     overlay: DayNightOverlay,
     worldX: number,
     worldY: number,
     cameraWidth: number,
+    cameraHeight: number,
     scale: number,
-  ): { x: number; y: number } {
-    const panelX = worldX + (cameraWidth - overlay.screenX - 172) * scale;
-    const panelY = worldY + overlay.screenY * scale;
+  ): void {
+    const heightBudget =
+      cameraHeight -
+      overlay.screenY * 2 -
+      overlay.buttonGapY -
+      overlay.buttonRowHeight;
+    const responsiveScale = Math.min(
+      overlay.displayScale,
+      (cameraWidth - overlay.screenX * 2) / overlay.width,
+      heightBudget / overlay.height,
+    );
+    const clampedScale = Math.max(0.32, responsiveScale);
+    const overlayScreenWidth = overlay.width * clampedScale;
+    const overlayScreenHeight = overlay.height * clampedScale;
+    const overlayScreenX = cameraWidth - overlay.screenX - overlayScreenWidth;
+    const overlayScreenY = overlay.screenY;
+    const buttonsScreenX =
+      overlayScreenX + (overlayScreenWidth - overlay.buttonRowWidth) / 2;
+    const buttonsScreenY =
+      overlayScreenY + overlayScreenHeight + overlay.buttonGapY;
 
-    overlay.panel.setPosition(panelX, panelY);
-    overlay.panel.setScale(scale);
-    overlay.label.setPosition(panelX + 14 * scale, panelY + 11 * scale);
-    overlay.phase.setPosition(panelX + 158 * scale, panelY + 31 * scale);
-
-    return { x: panelX, y: panelY };
+    overlay.container.setPosition(
+      worldX + overlayScreenX * scale,
+      worldY + overlayScreenY * scale,
+    );
+    overlay.container.setScale(scale * clampedScale);
+    overlay.artworkMask.clear();
+    overlay.artworkMask
+      .fillStyle(0xffffff, 1)
+      .fillRect(
+        worldX + overlayScreenX * scale,
+        worldY + overlayScreenY * scale,
+        overlayScreenWidth * scale,
+        (overlay.panelY + artworkPanelUnderlap) * clampedScale * scale,
+      );
+    overlay.buttonsContainer.setPosition(
+      worldX + buttonsScreenX * scale,
+      worldY + buttonsScreenY * scale,
+    );
+    overlay.buttonsContainer.setScale(scale);
   }
 
   private handleButtonClicks(world: World, overlay: DayNightOverlay): void {
@@ -188,19 +198,4 @@ function formatClock(clock: GameClock): string {
 
 function lerp(from: number, to: number, progress: number): number {
   return from + (to - from) * Math.max(0, Math.min(1, progress));
-}
-
-function phaseColor(phase: string): number {
-  switch (phase) {
-    case "Dawn":
-      return 0xf0c85a;
-    case "Day":
-      return 0xfff3a1;
-    case "Dusk":
-      return 0xd192ff;
-    case "Night":
-      return 0x7bd7ff;
-    default:
-      return hudColors.border;
-  }
 }

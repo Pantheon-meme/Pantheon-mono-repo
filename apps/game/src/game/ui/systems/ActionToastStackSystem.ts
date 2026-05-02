@@ -1,24 +1,32 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import {
-  uiIconAssets,
-  type UiIconAsset,
+  toastCardKindIconAssets,
+  toastCardPanelAsset,
+  toastCardPanelSlices,
+  toastCardPanelTextureKey,
+  toastCardStatusIconAssets,
+  type ToastCardKindIconAsset,
+  type ToastCardStatusIconAsset,
 } from "../../../assets/ui/UiImageAssets";
 import { ActionLog } from "../../actions/components/ActionLog";
-import {
-  hudColors,
-  hudFontFamily,
-  hudStatusColor,
-  type HudStatus,
-} from "../HudTheme";
+import type { HudStatus } from "../HudTheme";
 import {
   ActionToastStack,
   type ActionToastCard,
 } from "../components/ActionToastStack";
 
-const toastHeight = 34;
-const toastGap = 6;
+const toastDisplayHeight = 42;
+const toastGap = 4;
 const maxCards = 4;
+const toastCardScale = toastDisplayHeight / toastCardPanelAsset.height;
+const toastKindIconX = 116;
+const toastKindIconDisplayHeight = 88;
+const toastLabelX = 174;
+const toastStatusRightInset = 92;
+const toastStatusIconDisplayHeight = 66;
+const toastLabelStatusGap = 26;
+const toastFontFamily = "Trebuchet MS, Verdana, system-ui, sans-serif";
 
 export class ActionToastStackSystem implements System {
   update(world: World, deltaSeconds: number): void {
@@ -61,37 +69,83 @@ export class ActionToastStackSystem implements System {
   ): ActionToastCard {
     const scene = stack.container.scene;
     const container = scene.add.container(0, 0);
+    const panelWidth = Math.round(stack.width / toastCardScale);
+    const statusX = panelWidth - toastStatusRightInset;
+    const labelWidth = Math.max(
+      220,
+      statusX - toastStatusIconDisplayHeight - toastLabelStatusGap - toastLabelX,
+    );
     const background = scene.add
-      .rectangle(0, 0, stack.width, toastHeight, hudColors.panelDark, 0.9)
+      .nineslice(
+        0,
+        0,
+        toastCardPanelTextureKey,
+        undefined,
+        panelWidth,
+        toastCardPanelAsset.height,
+        toastCardPanelSlices.left,
+        toastCardPanelSlices.right,
+        toastCardPanelSlices.top,
+        toastCardPanelSlices.bottom,
+      )
       .setOrigin(0)
-      .setStrokeStyle(1, hudStatusColor(status), 0.62);
-    const accent = scene.add
-      .rectangle(0, 0, 4, toastHeight, hudStatusColor(status), 0.95)
-      .setOrigin(0);
-    const iconAsset = statusIcon(status);
-    const icon = scene.add
-      .image(15, toastHeight / 2, iconAsset.textureKey)
-      .setDisplaySize(18, 18)
-      .setAlpha(status === "default" ? 0.82 : 0.95)
+      .setAlpha(0.98);
+    const kindIconAsset = kindIconForMessage(message, status);
+    const kindIconImage = scene.add
+      .image(
+        toastKindIconX,
+        toastCardPanelAsset.height / 2,
+        kindIconAsset.textureKey,
+      )
+      .setDisplaySize(
+        fittedWidth(kindIconAsset, toastKindIconDisplayHeight),
+        toastKindIconDisplayHeight,
+      )
+      .setOrigin(0.5);
+    const statusIconAsset = statusIconForStatus(status);
+    const statusIconImage = scene.add
+      .image(
+        statusX,
+        toastCardPanelAsset.height / 2,
+        statusIconAsset.textureKey,
+      )
+      .setDisplaySize(
+        fittedWidth(statusIconAsset, toastStatusIconDisplayHeight),
+        toastStatusIconDisplayHeight,
+      )
+      .setAlpha(status === "default" ? 0.88 : 0.97)
       .setOrigin(0.5);
     const label = scene.add
-      .text(32, 8, message, {
-        color: hudColors.text,
-        fixedWidth: stack.width - 42,
-        fontFamily: hudFontFamily,
-        fontSize: "13px",
-        wordWrap: { width: stack.width - 44 },
+      .text(toastLabelX, toastCardPanelAsset.height / 2 + 1, message, {
+        color: "#201309",
+        fixedHeight: 48,
+        fixedWidth: labelWidth,
+        fontFamily: toastFontFamily,
+        fontSize: "38px",
+        fontStyle: "700",
+        maxLines: 1,
+        shadow: {
+          color: "#f7e8c4",
+          fill: true,
+          offsetX: 0,
+          offsetY: 2,
+        },
+        stroke: "#f4dfb2",
+        strokeThickness: 2,
+        wordWrap: { width: labelWidth, useAdvancedWrap: true },
       })
-      .setOrigin(0);
+      .setOrigin(0, 0.5)
+      .setResolution(2);
 
-    container.add([background, accent, icon, label]);
+    container.setScale(toastCardScale);
+    container.add([background, kindIconImage, label, statusIconImage]);
     stack.container.add(container);
 
     return {
       container,
       background,
-      accent,
-      icon,
+      kindIcon: kindIconImage,
+      statusIcon: statusIconImage,
       label,
       ageSeconds: 0,
       durationSeconds: status === "danger" ? 4.8 : 3.6,
@@ -118,10 +172,18 @@ export class ActionToastStackSystem implements System {
           : (card.ageSeconds - fadeStart) / Math.max(0.01, 0.75);
       const enterOffset = Math.max(0, 1 - card.ageSeconds / 0.18) * -12;
 
-      card.container.setPosition(enterOffset, index * (toastHeight + toastGap));
+      card.container.setPosition(
+        enterOffset,
+        index * (toastDisplayHeight + toastGap),
+      );
       card.container.setAlpha(1 - fadeProgress);
-      card.background.setStrokeStyle(1, hudStatusColor(card.status), 0.62);
-      card.accent.setFillStyle(hudStatusColor(card.status), 0.95);
+      card.statusIcon.setAlpha(
+        card.status === "pending"
+          ? 0.78 + Math.sin(card.ageSeconds * 8) * 0.14
+          : card.status === "default"
+            ? 0.88
+            : 0.97,
+      );
     }
   }
 
@@ -134,6 +196,39 @@ export class ActionToastStackSystem implements System {
     stack.container.setPosition(worldX, worldY);
     stack.container.setScale(scale);
   }
+}
+
+function fittedWidth(
+  asset: ToastCardKindIconAsset | ToastCardStatusIconAsset,
+  displayHeight: number,
+): number {
+  return displayHeight * (asset.width / asset.height);
+}
+
+function kindIconForMessage(
+  message: string,
+  status: HudStatus,
+): ToastCardKindIconAsset {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.startsWith("region:") ||
+    normalized.startsWith("settings:") ||
+    normalized.includes("sync")
+  ) {
+    return toastCardKindIconAssets.system;
+  }
+
+  if (
+    status === "success" ||
+    normalized.includes("found") ||
+    normalized.includes("entered") ||
+    normalized.includes("shook loose")
+  ) {
+    return toastCardKindIconAssets.star;
+  }
+
+  return toastCardKindIconAssets.message;
 }
 
 function classifyMessage(message: string): HudStatus {
@@ -172,17 +267,17 @@ function classifyMessage(message: string): HudStatus {
   return "default";
 }
 
-function statusIcon(status: HudStatus): UiIconAsset {
+function statusIconForStatus(status: HudStatus): ToastCardStatusIconAsset {
   switch (status) {
     case "success":
-      return uiIconAssets.success;
-    case "warning":
-    case "danger":
-      return uiIconAssets.errorFail;
-    case "pending":
-      return uiIconAssets.pending;
-    case "disabled":
     case "default":
-      return uiIconAssets.gather;
+      return toastCardStatusIconAssets.success;
+    case "danger":
+      return toastCardStatusIconAssets.errorFail;
+    case "warning":
+    case "disabled":
+      return toastCardStatusIconAssets.warning;
+    case "pending":
+      return toastCardStatusIconAssets.queueWaiting;
   }
 }

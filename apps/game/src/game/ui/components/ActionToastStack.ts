@@ -3,9 +3,9 @@ import type { HudStatus } from "../HudTheme";
 
 export type ActionToastCard = {
   container: Phaser.GameObjects.Container;
-  background: Phaser.GameObjects.Rectangle;
-  accent: Phaser.GameObjects.Rectangle;
-  icon: Phaser.GameObjects.Image;
+  background: Phaser.GameObjects.NineSlice;
+  kindIcon: Phaser.GameObjects.Image;
+  statusIcon: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
   ageSeconds: number;
   durationSeconds: number;
