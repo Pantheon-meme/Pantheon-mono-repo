@@ -36,6 +36,7 @@ contract PantheonSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(TerrainTile.getExists(x, y), "missing terrain");
+    PlayerLib.requireNear(player, x, y, "dig too far");
 
     bytes32 terrainId = TerrainTile.getTerrainId(x, y);
     require(
@@ -72,7 +73,7 @@ contract PantheonSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(TerrainTile.getExists(x, y), "missing terrain");
-    require(_isNearPlayer(player, x, y), "forage too far");
+    PlayerLib.requireNear(player, x, y, "forage too far");
 
     bytes32 terrainId = TerrainTile.getTerrainId(x, y);
     require(ForageTable.getExists(terrainId), "terrain not forageable");
@@ -136,12 +137,10 @@ contract PantheonSystem is System {
     require(ObjectState.getExists(objectId), "missing object state");
     require(!InventoryObject.getExists(objectId), "already picked up");
 
-    require(
-      _isNearPlayer(
-        player,
-        WorldObject.getX(objectId),
-        WorldObject.getY(objectId)
-      ),
+    PlayerLib.requireNear(
+      player,
+      WorldObject.getX(objectId),
+      WorldObject.getY(objectId),
       "object too far"
     );
 
@@ -165,7 +164,7 @@ contract PantheonSystem is System {
     require(ObjectState.getExists(objectId), "missing object state");
     require(InventoryObject.getOwner(objectId) == player, "not carried");
     require(TerrainTile.getExists(x, y), "missing terrain");
-    require(_isNearPlayer(player, x, y), "drop too far");
+    PlayerLib.requireNear(player, x, y, "drop too far");
 
     uint8 slot = _inventorySlotForObject(player, objectId);
 
@@ -472,16 +471,4 @@ contract PantheonSystem is System {
     return 0;
   }
 
-  function _isNearPlayer(
-    address player,
-    int32 x,
-    int32 y
-  ) private view returns (bool) {
-    (int32 playerX, int32 playerY) = PlayerLib.getPosition(player);
-
-    int32 dx = x > playerX ? x - playerX : playerX - x;
-    int32 dy = y > playerY ? y - playerY : playerY - y;
-
-    return dx <= 1 && dy <= 1;
-  }
 }

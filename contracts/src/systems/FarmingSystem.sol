@@ -31,7 +31,7 @@ contract FarmingSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(TerrainTile.getExists(x, y), "missing terrain");
-    require(_isNearPlayer(player, x, y), "plant too far");
+    PlayerLib.requireNear(player, x, y, "plant too far");
     require(PlantType.getExists(plantId), "missing plant type");
     require(!PlantState.getExists(x, y), "plant exists");
 
@@ -69,7 +69,7 @@ contract FarmingSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(PlantState.getExists(x, y), "missing plant");
-    require(_isNearPlayer(player, x, y), "harvest too far");
+    PlayerLib.requireNear(player, x, y, "harvest too far");
     require(
       PlantState.getStage(x, y) != PantheonConstants.PLANT_STAGE_HARVESTED,
       "already harvested"
@@ -108,7 +108,7 @@ contract FarmingSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(PlantState.getExists(x, y), "missing plant");
-    require(_isNearPlayer(player, x, y), "water too far");
+    PlayerLib.requireNear(player, x, y, "water too far");
 
     bytes32 terrainId = TerrainTile.getTerrainId(x, y);
     _ensureFarmTile(x, y, terrainId);
@@ -135,7 +135,7 @@ contract FarmingSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(PlantState.getExists(x, y), "missing plant");
-    require(_isNearPlayer(player, x, y), "tend too far");
+    PlayerLib.requireNear(player, x, y, "tend too far");
 
     bytes32 terrainId = TerrainTile.getTerrainId(x, y);
     _ensureFarmTile(x, y, terrainId);
@@ -357,12 +357,4 @@ contract FarmingSystem is System {
       : value;
   }
 
-  function _isNearPlayer(address player, int32 x, int32 y) private view returns (bool) {
-    (int32 playerX, int32 playerY) = PlayerLib.getPosition(player);
-
-    int32 dx = x > playerX ? x - playerX : playerX - x;
-    int32 dy = y > playerY ? y - playerY : playerY - y;
-
-    return dx <= 1 && dy <= 1;
-  }
 }
