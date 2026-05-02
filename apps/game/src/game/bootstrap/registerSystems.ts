@@ -27,6 +27,7 @@ import { InventoryHudSystem } from "../ui/systems/InventoryHudSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
 import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
+import { MudRemotePlayerHydrationSystem } from "../mud/systems/MudRemotePlayerHydrationSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
 import { PlantRenderSystem } from "../plants/systems/PlantRenderSystem";
 import { PlantStatusPanelSystem } from "../ui/systems/PlantStatusPanelSystem";
@@ -69,6 +70,7 @@ export function registerSystems(
   );
   world.addSystem(new ActionInputSystem(keyboard));
   world.addSystem(new MudHydrationSystem(1, initialMudSnapshot));
+  world.addSystem(new MudRemotePlayerHydrationSystem(scene));
   world.addSystem(new GameClockSystem());
   world.addSystem(new EnergySystem());
   world.addSystem(new PlantGrowthSystem());

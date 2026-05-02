@@ -62,6 +62,7 @@ import type {
   PendingActionSnapshot,
   PlayerEnergy,
   PlayerInventorySnapshot,
+  PlayerPresenceSnapshot,
   PlayerSnapshot,
   WorldObjectSnapshot,
   WorldStateReadBounds,
@@ -174,6 +175,50 @@ export class MudSnapshotReader {
               worldStateBounds,
             )
           : undefined,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async readPlayerPresence(): Promise<PlayerPresenceSnapshot | undefined> {
+    try {
+      const keyTuple = [addressToBytes32(this.playerAddress)];
+      const [
+        xBlob,
+        yBlob,
+        energyBlob,
+        maxEnergyBlob,
+        lastMoveAtBlob,
+        moveSpeedBlob,
+        existsBlob,
+      ] = await Promise.all([
+        this.readPlayerStaticField(keyTuple, playerXFieldIndex),
+        this.readPlayerStaticField(keyTuple, playerYFieldIndex),
+        this.readPlayerStaticField(keyTuple, playerEnergyFieldIndex),
+        this.readPlayerStaticField(keyTuple, playerMaxEnergyFieldIndex),
+        this.readPlayerStaticField(keyTuple, playerLastMoveAtFieldIndex),
+        this.readPlayerStaticField(keyTuple, playerMoveSpeedFieldIndex),
+        this.readPlayerStaticField(keyTuple, playerExistsFieldIndex),
+      ]);
+
+      const exists = decodeBoolStaticField(existsBlob);
+
+      if (!exists) {
+        return undefined;
+      }
+
+      return {
+        address: this.playerAddress,
+        x: decodeInt32StaticField(xBlob),
+        y: decodeInt32StaticField(yBlob),
+        energy: decodeUint32StaticField(energyBlob),
+        maxEnergy: decodeUint32StaticField(maxEnergyBlob),
+        lastMoveAt: decodeUint64StaticField(lastMoveAtBlob),
+        moveSpeed: decodeUint32StaticField(moveSpeedBlob),
+        exists,
+        actionLog: await this.readActionLogAfterConfirmation(keyTuple),
+        pendingAction: await this.readPendingActionForKeyTuple(keyTuple),
       };
     } catch {
       return undefined;
@@ -623,6 +668,13 @@ export class MudSnapshotReader {
 
   private async readPendingAction(): Promise<PendingActionSnapshot | undefined> {
     const keyTuple = [addressToBytes32(this.playerAddress)];
+
+    return this.readPendingActionForKeyTuple(keyTuple);
+  }
+
+  private async readPendingActionForKeyTuple(
+    keyTuple: Hex[],
+  ): Promise<PendingActionSnapshot | undefined> {
     const [actionBlob, readyAtBlob, valueBlob, existsBlob] = await Promise.all([
       this.readPendingActionStaticField(keyTuple, pendingActionActionFieldIndex),
       this.readPendingActionStaticField(keyTuple, pendingActionReadyAtFieldIndex),

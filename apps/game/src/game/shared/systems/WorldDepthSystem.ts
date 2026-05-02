@@ -2,7 +2,7 @@ import type Phaser from "phaser";
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { BiomeObjectVisual } from "../../biome/components/BiomeObjectVisual";
-import { PlayerControlled } from "../../player/components/PlayerControlled";
+import { PlayerAvatar } from "../../player/components/PlayerAvatar";
 import { PlantVisual } from "../../plants/components/PlantVisual";
 import { TerrainGrid } from "../../terrain/components/TerrainGrid";
 import { Position } from "../components/Position";
@@ -23,7 +23,7 @@ export class WorldDepthSystem implements System {
     for (const [, position, renderable] of world.query(
       Position,
       Renderable,
-      PlayerControlled,
+      PlayerAvatar,
     )) {
       const sprite = renderable.sprite as Partial<DepthableGameObject>;
 

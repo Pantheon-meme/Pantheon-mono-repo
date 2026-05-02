@@ -23,6 +23,7 @@ import type {
   MudPlantCallbacks,
   MudPlantCareCallbacks,
   MudStartSleepCallbacks,
+  PlayerPresenceSnapshot,
   PlayerSnapshot,
   WorldObjectSnapshot,
   WorldStateReadBounds,
@@ -57,6 +58,7 @@ export type {
   PlayerInventorySlotSnapshot,
   PlantStateSnapshot,
   PlayerEnergy,
+  PlayerPresenceSnapshot,
   PlayerSnapshot,
   TerrainStateSnapshot,
   WorldObjectSnapshot,
@@ -291,6 +293,10 @@ export class MudWorldBridge {
     worldStateBounds?: WorldStateReadBounds,
   ): Promise<PlayerSnapshot | undefined> {
     return this.snapshotReader.readPlayerSnapshot(worldStateBounds);
+  }
+
+  async readPlayerPresence(): Promise<PlayerPresenceSnapshot | undefined> {
+    return this.snapshotReader.readPlayerPresence();
   }
 
   async readWorldObjects(): Promise<WorldObjectSnapshot[]> {

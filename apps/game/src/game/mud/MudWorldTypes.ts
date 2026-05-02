@@ -1,3 +1,5 @@
+import type { Hex } from "viem";
+
 export type ConfirmedDig = {
   x: number;
   y: number;
@@ -136,6 +138,17 @@ export type PlayerSnapshot = PlayerEnergy & {
   cucBalance?: bigint;
   worldObjects: WorldObjectSnapshot[];
   worldState?: WorldStateSnapshot;
+};
+
+export type PlayerPresenceSnapshot = PlayerEnergy & {
+  address: Hex;
+  x: number;
+  y: number;
+  lastMoveAt: number;
+  moveSpeed: number;
+  exists: boolean;
+  actionLog?: ActionLogSnapshot;
+  pendingAction?: PendingActionSnapshot;
 };
 
 export type WorldStateSnapshot = {

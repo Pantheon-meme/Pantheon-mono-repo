@@ -10,7 +10,6 @@ import { SleepState } from "../../sleep/components/SleepState";
 import { FacingDirection } from "../components/FacingDirection";
 import { InputState } from "../components/InputState";
 import { PlayerAvatar } from "../components/PlayerAvatar";
-import { PlayerControlled } from "../components/PlayerControlled";
 import {
   getPlayerSpriteAsset,
   getPlayerSpriteFrameIndex,
@@ -27,9 +26,8 @@ export class PlayerSpriteAnimationSystem implements System {
   private readonly animationSecondsByEntity = new Map<Entity, number>();
 
   update(world: World, deltaSeconds: number): void {
-    for (const [entity, , input, facing, renderable] of world.query(
-      PlayerControlled,
-      InputState,
+    for (const [entity, avatar, facing, renderable] of world.query(
+      PlayerAvatar,
       FacingDirection,
       Renderable,
     )) {
@@ -37,18 +35,18 @@ export class PlayerSpriteAnimationSystem implements System {
         continue;
       }
 
-      const avatar = world.getComponent(entity, PlayerAvatar);
-      const spriteAsset = getPlayerSpriteAsset(avatar?.spriteId);
+      const spriteAsset = getPlayerSpriteAsset(avatar.spriteId);
 
       if (!spriteAsset) {
         continue;
       }
 
+      const input = world.getComponent(entity, InputState);
       const velocity = world.getComponent(entity, Velocity);
       const presentation = world.getComponent(entity, OnchainPresentation);
       const moving =
-        input.directionX !== 0 ||
-        input.directionY !== 0 ||
+        (input?.directionX ?? 0) !== 0 ||
+        (input?.directionY ?? 0) !== 0 ||
         Math.abs(velocity?.x ?? 0) > 1 ||
         Math.abs(velocity?.y ?? 0) > 1;
       const direction = getDirection(facing);
