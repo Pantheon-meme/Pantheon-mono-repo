@@ -3,6 +3,8 @@ import type { World } from "../../../ecs/World";
 import { SleepProgressBar } from "../components/SleepProgressBar";
 import { SleepState } from "../../sleep/components/SleepState";
 
+const sleepIconDisplaySize = 24;
+
 export class SleepProgressBarSystem implements System {
   update(world: World): void {
     const sleep = world.query(SleepState)[0]?.[1];
@@ -17,12 +19,21 @@ export class SleepProgressBarSystem implements System {
       bar.background.setScale(scale);
       bar.fill.setPosition(worldX, worldY);
       bar.fill.setScale(scale);
+      bar.icon.setPosition(
+        worldX + (bar.height / 2 + 4) * scale,
+        worldY + (bar.height / 2) * scale,
+      );
+      bar.icon.setDisplaySize(
+        sleepIconDisplaySize * scale,
+        sleepIconDisplaySize * scale,
+      );
       bar.label.setPosition(worldX, worldY + (bar.height + 6) * scale);
       bar.label.setScale(scale);
 
       if (!sleep?.active) {
         bar.background.setVisible(false);
         bar.fill.setVisible(false);
+        bar.icon.setVisible(false);
         bar.label.setVisible(false);
         return;
       }
@@ -39,6 +50,7 @@ export class SleepProgressBarSystem implements System {
       );
       bar.background.setVisible(true);
       bar.fill.setVisible(true);
+      bar.icon.setVisible(true);
       bar.label.setVisible(true);
     }
   }

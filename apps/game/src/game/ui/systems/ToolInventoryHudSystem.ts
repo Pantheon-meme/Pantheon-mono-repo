@@ -22,10 +22,7 @@ import {
 import { WeightInspectable } from "../../shared/components/WeightInspectable";
 import { WeightedObject } from "../../shared/components/WeightedObject";
 import {
-  toolIconAxeAsset,
-  toolIconAxeTextureKey,
-  toolIconWateringCanAsset,
-  toolIconWateringCanTextureKey,
+  uiIconAssets,
 } from "../../../assets/ui/UiImageAssets";
 import { ToolInventoryHud, type HudSlot } from "../components/ToolInventoryHud";
 
@@ -265,18 +262,27 @@ function iconForTool(slotId: string): SlotIconState {
   if (slotId === "tool:axe") {
     return {
       kind: "image",
-      textureKey: toolIconAxeTextureKey,
-      width: toolIconAxeAsset.width * 1.04,
-      height: toolIconAxeAsset.height * 1.04,
+      textureKey: uiIconAssets.axe.textureKey,
+      width: 64,
+      height: 64,
     };
   }
 
   if (slotId === "tool:watering-can") {
     return {
       kind: "image",
-      textureKey: toolIconWateringCanTextureKey,
-      width: toolIconWateringCanAsset.width,
-      height: toolIconWateringCanAsset.height,
+      textureKey: uiIconAssets.wateringCan.textureKey,
+      width: 64,
+      height: 64,
+    };
+  }
+
+  if (slotId === "tool:hands") {
+    return {
+      kind: "image",
+      textureKey: uiIconAssets.hands.textureKey,
+      width: 62,
+      height: 62,
     };
   }
 

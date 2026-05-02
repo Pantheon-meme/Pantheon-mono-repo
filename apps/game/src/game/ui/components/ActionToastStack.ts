@@ -5,7 +5,7 @@ export type ActionToastCard = {
   container: Phaser.GameObjects.Container;
   background: Phaser.GameObjects.Rectangle;
   accent: Phaser.GameObjects.Rectangle;
-  icon: Phaser.GameObjects.Text;
+  icon: Phaser.GameObjects.Image;
   label: Phaser.GameObjects.Text;
   ageSeconds: number;
   durationSeconds: number;

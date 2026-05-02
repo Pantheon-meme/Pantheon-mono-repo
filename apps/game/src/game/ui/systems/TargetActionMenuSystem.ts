@@ -14,13 +14,10 @@ import {
   actionButtonBgTextureKey,
   actionButtonKeyboardShortcutKeyAsset,
   actionButtonKeyboardShortcutKeyTextureKey,
-  toolIconAxeAsset,
-  toolIconWateringCanAsset,
+  uiIconAssets,
+  type UiIconAsset,
 } from "../../../assets/ui/UiImageAssets";
 import { TargetActionMenu } from "../components/TargetActionMenu";
-import { ToolInventoryHud } from "../components/ToolInventoryHud";
-
-type ToolIconAsset = typeof toolIconAxeAsset | typeof toolIconWateringCanAsset;
 
 const buttonMinWidth = 300;
 const buttonMaxWidth = 520;
@@ -32,6 +29,8 @@ const screenBottomMargin = 6;
 const hoverScale = 1.035;
 const pressScale = 0.965;
 const iconLeftInset = 84;
+const actionIconDisplaySize = 70;
+const statusIconDisplaySize = 26;
 const labelLeftInset = 126;
 const labelShortcutGap = 18;
 const shortcutRightInset = iconLeftInset;
@@ -62,14 +61,13 @@ export class TargetActionMenuSystem implements System {
     }
 
     const hints = getActionHints(world);
-    const selectedToolIcon = getSelectedToolIcon(world);
     const signature = `${actions
       .map((action) => `${action.id}:${action.label}:${action.detail ?? ""}`)
-      .join("|")}|${[...hints.entries()].map(([id, hint]) => `${id}:${hint}`)}|${selectedToolIcon.textureKey}|${queue.pendingActionIds.join(",")}|${progress.actionId ?? ""}:${progress.active}`;
+      .join("|")}|${[...hints.entries()].map(([id, hint]) => `${id}:${hint}`)}|${queue.pendingActionIds.join(",")}|${progress.actionId ?? ""}:${progress.active}`;
 
     if (signature !== menu.signature) {
       menu.signature = signature;
-      this.rebuildMenu(menu, actions, hints, queue, progress, selectedToolIcon);
+      this.rebuildMenu(menu, actions, hints, queue, progress);
     }
 
     this.placeMenu(menu);
@@ -83,7 +81,6 @@ export class TargetActionMenuSystem implements System {
     hints: Map<string, string>,
     queue: ActionQueue,
     progress: ActionProgress,
-    selectedToolIcon: ToolIconAsset,
   ): void {
     for (const button of menu.buttons) {
       button.container.destroy(true);
@@ -117,6 +114,8 @@ export class TargetActionMenuSystem implements System {
     layouts.forEach(({ action, hint, width: actionButtonWidth }) => {
       const x = cursorX + actionButtonWidth / 2;
       const executing = progress.active && progress.actionId === action.id;
+      const queued = queue.pendingActionIds.includes(action.id);
+      const actionIcon = iconForTargetAction(action);
       const container = scene.add.container(x, 0);
       const background = scene.add
         .nineslice(
@@ -138,12 +137,19 @@ export class TargetActionMenuSystem implements System {
         .image(
           -actionButtonWidth / 2 + iconLeftInset,
           0,
-          selectedToolIcon.textureKey,
+          actionIcon.textureKey,
         )
-        .setDisplaySize(
-          selectedToolIcon.width * 1.18,
-          selectedToolIcon.height * 1.18,
+        .setDisplaySize(actionIconDisplaySize, actionIconDisplaySize)
+        .setOrigin(0.5);
+      const statusIcon = scene.add
+        .image(
+          actionButtonWidth / 2 - 32,
+          -buttonHeight / 2 + 32,
+          uiIconAssets.pending.textureKey,
         )
+        .setDisplaySize(statusIconDisplaySize, statusIconDisplaySize)
+        .setAlpha(executing ? 0.95 : 0.74)
+        .setVisible(queued || executing)
         .setOrigin(0.5);
       const label = scene.add
         .text(-actionButtonWidth / 2 + labelLeftInset, -2, action.label, {
@@ -219,7 +225,7 @@ export class TargetActionMenuSystem implements System {
         tweenButton(scene, container, 1, 140, "Cubic.easeOut");
       });
 
-      container.add([background, icon, label, shortcutKey, shortcut]);
+      container.add([background, icon, statusIcon, label, shortcutKey, shortcut]);
       menu.content.add(container);
       menu.buttons.push({
         actionId: action.id,
@@ -313,16 +319,6 @@ function formatKeyHint(keyCode: number): string {
   return keyNames[keyCode] ?? String.fromCharCode(keyCode);
 }
 
-function getSelectedToolIcon(world: World): ToolIconAsset {
-  const hud = world.query(ToolInventoryHud)[0]?.[1];
-
-  if (hud?.selectedSlotId === "tool:watering-can") {
-    return toolIconWateringCanAsset;
-  }
-
-  return toolIconAxeAsset;
-}
-
 function measureButtonWidth(scene: Phaser.Scene, label: string): number {
   const measurement = scene.add
     .text(0, 0, label, {
@@ -345,6 +341,38 @@ function measureButtonWidth(scene: Phaser.Scene, label: string): number {
     buttonMinWidth,
     buttonMaxWidth,
   );
+}
+
+function iconForTargetAction(action: TargetActionEntry): UiIconAsset {
+  if (action.id === "dig") {
+    return uiIconAssets.dig;
+  }
+
+  if (action.id === "forage") {
+    return uiIconAssets.forage;
+  }
+
+  if (action.id === "plant" || action.id.endsWith("-hand-use")) {
+    return uiIconAssets.plant;
+  }
+
+  if (action.id === "sleep") {
+    return uiIconAssets.sleep;
+  }
+
+  if (action.id === "fetch") {
+    return uiIconAssets.harvest;
+  }
+
+  if (action.id.endsWith("-hand-toggle")) {
+    return uiIconAssets.grab;
+  }
+
+  if (action.id === "carry-more-need") {
+    return uiIconAssets.drop;
+  }
+
+  return uiIconAssets.gather;
 }
 
 function labelWidth(buttonWidth: number): number {

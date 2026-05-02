@@ -5,7 +5,7 @@ export type HudSystemButtonId = "journal" | "map" | "settings";
 export type HudSystemButton = {
   id: HudSystemButtonId;
   background: Phaser.GameObjects.Rectangle;
-  label: Phaser.GameObjects.Text;
+  icon: Phaser.GameObjects.Image;
   pendingClick: boolean;
 };
 

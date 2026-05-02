@@ -1,10 +1,13 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import {
+  uiIconAssets,
+  type UiIconAsset,
+} from "../../../assets/ui/UiImageAssets";
 import { ActionLog } from "../../actions/components/ActionLog";
 import {
   hudColors,
   hudFontFamily,
-  hudShadow,
   hudStatusColor,
   type HudStatus,
 } from "../HudTheme";
@@ -65,24 +68,19 @@ export class ActionToastStackSystem implements System {
     const accent = scene.add
       .rectangle(0, 0, 4, toastHeight, hudStatusColor(status), 0.95)
       .setOrigin(0);
+    const iconAsset = statusIcon(status);
     const icon = scene.add
-      .text(14, toastHeight / 2, statusIcon(status), {
-        align: "center",
-        color: status === "disabled" ? "#a9b8b1" : hudColors.textWarm,
-        fixedWidth: 18,
-        fontFamily: hudFontFamily,
-        fontSize: "12px",
-        fontStyle: "700",
-        shadow: hudShadow(),
-      })
+      .image(15, toastHeight / 2, iconAsset.textureKey)
+      .setDisplaySize(18, 18)
+      .setAlpha(status === "default" ? 0.82 : 0.95)
       .setOrigin(0.5);
     const label = scene.add
-      .text(30, 8, message, {
+      .text(32, 8, message, {
         color: hudColors.text,
-        fixedWidth: stack.width - 40,
+        fixedWidth: stack.width - 42,
         fontFamily: hudFontFamily,
         fontSize: "13px",
-        wordWrap: { width: stack.width - 42 },
+        wordWrap: { width: stack.width - 44 },
       })
       .setOrigin(0);
 
@@ -174,19 +172,17 @@ function classifyMessage(message: string): HudStatus {
   return "default";
 }
 
-function statusIcon(status: HudStatus): string {
+function statusIcon(status: HudStatus): UiIconAsset {
   switch (status) {
     case "success":
-      return "+";
+      return uiIconAssets.success;
     case "warning":
-      return "!";
     case "danger":
-      return "x";
+      return uiIconAssets.errorFail;
     case "pending":
-      return "...";
+      return uiIconAssets.pending;
     case "disabled":
-      return "-";
     case "default":
-      return ">";
+      return uiIconAssets.gather;
   }
 }

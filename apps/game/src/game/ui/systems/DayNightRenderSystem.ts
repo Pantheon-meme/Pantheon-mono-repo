@@ -7,6 +7,8 @@ import { JournalPanel } from "../components/JournalPanel";
 import { BiomeMinimap } from "../components/BiomeMinimap";
 import { hudColors } from "../HudTheme";
 
+const systemButtonIconSize = 18;
+
 type Lighting = {
   alpha: number;
   color: number;
@@ -69,11 +71,14 @@ export class DayNightRenderSystem implements System {
           isActive ? hudColors.selected : hudColors.border,
           isActive ? 0.9 : 0.45,
         );
-        button.label.setPosition(buttonX, buttonY);
-        button.label.setScale(scale);
-        button.label.setColor(isActive ? hudColors.textDark : hudColors.textWarm);
+        button.icon.setPosition(buttonX, buttonY);
+        button.icon.setDisplaySize(
+          systemButtonIconSize * scale,
+          systemButtonIconSize * scale,
+        );
+        button.icon.setAlpha(isActive ? 1 : 0.86);
         button.background.setVisible(true);
-        button.label.setVisible(true);
+        button.icon.setVisible(true);
       });
     }
   }

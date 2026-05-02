@@ -34,6 +34,7 @@ import {
   joystickControlTextureKey,
   playerMarkerAsset,
   playerMarkerTextureKey,
+  uiIconAssets,
   uiImageAssets,
 } from "../assets/ui/UiImageAssets";
 import { World } from "../ecs/World";
@@ -638,14 +639,8 @@ export class MainGameScene extends Phaser.Scene {
       .circle(-width / 2 - 14, 0, 15, hudColors.panelWarm, 0.96)
       .setStrokeStyle(1, hudColors.borderWarm, 0.62);
     const icon = this.add
-      .text(-width / 2 - 14, 0, ">", {
-        align: "center",
-        color: hudColors.textWarm,
-        fixedWidth: 28,
-        fontFamily: hudFontFamily,
-        fontSize: "13px",
-        fontStyle: "700",
-      })
+      .image(-width / 2 - 14, 0, uiIconAssets.gather.textureKey)
+      .setDisplaySize(24, 24)
       .setOrigin(0.5);
     const label = this.add
       .text(-width / 2 + 2, -8, "", {
@@ -720,33 +715,26 @@ export class MainGameScene extends Phaser.Scene {
       .setOrigin(1, 0.5)
       .setDepth(101);
     const buttons = [
-      this.createSystemButton("journal", "J"),
-      this.createSystemButton("map", "M"),
-      this.createSystemButton("settings", "S"),
+      this.createSystemButton("journal"),
+      this.createSystemButton("map"),
+      this.createSystemButton("settings"),
     ];
 
     return new DayNightOverlay(shade, panel, label, phase, buttons, 18, 18);
   }
 
-  private createSystemButton(id: HudSystemButtonId, labelText: string) {
+  private createSystemButton(id: HudSystemButtonId) {
     const background = this.add
       .rectangle(0, 0, 28, 26, hudColors.panel, 0.9)
       .setOrigin(0.5)
       .setDepth(102)
       .setStrokeStyle(1, hudColors.border, 0.45)
       .setInteractive({ useHandCursor: true });
-    const label = this.add
-      .text(0, 0, labelText, {
-        align: "center",
-        color: hudColors.textWarm,
-        fixedWidth: 26,
-        fontFamily: hudFontFamily,
-        fontSize: "12px",
-        fontStyle: "700",
-      })
+    const icon = this.add
+      .image(0, 0, systemButtonIcon(id).textureKey)
       .setOrigin(0.5)
       .setDepth(103);
-    const button = { id, background, label, pendingClick: false };
+    const button = { id, background, icon, pendingClick: false };
 
     background.on("pointerover", () => {
       background.setFillStyle(0x314556, 0.98);
@@ -774,6 +762,14 @@ export class MainGameScene extends Phaser.Scene {
       .rectangle(x, y, width, height, 0x7bd7ff, 1)
       .setOrigin(0)
       .setDepth(102);
+    const icon = this.add
+      .image(
+        x + height / 2 + 4,
+        y + height / 2,
+        uiIconAssets.sleepPillow.textureKey,
+      )
+      .setDepth(103)
+      .setVisible(false);
     const label = this.add
       .text(x, y + height + 6, "", {
         color: "#eef7f4",
@@ -785,9 +781,19 @@ export class MainGameScene extends Phaser.Scene {
     background.setStrokeStyle(2, 0xe8f0e8, 0.45);
     background.setVisible(false);
     fill.setVisible(false);
+    icon.setVisible(false);
     label.setVisible(false);
 
-    return new SleepProgressBar(background, fill, label, width, height, x, y);
+    return new SleepProgressBar(
+      background,
+      fill,
+      icon,
+      label,
+      width,
+      height,
+      x,
+      y,
+    );
   }
 
   private createActionToastStack(): ActionToastStack {
@@ -1262,6 +1268,17 @@ export class MainGameScene extends Phaser.Scene {
       .setVisible(false);
 
     return { section, background, label: text };
+  }
+}
+
+function systemButtonIcon(id: HudSystemButtonId) {
+  switch (id) {
+    case "journal":
+      return uiIconAssets.journal;
+    case "map":
+      return uiIconAssets.map;
+    case "settings":
+      return uiIconAssets.settings;
   }
 }
 

@@ -7,7 +7,7 @@ export class ActionProgressBar {
     public readonly track: Phaser.GameObjects.Rectangle,
     public readonly fill: Phaser.GameObjects.Rectangle,
     public readonly iconFrame: Phaser.GameObjects.Arc,
-    public readonly icon: Phaser.GameObjects.Text,
+    public readonly icon: Phaser.GameObjects.Image,
     public readonly label: Phaser.GameObjects.Text,
     public readonly detail: Phaser.GameObjects.Text,
     public readonly width: number,
