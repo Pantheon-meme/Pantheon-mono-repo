@@ -7,6 +7,7 @@
   "scripts": {
     "build": "mud build",
     "clean": "forge clean && shx rm -rf src/**/codegen",
+    "create-player-agent-offers:local": "forge script CreatePlayerAgentOffers --rpc-url http://127.0.0.1:8545 --broadcast -vv",
     "deploy:local": "mud deploy",
     "dev": "mud dev-contracts --rpc http://127.0.0.1:8545",
     "explorer": "NEXT_PUBLIC_PROJECT_ID=${NEXT_PUBLIC_PROJECT_ID:-local} explorer",

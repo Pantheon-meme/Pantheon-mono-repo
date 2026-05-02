@@ -141,6 +141,12 @@ contract PantheonAgentINFT is IPantheonAgentINFT {
     return _storageInfo;
   }
 
+  function tokenURI(uint256 tokenId) external view returns (string memory) {
+    ownerOf(tokenId);
+
+    return _runtimePointers[tokenId].publicURI;
+  }
+
   function balanceOf(address account) external view returns (uint256) {
     require(account != address(0), "zero address");
 

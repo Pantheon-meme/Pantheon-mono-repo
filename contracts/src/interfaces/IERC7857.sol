@@ -171,6 +171,8 @@ interface IERC7857 {
   function getDelegateAccess(address user) external view returns (address);
 
   function storageInfo(uint256 tokenId) external view returns (string memory);
+
+  function tokenURI(uint256 tokenId) external view returns (string memory);
 }
 
 interface IPantheonAgentINFT is IERC7857, IERC7857Metadata {
