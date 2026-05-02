@@ -24,6 +24,8 @@
     "generate-biome-plant-sprites": "tsx src/generate-biome-plant-sprites.ts",
     "generate-tree-sprites": "tsx src/generate-tree-sprites.ts",
     "combine-autotile-atlas": "tsx src/combine-autotile-atlas.ts",
+    "prepare-inft-metadata": "tsx src/prepare-inft-metadata.ts",
+    "upload-inft-metadata": "tsx src/prepare-inft-metadata.ts --upload",
     "publish-game-assets": "tsx src/publish-game-assets.ts",
     "publish-object-sprites": "tsx src/publish-object-sprites.ts",
     "lint": "tsc --noEmit -p tsconfig.json",
@@ -32,8 +34,10 @@
   },
   "dependencies": {
     "@mastra/core": "^0.16.0",
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.6",
     "@openrouter/ai-sdk-provider": "^1.2.0",
     "ai": "^5.0.0",
+    "ethers": "6.13.1",
     "sharp": "^0.33.5",
     "zod": "^3.25.76"
   },

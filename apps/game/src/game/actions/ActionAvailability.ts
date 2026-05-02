@@ -1,15 +1,13 @@
 import type { Entity } from "../../ecs/World";
 import type { World } from "../../ecs/World";
-import { Hands, type HandId } from "../player/components/Hands";
 import { FocusTarget } from "../player/components/FocusTarget";
-import { HeldItem } from "../player/components/HeldItem";
 import { Energy } from "../energy/components/Energy";
-import { SeedDrop } from "../plants/components/SeedDrop";
+import { PlayerInventory } from "../inventory/components/PlayerInventory";
+import { getPlantBySeed } from "../plants/PlantDefinitions";
 import { SeedPouch } from "../plants/components/SeedPouch";
 import { SleepState } from "../sleep/components/SleepState";
 import { Position } from "../shared/components/Position";
 import { Grabbable } from "../shared/components/Grabbable";
-import { ItemUseConstraints } from "../shared/components/ItemUseConstraints";
 import { WeightedObject } from "../shared/components/WeightedObject";
 import { TerrainGrid } from "../terrain/components/TerrainGrid";
 import {
@@ -19,7 +17,6 @@ import {
 import {
   findPlantAt,
   findPlantByEntity,
-  handLabel,
   seedLabel,
 } from "./ActionHelpers";
 
@@ -58,6 +55,14 @@ function getObjectActions(
   const actions: TargetActionEntry[] = [];
   const grownPlant = findPlantByEntity(world, target, true);
 
+  if (focus.objectLabel === "Central Uni Bank") {
+    actions.push({
+      id: "bank-open",
+      label: "Bank",
+      detail: "Trade CUC goods",
+    });
+  }
+
   if (grownPlant) {
     actions.push({
       id: "fetch",
@@ -66,21 +71,24 @@ function getObjectActions(
     });
   }
 
-  for (const hand of ["left", "right"] as const) {
-    if (canGrabWithHand(world, actor, target, hand)) {
-      actions.push({
-        id: `${hand}-hand-toggle`,
-        label: `${handLabel(hand)} grab`,
-        detail: focus.objectLabel,
-      });
-    }
+  if (findPlantByEntity(world, target, false)) {
+    actions.push({
+      id: "water",
+      label: "Water",
+      detail: "Raise moisture",
+    });
+    actions.push({
+      id: "tend",
+      label: "Tend",
+      detail: "Improve care",
+    });
   }
 
-  if (canNoticeCarryLimit(world, actor, target)) {
+  if (canGrabIntoInventory(world, actor, target)) {
     actions.push({
-      id: "carry-more-need",
-      label: "Stow item",
-      detail: "Hands full",
+      id: "inventory-grab",
+      label: "Grab",
+      detail: getInventoryGrabDetail(world, actor, target, focus.objectLabel),
     });
   }
 
@@ -107,13 +115,27 @@ function getTileActions(
     });
   }
 
-  if (canPlantFromPouch(world, actor, focus)) {
-    const pouch = world.getComponent(actor, SeedPouch);
+  const carePlant = findPlantAt(world, focus.tileX, focus.tileY, false);
 
+  if (carePlant) {
+    actions.push({
+      id: "water",
+      label: "Water",
+      detail: "Raise moisture",
+    });
+    actions.push({
+      id: "tend",
+      label: "Tend",
+      detail: "Improve care",
+    });
+  }
+
+  const plantableSeedId = getPlantableSeedId(world, actor, focus);
+  if (plantableSeedId) {
     actions.push({
       id: "plant",
       label: "Plant",
-      detail: pouch ? seedLabel(pouch.activeSeedId) : undefined,
+      detail: seedLabel(plantableSeedId),
     });
   }
 
@@ -135,16 +157,6 @@ function getTileActions(
       label: "Sleep",
       detail: "Recover energy",
     });
-  }
-
-  for (const hand of ["left", "right"] as const) {
-    if (canUseHandOnTile(world, actor, focus, hand)) {
-      actions.push({
-        id: `${hand}-hand-use`,
-        label: `${handLabel(hand)} use`,
-        detail: "Use held seed",
-      });
-    }
   }
 
   return actions;
@@ -169,55 +181,71 @@ function canRestoreEnergy(world: World, actor: Entity): boolean {
   return true;
 }
 
-function canGrabWithHand(
+function canGrabIntoInventory(
   world: World,
   actor: Entity,
   target: Entity,
-  hand: HandId,
 ): boolean {
-  const hands = world.getComponent(actor, Hands);
-  const slot = hands?.get(hand);
+  const inventory = world.getComponent(actor, PlayerInventory);
   const weight = world.getComponent(target, WeightedObject);
 
   return Boolean(
-    hands &&
-    slot &&
-    !slot.held &&
-    !world.getComponent(target, HeldItem) &&
+    inventory &&
     world.getComponent(target, Grabbable) &&
     weight &&
-    weight.weight <= hands.maxHandWeight,
+    inventory.usedWeight + weight.weight <= inventory.maxWeight &&
+    inventory.nextFreeSlot() !== undefined,
   );
 }
 
-function canNoticeCarryLimit(
+function getInventoryGrabDetail(
   world: World,
   actor: Entity,
   target: Entity,
-): boolean {
-  const hands = world.getComponent(actor, Hands);
+  fallbackLabel: string,
+): string {
+  const inventory = world.getComponent(actor, PlayerInventory);
+  const weight = world.getComponent(target, WeightedObject)?.weight ?? 0;
 
-  return Boolean(
-    hands &&
-    hands.left.held &&
-    hands.right.held &&
-    !world.getComponent(target, HeldItem) &&
-    world.getComponent(target, Grabbable),
-  );
+  if (!inventory) {
+    return fallbackLabel;
+  }
+
+  return `${fallbackLabel} (${formatWeight(
+    inventory.usedWeight + weight,
+  )}/${formatWeight(inventory.maxWeight)})`;
 }
 
-function canPlantFromPouch(
+function getPlantableSeedId(
   world: World,
   actor: Entity,
   focus: FocusTarget,
-): boolean {
+): string | undefined {
+  const inventory = world.getComponent(actor, PlayerInventory);
+  const activeInventorySlot = inventory?.slots.get(inventory.activeSlot);
+
+  if (
+    activeInventorySlot &&
+    activeInventorySlot.amount > 0 &&
+    getPlantBySeed(activeInventorySlot.itemId) &&
+    getTopTerrainLayerAtCell(world, focus.tileX, focus.tileY)?.layer.id ===
+      "dirt" &&
+    !findPlantAt(world, focus.tileX, focus.tileY, false)
+  ) {
+    return activeInventorySlot.itemId;
+  }
+
   const pouch = world.getComponent(actor, SeedPouch);
 
-  return Boolean(
+  if (
     pouch &&
     pouch.count(pouch.activeSeedId) > 0 &&
-    !findPlantAt(world, focus.tileX, focus.tileY, false),
-  );
+    !findPlantAt(world, focus.tileX, focus.tileY, false)
+  ) {
+    return pouch.activeSeedId;
+  }
+
+  return undefined;
 }
 
 function getDigDetail(world: World, focus: FocusTarget): string {
@@ -228,37 +256,6 @@ function getDigDetail(world: World, focus: FocusTarget): string {
     : "Loosen soil";
 }
 
-function canUseHandOnTile(
-  world: World,
-  actor: Entity,
-  focus: FocusTarget,
-  hand: HandId,
-): boolean {
-  const hands = world.getComponent(actor, Hands);
-  const held = hands?.get(hand).held;
-
-  if (!held) {
-    return false;
-  }
-
-  const seedDrop = world.getComponent(held, SeedDrop);
-
-  if (!seedDrop || seedDrop.collected) {
-    return false;
-  }
-
-  if (findPlantAt(world, focus.tileX, focus.tileY, false)) {
-    return false;
-  }
-
-  const constraints = world.getComponent(held, ItemUseConstraints);
-
-  if (!constraints?.requiredTerrainLayerId) {
-    return true;
-  }
-
-  return (
-    getTopTerrainLayerAtCell(world, focus.tileX, focus.tileY)?.layer.id ===
-    constraints.requiredTerrainLayerId
-  );
+function formatWeight(weight: number): string {
+  return Number.isInteger(weight) ? `${weight}` : weight.toFixed(2);
 }

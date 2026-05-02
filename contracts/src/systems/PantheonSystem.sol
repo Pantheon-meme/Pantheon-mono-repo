@@ -1,24 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { System } from "@latticexyz/world/src/System.sol";
-import {
-  ForageLootSlot,
-  ForageNonce,
-  ForageState,
-  ForageTable,
-  LastForageResult,
-  PlantState,
-  TerrainState,
-  TerrainTile
-} from "../codegen/index.sol";
-import { ActionLogLib } from "../libraries/ActionLogLib.sol";
-import { InventoryLib } from "../libraries/InventoryLib.sol";
-import { PantheonConstants } from "../libraries/PantheonConstants.sol";
-import { PendingActionLib } from "../libraries/PendingActionLib.sol";
-import { PlayerLib } from "../libraries/PlayerLib.sol";
+import {System} from "@latticexyz/world/src/System.sol";
+import {ForageLootSlot, ForageNonce, ForageState, ForageTable, InventoryObject, LastForageResult, ObjectState, ObjectType, PlayerInventory, PlayerInventoryCapacity, TerrainState, TerrainTile, WorldObject, WorldObjectCount} from "../codegen/index.sol";
+import {ActionLogLib} from "../libraries/ActionLogLib.sol";
+import {PantheonConstants} from "../libraries/PantheonConstants.sol";
+import {PendingActionLib} from "../libraries/PendingActionLib.sol";
+import {PlayerLib} from "../libraries/PlayerLib.sol";
 
 contract PantheonSystem is System {
+  uint16 private constant INVENTORY_SLOT_COUNT = 256;
+
   struct ForageResult {
     bytes32 itemId;
     uint32 amount;
@@ -43,16 +35,34 @@ contract PantheonSystem is System {
     PlayerLib.requireExists(player);
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
+    require(TerrainTile.getExists(x, y), "missing terrain");
+    PlayerLib.requireNear(player, x, y, "dig too far");
+
+    bytes32 terrainId = TerrainTile.getTerrainId(x, y);
+    require(
+      terrainId != PantheonConstants.TERRAIN_PATH &&
+        terrainId != PantheonConstants.TERRAIN_WATER &&
+        terrainId != PantheonConstants.TERRAIN_SWAMP,
+      "terrain not diggable"
+    );
+    require(
+      TerrainState.getDigDepth(x, y) < PantheonConstants.MAX_DIG_LEVEL,
+      "already dug"
+    );
+
     PlayerLib.spendEnergy(player, PantheonConstants.DIG_ENERGY_COST);
 
-    uint32 depth = TerrainState.getDigDepth(x, y);
-    bool loosened = TerrainState.getLoosened(x, y);
     TerrainState.set(
       x,
       y,
       PantheonConstants.TERRAIN_DIRT,
-      loosened ? depth + 1 : depth,
+      PantheonConstants.MAX_DIG_LEVEL,
       true
+    );
+    PendingActionLib.startBusy(
+      player,
+      PantheonConstants.ACTION_DIG,
+      PantheonConstants.DIG_DURATION
     );
     ActionLogLib.write(player, PantheonConstants.ACTION_DIG, "Dug soil");
   }
@@ -63,7 +73,7 @@ contract PantheonSystem is System {
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
     require(TerrainTile.getExists(x, y), "missing terrain");
-    require(_isNearPlayer(player, x, y), "forage too far");
+    PlayerLib.requireNear(player, x, y, "forage too far");
 
     bytes32 terrainId = TerrainTile.getTerrainId(x, y);
     require(ForageTable.getExists(terrainId), "terrain not forageable");
@@ -97,47 +107,130 @@ contract PantheonSystem is System {
     LastForageResult.set(player, x, y, result.itemId, result.amount, true);
 
     if (result.amount > 0) {
-      InventoryLib.add(player, result.itemId, result.amount);
-      ActionLogLib.write(player, PantheonConstants.ACTION_FORAGE, "Foraged resource");
+      _spawnForageObjects(player, x, y, result.itemId, result.amount);
+      ActionLogLib.write(
+        player,
+        PantheonConstants.ACTION_FORAGE,
+        "Foraged resource"
+      );
     } else {
-      ActionLogLib.write(player, PantheonConstants.ACTION_FORAGE, "Foraged nothing");
+      ActionLogLib.write(
+        player,
+        PantheonConstants.ACTION_FORAGE,
+        "Foraged nothing"
+      );
     }
-  }
 
-  function plant(int32 x, int32 y, bytes32 plantId) public {
-    address player = _msgSender();
-    PlayerLib.requireExists(player);
-    PendingActionLib.resolveReady(player);
-    PendingActionLib.requireIdle(player);
-    require(!PlantState.getExists(x, y), "plant exists");
-    PlayerLib.spendEnergy(player, PantheonConstants.PLANT_ENERGY_COST);
-
-    PlantState.set(
-      x,
-      y,
-      plantId,
+    PendingActionLib.startBusy(
       player,
-      uint64(block.timestamp),
-      PantheonConstants.PLANT_STAGE_GROWING,
-      true
+      PantheonConstants.ACTION_FORAGE,
+      PantheonConstants.FORAGE_DURATION
     );
-    ActionLogLib.write(player, PantheonConstants.ACTION_PLANT, "Planted seed");
   }
 
-  function harvest(int32 x, int32 y) public {
+  function pickupObject(bytes32 objectId) public {
     address player = _msgSender();
     PlayerLib.requireExists(player);
     PendingActionLib.resolveReady(player);
     PendingActionLib.requireIdle(player);
-    require(PlantState.getExists(x, y), "missing plant");
+    require(WorldObject.getExists(objectId), "missing object");
+    require(ObjectState.getExists(objectId), "missing object state");
+    require(!InventoryObject.getExists(objectId), "already picked up");
 
-    PlantState.setStage(x, y, PantheonConstants.PLANT_STAGE_HARVESTED);
-    ActionLogLib.write(player, PantheonConstants.ACTION_HARVEST, "Harvested plant");
+    PlayerLib.requireNear(
+      player,
+      WorldObject.getX(objectId),
+      WorldObject.getY(objectId),
+      "object too far"
+    );
+
+    uint32 maxWeight = _playerInventoryMaxWeight(player);
+    uint32 currentWeight = _playerInventoryWeight(player);
+    uint32 objectWeight = _objectWeight(objectId);
+    require(currentWeight + objectWeight <= maxWeight, "inventory full");
+    uint8 slot = _firstFreeInventorySlot(player);
+
+    PlayerInventory.set(player, slot, objectId, true);
+    InventoryObject.set(objectId, player, true);
+    WorldObject.deleteRecord(objectId);
+    ActionLogLib.write(player, bytes32("pickup"), "Picked up object");
+  }
+
+  function dropObject(bytes32 objectId, int32 x, int32 y) public {
+    address player = _msgSender();
+    PlayerLib.requireExists(player);
+    PendingActionLib.resolveReady(player);
+    PendingActionLib.requireIdle(player);
+    require(ObjectState.getExists(objectId), "missing object state");
+    require(InventoryObject.getOwner(objectId) == player, "not carried");
+    require(TerrainTile.getExists(x, y), "missing terrain");
+    PlayerLib.requireNear(player, x, y, "drop too far");
+
+    uint8 slot = _inventorySlotForObject(player, objectId);
+
+    PlayerInventory.deleteRecord(player, slot);
+    InventoryObject.deleteRecord(objectId);
+    WorldObject.set(objectId, x, y, player, uint64(block.timestamp), true);
+    ActionLogLib.write(player, bytes32("drop"), "Dropped object");
+  }
+
+  function getPlayerInventory(
+    address player
+  )
+    public
+    view
+    returns (
+      uint32 maxWeight,
+      uint8[] memory slots,
+      bytes32[] memory objectIds,
+      bytes32[] memory objectTypeIds,
+      bytes32[] memory itemIds,
+      uint32[] memory amounts,
+      uint32[] memory weights
+    )
+  {
+    maxWeight = _playerInventoryMaxWeight(player);
+    uint16 count = 0;
+
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      if (PlayerInventory.getExists(player, uint8(slot))) {
+        count += 1;
+      }
+    }
+
+    slots = new uint8[](count);
+    objectIds = new bytes32[](count);
+    objectTypeIds = new bytes32[](count);
+    itemIds = new bytes32[](count);
+    amounts = new uint32[](count);
+    weights = new uint32[](count);
+
+    uint16 index = 0;
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
+
+      if (!PlayerInventory.getExists(player, inventorySlot)) {
+        continue;
+      }
+
+      bytes32 objectId = PlayerInventory.getObjectId(player, inventorySlot);
+      slots[index] = inventorySlot;
+      objectIds[index] = objectId;
+      objectTypeIds[index] = ObjectState.getObjectTypeId(objectId);
+      itemIds[index] = ObjectState.getItemId(objectId);
+      amounts[index] = ObjectState.getAmount(objectId);
+      weights[index] = _objectWeight(objectId);
+      index += 1;
+    }
   }
 
   function getLastForageResult(
     address player
-  ) public view returns (int32 x, int32 y, bytes32 itemId, uint32 amount, bool exists) {
+  )
+    public
+    view
+    returns (int32 x, int32 y, bytes32 itemId, uint32 amount, bool exists)
+  {
     return (
       LastForageResult.getX(player),
       LastForageResult.getY(player),
@@ -145,6 +238,146 @@ contract PantheonSystem is System {
       LastForageResult.getAmount(player),
       LastForageResult.getExists(player)
     );
+  }
+
+  function getWorldObjectCount() public view returns (uint32 count) {
+    return WorldObjectCount.getCount(PantheonConstants.WORLD_OBJECT_COUNTER_ID);
+  }
+
+  function getWorldObject(
+    uint32 index
+  )
+    public
+    view
+    returns (
+      bytes32 objectId,
+      int32 x,
+      int32 y,
+      bytes32 itemId,
+      uint32 amount,
+      address spawnedBy,
+      uint64 createdAt,
+      bool exists
+    )
+  {
+    objectId = bytes32(uint256(index));
+
+    return (
+      objectId,
+      WorldObject.getX(objectId),
+      WorldObject.getY(objectId),
+      ObjectState.getItemId(objectId),
+      ObjectState.getAmount(objectId),
+      WorldObject.getSpawnedBy(objectId),
+      WorldObject.getCreatedAt(objectId),
+      WorldObject.getExists(objectId)
+    );
+  }
+
+  function _spawnForageObjects(
+    address player,
+    int32 x,
+    int32 y,
+    bytes32 itemId,
+    uint32 amount
+  ) private {
+    bytes32 counterId = PantheonConstants.WORLD_OBJECT_COUNTER_ID;
+    uint32 count = WorldObjectCount.getCount(counterId);
+
+    for (uint32 i = 0; i < amount; i++) {
+      count += 1;
+      _spawnWorldObject(bytes32(uint256(count)), player, x, y, itemId);
+    }
+
+    WorldObjectCount.set(counterId, count, true);
+  }
+
+  function _spawnWorldObject(
+    bytes32 objectId,
+    address player,
+    int32 x,
+    int32 y,
+    bytes32 itemId
+  ) private {
+    ObjectState.set(objectId, itemId, itemId, 1, true);
+    WorldObject.setX(objectId, x);
+    WorldObject.setY(objectId, y);
+    WorldObject.setSpawnedBy(objectId, player);
+    WorldObject.setCreatedAt(objectId, uint64(block.timestamp));
+    WorldObject.setExists(objectId, true);
+  }
+
+  function _playerInventoryMaxWeight(
+    address player
+  ) private view returns (uint32) {
+    uint32 maxWeight = PlayerInventoryCapacity.getExists(player)
+      ? PlayerInventoryCapacity.getMaxWeight(player)
+      : PantheonConstants.DEFAULT_INVENTORY_MAX_WEIGHT;
+
+    return
+      maxWeight == 0
+        ? PantheonConstants.DEFAULT_INVENTORY_MAX_WEIGHT
+        : maxWeight;
+  }
+
+  function _firstFreeInventorySlot(
+    address player
+  ) private view returns (uint8) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
+
+      if (!PlayerInventory.getExists(player, inventorySlot)) {
+        return inventorySlot;
+      }
+    }
+
+    revert("inventory slots exhausted");
+  }
+
+  function _inventorySlotForObject(
+    address player,
+    bytes32 objectId
+  ) private view returns (uint8) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
+
+      if (
+        PlayerInventory.getExists(player, inventorySlot) &&
+        PlayerInventory.getObjectId(player, inventorySlot) == objectId
+      ) {
+        return inventorySlot;
+      }
+    }
+
+    revert("object not in inventory");
+  }
+
+  function _playerInventoryWeight(
+    address player
+  ) private view returns (uint32 totalWeight) {
+    for (uint16 slot = 0; slot < INVENTORY_SLOT_COUNT; slot++) {
+      uint8 inventorySlot = uint8(slot);
+
+      if (PlayerInventory.getExists(player, inventorySlot)) {
+        totalWeight += _objectWeight(
+          PlayerInventory.getObjectId(player, inventorySlot)
+        );
+      }
+    }
+  }
+
+  function _objectWeight(bytes32 objectId) private view returns (uint32) {
+    bytes32 objectTypeId = ObjectState.getObjectTypeId(objectId);
+
+    if (objectTypeId != bytes32(0) && ObjectType.getExists(objectTypeId)) {
+      uint32 objectTypeWeight = ObjectType.getWeight(objectTypeId);
+
+      if (objectTypeWeight > 0) {
+        return objectTypeWeight;
+      }
+    }
+
+    return 1;
   }
 
   function _resolveForage(
@@ -164,7 +397,11 @@ contract PantheonSystem is System {
     bytes32 tableId = ForageTable.getTableId(terrainId);
     uint32 totalWeight = 0;
 
-    for (uint8 slot = 0; slot < PantheonConstants.FORAGE_MAX_LOOT_SLOTS; slot++) {
+    for (
+      uint8 slot = 0;
+      slot < PantheonConstants.FORAGE_MAX_LOOT_SLOTS;
+      slot++
+    ) {
       if (ForageLootSlot.getEnabled(tableId, slot)) {
         totalWeight += ForageLootSlot.getWeight(tableId, slot);
       }
@@ -180,7 +417,11 @@ contract PantheonSystem is System {
     );
     uint32 cursor = 0;
 
-    for (uint8 slot = 0; slot < PantheonConstants.FORAGE_MAX_LOOT_SLOTS; slot++) {
+    for (
+      uint8 slot = 0;
+      slot < PantheonConstants.FORAGE_MAX_LOOT_SLOTS;
+      slot++
+    ) {
       if (!ForageLootSlot.getEnabled(tableId, slot)) {
         continue;
       }
@@ -230,12 +471,4 @@ contract PantheonSystem is System {
     return 0;
   }
 
-  function _isNearPlayer(address player, int32 x, int32 y) private view returns (bool) {
-    (int32 playerX, int32 playerY) = PlayerLib.getPosition(player);
-
-    int32 dx = x > playerX ? x - playerX : playerX - x;
-    int32 dy = y > playerY ? y - playerY : playerY - y;
-
-    return dx <= 1 && dy <= 1;
-  }
 }

@@ -1,4 +1,5 @@
 import applewoodSpriteUrl from "./applewood/applewood-sprite-sheet.png?url";
+import centralUniBankSpriteUrl from "./central-uni-bank/central-uni-bank-sprite-sheet.png?url";
 import cityCloverSpriteUrl from "./city-clover/city-clover-sprite-sheet.png?url";
 import duskmilletSpriteUrl from "./duskmillet/duskmillet-sprite-sheet.png?url";
 import emberoakSpriteUrl from "./emberoak/emberoak-sprite-sheet.png?url";
@@ -15,6 +16,10 @@ import mirrorReedSpriteUrl from "./mirror-reed/mirror-reed-sprite-sheet.png?url"
 import moonwillowSpriteUrl from "./moonwillow/moonwillow-sprite-sheet.png?url";
 import pinecrestSpriteUrl from "./pinecrest/pinecrest-sprite-sheet.png?url";
 import playerSpriteUrl from "./player/player-sprite-sheet.png?url";
+import player2SpriteUrl from "./player2/player2-sprite-sheet.png?url";
+import player3SpriteUrl from "./player3/player3-sprite-sheet.png?url";
+import player4SpriteUrl from "./player4/player4-sprite-sheet.png?url";
+import player5SpriteUrl from "./player5/player5-sprite-sheet.png?url";
 import poolblossomSpriteUrl from "./poolblossom/poolblossom-sprite-sheet.png?url";
 import poolcypressSpriteUrl from "./poolcypress/poolcypress-sprite-sheet.png?url";
 import routeberrySpriteUrl from "./routeberry/routeberry-sprite-sheet.png?url";
@@ -246,6 +251,29 @@ export const objectSpriteAssets = {
         ]
     },
   },
+  "central-uni-bank": {
+    imageUrl: centralUniBankSpriteUrl,
+    manifest: {
+        "rows": 1,
+        "columns": 1,
+        "cellSize": 512,
+        "atlasWidth": 512,
+        "atlasHeight": 512,
+        "cells": [
+            {
+                "stateId": "building",
+                "stateTitle": "Building",
+                "columnLabel": "building",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 512,
+                "height": 512
+            }
+        ]
+    },
+  },
   "city-clover": {
     imageUrl: cityCloverSpriteUrl,
     manifest: {
@@ -345,7 +373,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 1",
                 "row": 2,
                 "column": 0,
@@ -356,7 +384,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 2",
                 "row": 2,
                 "column": 1,
@@ -367,7 +395,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 3",
                 "row": 2,
                 "column": 2,
@@ -378,7 +406,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 4",
                 "row": 2,
                 "column": 3,
@@ -389,7 +417,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 1",
                 "row": 3,
                 "column": 0,
@@ -400,7 +428,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 2",
                 "row": 3,
                 "column": 1,
@@ -411,7 +439,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 3",
                 "row": 3,
                 "column": 2,
@@ -422,7 +450,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 4",
                 "row": 3,
                 "column": 3,
@@ -3254,6 +3282,758 @@ export const objectSpriteAssets = {
         ]
     },
   },
+  "player2": {
+    imageUrl: player2SpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "down",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "side",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "up",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "action",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "down",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "side",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "up",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "action",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "down",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "side",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "up",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "action",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "down",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "side",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "up",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "action",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "player3": {
+    imageUrl: player3SpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "down",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "side",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "up",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "action",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "down",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "side",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "up",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "action",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "down",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "side",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "up",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "action",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "down",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "side",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "up",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "action",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "player4": {
+    imageUrl: player4SpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "down",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "side",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "up",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "action",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "down",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "side",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "up",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "action",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "down",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "side",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "up",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "action",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "down",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "side",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "up",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "action",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "player5": {
+    imageUrl: player5SpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "down",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "side",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "up",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_1",
+                "stateTitle": "Idle 1",
+                "columnLabel": "action",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "down",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "side",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "up",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "idle_2",
+                "stateTitle": "Idle 2",
+                "columnLabel": "action",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "down",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "side",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "up",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_1",
+                "stateTitle": "Move 1",
+                "columnLabel": "action",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "down",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "side",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "up",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "move_2",
+                "stateTitle": "Move 2",
+                "columnLabel": "action",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
   "poolblossom": {
     imageUrl: poolblossomSpriteUrl,
     manifest: {
@@ -3729,7 +4509,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 1",
                 "row": 2,
                 "column": 0,
@@ -3740,7 +4520,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 2",
                 "row": 2,
                 "column": 1,
@@ -3751,7 +4531,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 3",
                 "row": 2,
                 "column": 2,
@@ -3762,7 +4542,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "grown",
-                "stateTitle": "Grown",
+                "stateTitle": "Grown And Stressed",
                 "columnLabel": "step 4",
                 "row": 2,
                 "column": 3,
@@ -3773,7 +4553,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 1",
                 "row": 3,
                 "column": 0,
@@ -3784,7 +4564,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 2",
                 "row": 3,
                 "column": 1,
@@ -3795,7 +4575,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 3",
                 "row": 3,
                 "column": 2,
@@ -3806,7 +4586,7 @@ export const objectSpriteAssets = {
             },
             {
                 "stateId": "harvested",
-                "stateTitle": "Harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 4",
                 "row": 3,
                 "column": 3,

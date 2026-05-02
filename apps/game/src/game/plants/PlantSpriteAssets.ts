@@ -57,15 +57,10 @@ export function getSeedItemSpriteFrameIndex(asset: ObjectSpriteAsset): number | 
   return getPlantSpriteFrameIndex(asset, "seed", 0);
 }
 
-export function getHarvestItemSpriteFrameIndex(asset: ObjectSpriteAsset, frame: number): number | undefined {
-  const startColumn = Math.floor(asset.manifest.columns / 2);
-  const itemColumns = Math.max(1, asset.manifest.columns - startColumn);
-
-  return getPlantSpriteFrameIndex(asset, "harvested", startColumn + (frame % itemColumns));
+export function getHarvestItemSpriteFrameIndex(asset: ObjectSpriteAsset, _frame: number): number | undefined {
+  return getPlantSpriteFrameIndex(asset, "harvested", 1);
 }
 
-export function getHarvestedPlantSpriteFrameIndex(asset: ObjectSpriteAsset, frame: number): number | undefined {
-  const remnantColumns = Math.max(1, Math.floor(asset.manifest.columns / 2));
-
-  return getPlantSpriteFrameIndex(asset, "harvested", frame % remnantColumns);
+export function getHarvestedPlantSpriteFrameIndex(asset: ObjectSpriteAsset, _frame: number): number | undefined {
+  return getPlantSpriteFrameIndex(asset, "harvested", 0);
 }

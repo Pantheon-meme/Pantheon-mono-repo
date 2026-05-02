@@ -17,6 +17,7 @@ body,
   width: 100%;
   height: 100%;
   margin: 0;
+  position: relative;
 }
 
 body {
@@ -25,4 +26,131 @@ body {
 
 canvas {
   display: block;
+}
+
+.character-select-overlay {
+  align-items: center;
+  background: #11181d;
+  box-sizing: border-box;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow: auto;
+  padding: 28px;
+  position: absolute;
+  z-index: 10;
+}
+
+.character-select-panel {
+  max-width: 1120px;
+  width: 100%;
+}
+
+.character-select-panel h1 {
+  color: #f6efd7;
+  font-size: 34px;
+  line-height: 1.1;
+  margin: 0;
+  text-align: center;
+}
+
+.character-select-subtitle,
+.character-select-footer {
+  color: #b7c8c0;
+  font-size: 15px;
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.character-select-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 26px;
+}
+
+.character-select-card {
+  align-items: center;
+  background: rgba(23, 34, 41, 0.96);
+  border: 2px solid rgba(58, 87, 83, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 14px 32px rgba(5, 7, 8, 0.32);
+  color: #f6efd7;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font: inherit;
+  min-height: 342px;
+  padding: 18px;
+  position: relative;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.character-select-card:hover,
+.character-select-card:focus-visible {
+  border-color: #d8a94f;
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.character-select-shortcut {
+  align-items: center;
+  background: rgba(216, 169, 79, 0.18);
+  border: 1px solid rgba(216, 169, 79, 0.72);
+  border-radius: 999px;
+  color: #f6efd7;
+  display: flex;
+  font-size: 13px;
+  height: 28px;
+  justify-content: center;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 28px;
+}
+
+.character-select-preview {
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  display: block;
+  height: 144px;
+  margin-top: 8px;
+  width: 144px;
+}
+
+.character-select-card strong {
+  color: #f6efd7;
+  font-size: 21px;
+  line-height: 1.15;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.character-select-description {
+  color: #dce8e2;
+  font-size: 14px;
+  line-height: 1.35;
+  margin-top: 8px;
+  min-height: 38px;
+  text-align: center;
+}
+
+.character-select-wallet {
+  color: #8bd6a0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.character-select-action {
+  background: #d8a94f;
+  border-radius: 6px;
+  color: #1f211a;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: auto;
+  padding: 10px 34px;
 }

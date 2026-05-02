@@ -1,6 +1,7 @@
 import { plantDefinitions } from "../plants/PlantDefinitions";
 
 export type ItemCategory =
+  | "crop"
   | "seed"
   | "fiber"
   | "wood"
@@ -20,6 +21,7 @@ export type ItemDefinition = {
 };
 
 const categoryColors: Record<ItemCategory, number> = {
+  crop: 0xf2d06b,
   seed: 0xd8a541,
   fiber: 0x8fd17d,
   wood: 0x9b6a3d,
@@ -72,6 +74,12 @@ export const itemDefinitions: Record<string, ItemDefinition> = {
     Object.values(plantDefinitions).map((plant) => [
       plant.seedId,
       item(plant.seedId, plant.seedLabel, "seed", plant.colors.seed),
+    ]),
+  ),
+  ...Object.fromEntries(
+    Object.values(plantDefinitions).map((plant) => [
+      `${plant.id}_harvest`,
+      item(`${plant.id}_harvest`, plant.harvestLabel, "crop", plant.colors.grown),
     ]),
   ),
   ...Object.fromEntries(forageItems.map((definition) => [definition.id, definition])),

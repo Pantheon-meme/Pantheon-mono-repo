@@ -1,13 +1,16 @@
 import Phaser from "phaser";
 import type { World } from "../../ecs/World";
 import { ActionInputSystem } from "../actions/systems/ActionInputSystem";
+import { ActionToastStackSystem } from "../ui/systems/ActionToastStackSystem";
 import { ActionProgressBarSystem } from "../ui/systems/ActionProgressBarSystem";
 import { ActionSystem } from "../actions/systems/ActionSystem";
 import { AutotileRenderSystem } from "../terrain/systems/AutotileRenderSystem";
+import { BankPanelSystem } from "../ui/systems/BankPanelSystem";
 import { BiomeObjectRenderSystem } from "../biome/systems/BiomeObjectRenderSystem";
 import { BiomeRegionAwarenessSystem } from "../biome/systems/BiomeRegionAwarenessSystem";
 import { BiomeMinimapSystem } from "../ui/systems/BiomeMinimapSystem";
 import { BoundsSystem } from "../shared/systems/BoundsSystem";
+import { CurrencyDisplaySystem } from "../ui/systems/CurrencyDisplaySystem";
 import { DayNightRenderSystem } from "../ui/systems/DayNightRenderSystem";
 import { EnergyBarSystem } from "../ui/systems/EnergyBarSystem";
 import { EnergySystem } from "../energy/systems/EnergySystem";
@@ -21,12 +24,16 @@ import { HarvestedPlantRenderSystem } from "../plants/systems/HarvestedPlantRend
 import { HeldItemPositionSystem } from "../player/systems/HeldItemPositionSystem";
 import { InputSystem } from "../player/systems/InputSystem";
 import { ForageDropRenderSystem } from "../items/systems/ForageDropRenderSystem";
+import { InventoryHudSystem } from "../ui/systems/InventoryHudSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
 import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
+import { MudRemotePlayerHydrationSystem } from "../mud/systems/MudRemotePlayerHydrationSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
 import { PlantRenderSystem } from "../plants/systems/PlantRenderSystem";
+import { PlantStatusPanelSystem } from "../ui/systems/PlantStatusPanelSystem";
 import { PlayerSpriteAnimationSystem } from "../player/systems/PlayerSpriteAnimationSystem";
+import { OcclusionFadeSystem } from "../shared/systems/OcclusionFadeSystem";
 import { RenderSystem } from "../shared/systems/RenderSystem";
 import { SeedDropRenderSystem } from "../plants/systems/SeedDropRenderSystem";
 import { SleepProgressBarSystem } from "../ui/systems/SleepProgressBarSystem";
@@ -35,9 +42,12 @@ import { SleepVisualSystem } from "../ui/systems/SleepVisualSystem";
 import { TargetActionMenuSystem } from "../ui/systems/TargetActionMenuSystem";
 import { TerrainBackgroundSystem } from "../terrain/systems/TerrainBackgroundSystem";
 import { TerrainBaseRenderSystem } from "../terrain/systems/TerrainBaseRenderSystem";
+import { ToolInventoryHudSystem } from "../ui/systems/ToolInventoryHudSystem";
+import { VirtualJoystickSystem } from "../ui/systems/VirtualJoystickSystem";
 import { WeightDisplaySystem } from "../ui/systems/WeightDisplaySystem";
 import { WorldDepthSystem } from "../shared/systems/WorldDepthSystem";
 import type { BiomeDefinition } from "../biome/BiomeDefinitions";
+import type { PlayerSnapshot } from "../mud/MudWorldTypes";
 
 export function registerSystems(
   world: World,
@@ -46,6 +56,7 @@ export function registerSystems(
   bounds: Phaser.Geom.Rectangle,
   weightLabel: Phaser.GameObjects.Text,
   biome: BiomeDefinition,
+  initialMudSnapshot?: PlayerSnapshot,
 ): void {
   world.addSystem(new TerrainBaseRenderSystem());
   world.addSystem(new AutotileRenderSystem(scene));
@@ -61,8 +72,10 @@ export function registerSystems(
       >,
     ),
   );
+  world.addSystem(new VirtualJoystickSystem());
   world.addSystem(new ActionInputSystem(keyboard));
-  world.addSystem(new MudHydrationSystem());
+  world.addSystem(new MudHydrationSystem(1, initialMudSnapshot));
+  world.addSystem(new MudRemotePlayerHydrationSystem(scene));
   world.addSystem(new GameClockSystem());
   world.addSystem(new EnergySystem());
   world.addSystem(new PlantGrowthSystem());
@@ -83,13 +96,20 @@ export function registerSystems(
   world.addSystem(new SeedDropRenderSystem(scene));
   world.addSystem(new ForageDropRenderSystem(scene));
   world.addSystem(new WorldDepthSystem());
+  world.addSystem(new OcclusionFadeSystem());
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new BankPanelSystem(scene));
+  world.addSystem(new PlantStatusPanelSystem());
+  world.addSystem(new ToolInventoryHudSystem());
   world.addSystem(new BiomeMinimapSystem());
   world.addSystem(new ActionProgressBarSystem());
+  world.addSystem(new ActionToastStackSystem());
   world.addSystem(new SleepProgressBarSystem());
   world.addSystem(new HandHudSystem());
+  world.addSystem(new InventoryHudSystem(keyboard));
   world.addSystem(new EnergyBarSystem(biome));
+  world.addSystem(new CurrencyDisplaySystem());
   world.addSystem(new WeightDisplaySystem(weightLabel));
 }

@@ -26,6 +26,55 @@ library PlayerLib {
     return (PlayerState.getX(player), PlayerState.getY(player));
   }
 
+  function requireNear(
+    address player,
+    int32 x,
+    int32 y,
+    string memory message
+  ) internal view {
+    require(isNear(player, x, y), message);
+  }
+
+  function isNear(address player, int32 x, int32 y) internal view returns (bool) {
+    (int32 playerX, int32 playerY) = getPosition(player);
+
+    int32 dx = x > playerX ? x - playerX : playerX - x;
+    int32 dy = y > playerY ? y - playerY : playerY - y;
+
+    return dx <= 1 && dy <= 1;
+  }
+
+  function requireNearArea(
+    address player,
+    int32 x,
+    int32 y,
+    int32 width,
+    int32 height,
+    string memory message
+  ) internal view {
+    require(isNearArea(player, x, y, width, height), message);
+  }
+
+  function isNearArea(
+    address player,
+    int32 x,
+    int32 y,
+    int32 width,
+    int32 height
+  ) internal view returns (bool) {
+    require(width > 0 && height > 0, "invalid area");
+
+    (int32 playerX, int32 playerY) = getPosition(player);
+    int32 maxX = x + width - 1;
+    int32 maxY = y + height - 1;
+
+    return
+      playerX >= x - 1 &&
+      playerX <= maxX + 1 &&
+      playerY >= y - 1 &&
+      playerY <= maxY + 1;
+  }
+
   function spawn(address player, int32 x, int32 y) internal {
     require(!PlayerState.getExists(player), "already spawned");
     PlayerState.set(

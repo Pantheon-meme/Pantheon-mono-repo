@@ -6,15 +6,12 @@ import { PantheonConstants } from "./PantheonConstants.sol";
 import { PlayerLib } from "./PlayerLib.sol";
 
 library SleepActionLib {
-  function start(address player) internal returns (uint64 readyAt, uint32 energyGain) {
+  function sleep(address player) internal returns (uint64 readyAt, uint32 energyGain) {
     require(PlayerState.getEnergy(player) < PlayerState.getMaxEnergy(player), "energy full");
 
     uint32 rate = energyRate(player);
     energyGain = rate * uint32(PantheonConstants.SLEEP_DURATION);
     readyAt = uint64(block.timestamp) + PantheonConstants.SLEEP_DURATION;
-  }
-
-  function resolve(address player, uint32 energyGain) internal {
     PlayerLib.addEnergy(player, energyGain);
   }
 

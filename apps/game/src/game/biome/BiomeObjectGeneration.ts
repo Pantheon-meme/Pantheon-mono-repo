@@ -115,8 +115,16 @@ function pickObjectPlacements(
   random: () => number,
   regionPlan: ReturnType<typeof createBiomeRegionPlan>,
 ): Array<{ tileX: number; tileY: number }> {
+  if (definition.placement.kind === "fixed-tile") {
+    return pickFixedTilePlacement(grid, definition);
+  }
+
   if (definition.placement.kind === "spawn-ring") {
     return pickSpawnRingPlacements(grid, definition, options, random);
+  }
+
+  if (definition.placement.kind === "region-center") {
+    return pickRegionCenterPlacement(grid, definition, regionPlan);
   }
 
   const placements: Array<{ tileX: number; tileY: number }> = [];
@@ -174,6 +182,47 @@ function pickObjectPlacements(
   }
 
   return placements;
+}
+
+function pickFixedTilePlacement(
+  grid: TerrainGrid,
+  definition: BiomeObjectDefinition,
+): Array<{ tileX: number; tileY: number }> {
+  if (
+    definition.placement.tileX === undefined ||
+    definition.placement.tileY === undefined
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      tileX: clampTile(definition.placement.tileX, grid.width),
+      tileY: clampTile(definition.placement.tileY, grid.height),
+    },
+  ];
+}
+
+function pickRegionCenterPlacement(
+  grid: TerrainGrid,
+  definition: BiomeObjectDefinition,
+  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
+): Array<{ tileX: number; tileY: number }> {
+  const regionId = definition.placement.regionIds?.[0];
+  const anchor = regionPlan.anchors.find(
+    (candidate) => candidate.definition.id === regionId,
+  );
+
+  if (!anchor) {
+    return [];
+  }
+
+  return [
+    {
+      tileX: clampTile(anchor.tileX, grid.width),
+      tileY: clampTile(anchor.tileY, grid.height),
+    },
+  ];
 }
 
 function matchesObjectFootprintTerrain(
@@ -286,6 +335,8 @@ function matchesPlacementMotif(
       );
     case "scattered":
       return random() < Math.max(0.12, regionScore * surfaceScore * 1.45);
+    case "fixed-tile":
+    case "region-center":
     case "spawn-ring":
       return true;
   }

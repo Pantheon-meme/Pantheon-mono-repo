@@ -19,13 +19,15 @@ import {
 import type { ActionDefinition, ActionEffectResult } from "./ActionTypes";
 
 const digEnergyCost = 12;
+const maxDigLevel = 1;
+const blockedDigTerrainIds = new Set(["path", "road", "water", "swamp"]);
 
 export const terrainActionDefinitions: Record<string, ActionDefinition> = {
   dig: {
     id: "dig",
     label: "Dig",
     energyDelta: -digEnergyCost,
-    durationSeconds: 2,
+    durationSeconds: 0,
     canStart: canDig,
     apply: dig,
   },
@@ -50,13 +52,27 @@ function canDig(world: World, actor: Entity): ActionEffectResult {
     };
   }
 
-  const isSurfaceDirt = dirtLayer.grid.has(targetCell.x, targetCell.y);
   const terrainLayerId =
     getTopTerrainLayerAtCell(world, targetCell.x, targetCell.y)?.layer.id ??
     hardness.defaultLayerId;
-  const requiredPower = isSurfaceDirt
-    ? hardness.getDeepHardness(digDepth.get(targetCell.x, targetCell.y))
-    : hardness.getLayerHardness(terrainLayerId);
+
+  if (blockedDigTerrainIds.has(terrainLayerId)) {
+    return {
+      message: `Dig: can't dig ${terrainLayerId}`,
+      applied: false,
+    };
+  }
+
+  const currentDigLevel = digDepth.get(targetCell.x, targetCell.y);
+
+  if (currentDigLevel >= maxDigLevel) {
+    return {
+      message: `Dig: already loosened at ${targetCell.x},${targetCell.y}`,
+      applied: false,
+    };
+  }
+
+  const requiredPower = hardness.getLayerHardness(terrainLayerId);
   const power = world.getComponent(actor, DiggingCapability)?.power ?? 1;
 
   if (power < requiredPower) {
@@ -102,8 +118,20 @@ function dig(world: World, actor: Entity): ActionEffectResult {
     targetCell.x,
     targetCell.y,
   );
+  const energy = world.getComponent(actor, Energy);
+  const optimisticEnergyDelta = -digEnergyCost;
   const submitted = mud.bridge.submitDig(targetCell.x, targetCell.y, {
-    onConfirmed: ({ x, y }) => {
+    onConfirmed: ({ x, y, playerEnergy }) => {
+      if (playerEnergy) {
+        energy?.settleOptimisticDelta(
+          optimisticEnergyDelta,
+          playerEnergy.energy,
+          playerEnergy.maxEnergy,
+          playerEnergy.updatedAt,
+        );
+      } else {
+        energy?.settleOptimisticLocally(optimisticEnergyDelta);
+      }
       updateActionLog(world, actor, `Dig: confirmed at ${x},${y}`);
     },
     onRejected: (message) => {
@@ -114,7 +142,7 @@ function dig(world: World, actor: Entity): ActionEffectResult {
         targetCell.y,
         previousState,
       );
-      refundEnergy(world, actor, digEnergyCost);
+      energy?.rollbackOptimisticDelta(optimisticEnergyDelta);
       updateActionLog(world, actor, `Dig: ${message}`);
     },
   });
@@ -134,7 +162,10 @@ function dig(world: World, actor: Entity): ActionEffectResult {
     };
   }
 
-  return { message: `${optimisticMessage} (syncing)` };
+  return {
+    message: `${optimisticMessage} (syncing)`,
+    energySettlement: "pending",
+  };
 }
 
 function getDigTargetCell(
@@ -185,14 +216,10 @@ function applyOptimisticDig(
   x: number,
   y: number,
 ): string {
-  if (!dirtGrid.has(x, y)) {
-    dirtGrid.set(x, y, true);
-    return `Dig: loosened soil at ${x},${y}`;
-  }
+  dirtGrid.set(x, y, true);
+  digDepth.set(x, y, maxDigLevel);
 
-  const depth = digDepth.increment(x, y);
-
-  return `Dig: depth ${depth} at ${x},${y}`;
+  return `Dig: loosened soil at ${x},${y}`;
 }
 
 function rollbackOptimisticDig(
@@ -204,14 +231,4 @@ function rollbackOptimisticDig(
 ): void {
   dirtGrid.set(x, y, previousState.hadDirt);
   digDepth.set(x, y, previousState.depth);
-}
-
-function refundEnergy(world: World, actor: Entity, amount: number): void {
-  const energy = world.getComponent(actor, Energy);
-
-  if (!energy) {
-    return;
-  }
-
-  energy.current = Math.min(energy.max, energy.current + amount);
 }

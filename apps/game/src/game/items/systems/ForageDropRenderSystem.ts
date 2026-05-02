@@ -11,6 +11,10 @@ import { itemColor } from "../ItemDefinitions";
 import { ForageDrop } from "../components/ForageDrop";
 import { ForageDropVisual } from "../components/ForageDropVisual";
 
+const forageDropSpriteSize = 160;
+const fallbackBodyWidth = 70;
+const fallbackBodyHeight = 52;
+
 export class ForageDropRenderSystem implements System {
   constructor(private readonly scene: Phaser.Scene) {}
 
@@ -41,8 +45,15 @@ export class ForageDropRenderSystem implements System {
             .setOrigin(0.5)
         : undefined;
     const container = this.scene.add.container(0, 0).setDepth(7);
-    const body = this.scene.add.ellipse(0, 0, 28, 20, color, 1);
-    const glint = this.scene.add.star(0, -3, 4, 3, 8, 0xffffff, 0.82);
+    const body = this.scene.add.ellipse(
+      0,
+      0,
+      fallbackBodyWidth,
+      fallbackBodyHeight,
+      color,
+      1,
+    );
+    const glint = this.scene.add.star(0, -4, 4, 4, 11, 0xffffff, 0.82);
     const label = this.scene.add
       .text(0, 0, ".", {
         align: "center",
@@ -60,7 +71,7 @@ export class ForageDropRenderSystem implements System {
 
       sprite
         .setFrame(frameIndex)
-        .setDisplaySize(32, 32);
+        .setDisplaySize(forageDropSpriteSize, forageDropSpriteSize);
       body.setVisible(false);
       glint.setVisible(false);
       label.setVisible(false);

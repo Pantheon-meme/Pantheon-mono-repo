@@ -11,10 +11,34 @@ library PendingActionLib {
     require(!PendingAction.getExists(player), "action pending");
   }
 
+  function clearReady(address player) internal {
+    if (
+      PendingAction.getExists(player) &&
+      block.timestamp >= PendingAction.getReadyAt(player)
+    ) {
+      PendingAction.deleteRecord(player);
+    }
+  }
+
+  function startBusy(address player, bytes32 action, uint64 duration) internal {
+    requireIdle(player);
+
+    PendingAction.set(
+      player,
+      action,
+      uint64(block.timestamp) + duration,
+      0,
+      0,
+      0,
+      bytes32(0),
+      true
+    );
+  }
+
   function startSleep(address player) internal {
     requireIdle(player);
 
-    (uint64 readyAt, uint32 energyGain) = SleepActionLib.start(player);
+    (uint64 readyAt, uint32 energyGain) = SleepActionLib.sleep(player);
     PendingAction.set(
       player,
       PantheonConstants.ACTION_SLEEP,
@@ -29,23 +53,6 @@ library PendingActionLib {
   }
 
   function resolveReady(address player) internal {
-    if (!PendingAction.getExists(player)) {
-      return;
-    }
-
-    if (block.timestamp < PendingAction.getReadyAt(player)) {
-      return;
-    }
-
-    bytes32 action = PendingAction.getAction(player);
-
-    if (action == PantheonConstants.ACTION_SLEEP) {
-      SleepActionLib.resolve(player, PendingAction.getValue(player));
-      PendingAction.deleteRecord(player);
-      ActionLogLib.write(player, PantheonConstants.ACTION_SLEEP, "Slept");
-      return;
-    }
-
-    revert("unknown action");
+    clearReady(player);
   }
 }

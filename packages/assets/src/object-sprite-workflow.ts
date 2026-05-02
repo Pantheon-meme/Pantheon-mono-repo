@@ -234,16 +234,24 @@ function buildObjectSpritePrompt(
 }
 
 function buildColumnBehaviorPrompt(request: ObjectSpriteRequest): string[] {
-  if (request.spriteKind === "plant" || request.spriteKind === "tree") {
-    const growthSubject = request.spriteKind === "tree" ? "tree" : "plant";
+  if (request.spriteKind === "plant") {
+    return [
+      "For seed rows, column 1 is an isolated collectible seed item with no dirt below it. Columns 2 through the end are planted seed growth steps from left to right.",
+      "For growing rows, columns are progressive growth frames from young sprout to nearly mature plant.",
+      "For grown rows, columns 1-2 are normal mature harvest-ready variants only. Column 3 must be a stressed care state. Column 4 must be a wilted severe-neglect state.",
+      "For harvested rows, column 1 is the single post-harvest remnant left in the ground. Column 2 is the single isolated crop/resource pickup. Column 3 must be a flourishing ideal-care state. Column 4 must be a recently tended or freshly cared-for state.",
+      "Care-state cells must remain the same plant species and silhouette family; communicate condition through posture, leaf fullness, color, dew, and small natural details, not text or UI icons.",
+      "Keep all columns in a row coherent for that row's state, not different unrelated designs.",
+      "Preserve the same silhouette language and materials across all states so the plant clearly evolves from row to row.",
+    ];
+  }
+
+  if (request.spriteKind === "tree") {
+    const growthSubject = "tree";
     const harvestedSubject =
-      request.spriteKind === "tree"
-        ? "tree trunk, stump, or canopy remnants"
-        : "plant remnants";
+      "tree trunk, stump, or canopy remnants";
     const pickupSubject =
-      request.spriteKind === "tree"
-        ? "fruit, cone, branch, seed pod, resin, leaf bundle, or magical tree resource pickups"
-        : "crop/resource pickups";
+      "fruit, cone, branch, seed pod, resin, leaf bundle, or magical tree resource pickups";
 
     return [
       "For seed rows, column 1 is an isolated collectible seed item with no dirt below it. Columns 2 through the end are planted seed growth steps from left to right.",
@@ -251,14 +259,10 @@ function buildColumnBehaviorPrompt(request: ObjectSpriteRequest): string[] {
       `For harvested rows, the first half of columns are post-harvest ${harvestedSubject} left in the ground, and the second half are isolated ${pickupSubject}.`,
       "Keep all columns in a row coherent for that row's state, not different unrelated designs.",
       `Preserve the same silhouette language and materials across all states so the ${growthSubject} clearly evolves from row to row.`,
-      ...(request.spriteKind === "tree"
-        ? [
-            "Tree frames should be rooted at the bottom center of each cell, with trunks growing upward from a stable ground contact point.",
-            "Keep canopies readable from a three-quarter top-down view without covering neighboring cells.",
-            "Mature tree frames must read much larger than crop frames: use a full tree silhouette that will still look detailed and intentional when the game renders it at roughly two terrain tiles tall.",
-            "Do not make mature trees crop-sized or shrub-sized. Seed and sapling frames can be small, but grown frames should have substantial trunk height and canopy mass.",
-          ]
-        : []),
+      "Tree frames should be rooted at the bottom center of each cell, with trunks growing upward from a stable ground contact point.",
+      "Keep canopies readable from a three-quarter top-down view without covering neighboring cells.",
+      "Mature tree frames must read much larger than crop frames: use a full tree silhouette that will still look detailed and intentional when the game renders it at roughly two terrain tiles tall.",
+      "Do not make mature trees crop-sized or shrub-sized. Seed and sapling frames can be small, but grown frames should have substantial trunk height and canopy mass.",
     ];
   }
 

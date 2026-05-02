@@ -1,5 +1,6 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import { PlayerInventory } from "../../inventory/components/PlayerInventory";
 import { HandHud } from "../components/HandHud";
 import { Hands, type HandId } from "../../player/components/Hands";
 import { WeightInspectable } from "../../shared/components/WeightInspectable";
@@ -8,8 +9,14 @@ import { WeightedObject } from "../../shared/components/WeightedObject";
 export class HandHudSystem implements System {
   update(world: World): void {
     const hands = world.query(Hands)[0]?.[1];
+    const inventory = world.query(PlayerInventory)[0]?.[1];
 
     for (const [, hud] of world.query(HandHud)) {
+      if (inventory) {
+        hud.label.setText("");
+        continue;
+      }
+
       const camera = hud.label.scene.cameras.main;
       const scale = 1 / camera.zoom;
       const worldX = camera.worldView.x + hud.screenX * scale;

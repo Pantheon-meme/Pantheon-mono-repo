@@ -3,11 +3,13 @@ import type { Entity } from "../../../ecs/World";
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { ActionProgress } from "../../actions/components/ActionProgress";
+import { OnchainPresentation } from "../../mud/components/OnchainPresentation";
 import { Renderable } from "../../shared/components/Renderable";
+import { Velocity } from "../../shared/components/Velocity";
 import { SleepState } from "../../sleep/components/SleepState";
 import { FacingDirection } from "../components/FacingDirection";
 import { InputState } from "../components/InputState";
-import { PlayerControlled } from "../components/PlayerControlled";
+import { PlayerAvatar } from "../components/PlayerAvatar";
 import {
   getPlayerSpriteAsset,
   getPlayerSpriteFrameIndex,
@@ -17,20 +19,15 @@ import {
 
 const walkFramesPerSecond = 8;
 const idleFramesPerSecond = 2;
+const defaultOriginY = 1;
+const sleepOriginY = 0.82;
 
 export class PlayerSpriteAnimationSystem implements System {
   private readonly animationSecondsByEntity = new Map<Entity, number>();
 
   update(world: World, deltaSeconds: number): void {
-    const spriteAsset = getPlayerSpriteAsset();
-
-    if (!spriteAsset) {
-      return;
-    }
-
-    for (const [entity, , input, facing, renderable] of world.query(
-      PlayerControlled,
-      InputState,
+    for (const [entity, avatar, facing, renderable] of world.query(
+      PlayerAvatar,
       FacingDirection,
       Renderable,
     )) {
@@ -38,16 +35,31 @@ export class PlayerSpriteAnimationSystem implements System {
         continue;
       }
 
-      const moving = input.directionX !== 0 || input.directionY !== 0;
+      const spriteAsset = getPlayerSpriteAsset(avatar.spriteId);
+
+      if (!spriteAsset) {
+        continue;
+      }
+
+      const input = world.getComponent(entity, InputState);
+      const velocity = world.getComponent(entity, Velocity);
+      const presentation = world.getComponent(entity, OnchainPresentation);
+      const moving =
+        (input?.directionX ?? 0) !== 0 ||
+        (input?.directionY ?? 0) !== 0 ||
+        Math.abs(velocity?.x ?? 0) > 1 ||
+        Math.abs(velocity?.y ?? 0) > 1;
       const direction = getDirection(facing);
       const action = moving ? "walk" : "idle";
       const elapsedSeconds = (this.animationSecondsByEntity.get(entity) ?? 0) + deltaSeconds;
       const frame = Math.floor(elapsedSeconds * (moving ? walkFramesPerSecond : idleFramesPerSecond));
       const sleep = world.getComponent(entity, SleepState);
       const progress = world.getComponent(entity, ActionProgress);
-      const frameIndex = sleep?.active
+      updatePresentation(presentation, deltaSeconds);
+      const sleeping = sleep?.active || presentation?.pose === "sleep";
+      const frameIndex = sleeping
         ? getPlayerSpecialSpriteFrameIndex(spriteAsset, direction, "sleep")
-        : progress?.active
+        : progress?.active || presentation?.pose === "action"
           ? getPlayerSpecialSpriteFrameIndex(spriteAsset, direction, "action")
           : getPlayerSpriteFrameIndex(spriteAsset, direction, action, frame);
 
@@ -60,9 +72,24 @@ export class PlayerSpriteAnimationSystem implements System {
       renderable.sprite
         .setFrame(frameIndex)
         .setFlipX(direction === "side" && facing.x < 0)
-        .setOrigin(0.5, 1)
+        .setOrigin(0.5, sleeping ? sleepOriginY : defaultOriginY)
         .setDisplaySize(spriteAsset.manifest.cellSize, spriteAsset.manifest.cellSize);
     }
+  }
+}
+
+function updatePresentation(
+  presentation: OnchainPresentation | undefined,
+  deltaSeconds: number,
+): void {
+  if (!presentation?.active) {
+    return;
+  }
+
+  presentation.elapsedSeconds += deltaSeconds;
+
+  if (presentation.elapsedSeconds >= presentation.durationSeconds) {
+    presentation.clear();
   }
 }
 

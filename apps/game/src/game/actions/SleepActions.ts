@@ -23,7 +23,7 @@ export const sleepActionDefinitions: Record<string, ActionDefinition> = {
     id: "sleep",
     label: "Sleep",
     energyDelta: 0,
-    durationSeconds: 1.2,
+    durationSeconds: 0,
     canStart: canSleep,
     apply: sleep,
   },
@@ -73,9 +73,22 @@ function sleep(world: World, actor: Entity): ActionEffectResult {
 
   const mud = world.query(MudWorld)[0]?.[1];
   const submitted = mud?.bridge.submitSleep({
-    onConfirmed: ({ energyGain }) => {
-      sleepState.confirmOnchainStart(energyGain);
-      updateActionLog(world, actor, `Sleep: started onchain (+${energyGain})`);
+    onConfirmed: ({ readyAt, value, playerEnergy }) => {
+      if (playerEnergy) {
+        energy.setConfirmed(
+          playerEnergy.energy,
+          playerEnergy.maxEnergy,
+          playerEnergy.updatedAt,
+        );
+      } else {
+        energy.commitLocalDelta(value);
+      }
+
+      sleepState.confirmOnchainStart(
+        value,
+        Math.max(0.1, readyAt - Date.now() / 1000),
+      );
+      updateActionLog(world, actor, `Sleep: +${value} energy, resting`);
     },
     onRejected: (message) => {
       sleepState.finish();
@@ -110,57 +123,6 @@ export function getSleepTerrain(
     energyPerSecond:
       sleepEnergyRates[activeLayer] ?? fallbackSleepEnergyPerSecond,
   };
-}
-
-export function submitSleepEnergy(
-  world: World,
-  actor: Entity,
-  amount: number,
-): ActionEffectResult {
-  const energy = world.getComponent(actor, Energy);
-  const mud = world.query(MudWorld)[0]?.[1];
-
-  if (!energy || !mud) {
-    return { message: "Sleep: MUD world unavailable", applied: false };
-  }
-
-  const gain = Math.floor(
-    Math.min(amount, Math.max(0, energy.max - energy.current)),
-  );
-
-  if (gain <= 0) {
-    return { message: "Sleep: energy already full", applied: false };
-  }
-
-  const previousEnergy = energy.current;
-  energy.current = Math.min(energy.max, energy.current + gain);
-
-  const submitted = mud.bridge.submitResolveAction(gain, {
-    onConfirmed: ({ amount: confirmedAmount, playerEnergy }) => {
-      if (playerEnergy) {
-        energy.max = playerEnergy.maxEnergy;
-        energy.current = playerEnergy.energy;
-      }
-
-      updateActionLog(
-        world,
-        actor,
-        `Sleep: confirmed +${confirmedAmount} energy`,
-      );
-    },
-    onRejected: (message) => {
-      energy.current = previousEnergy;
-      updateActionLog(world, actor, `Sleep: ${message}`);
-    },
-  });
-
-  if (!submitted) {
-    energy.current = previousEnergy;
-
-    return { message: "Sleep: waiting on energy sync", applied: false };
-  }
-
-  return { message: `Sleep: +${gain} energy (syncing)` };
 }
 
 function updateActionLog(world: World, actor: Entity, message: string): void {

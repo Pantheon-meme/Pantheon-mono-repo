@@ -2,12 +2,17 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { DayNightOverlay } from "../components/DayNightOverlay";
 import { GameClock } from "../../time/components/GameClock";
+import { ActionLog } from "../../actions/components/ActionLog";
+import { JournalPanel } from "../components/JournalPanel";
+import { BiomeMinimap } from "../components/BiomeMinimap";
 
 type Lighting = {
   alpha: number;
   color: number;
   phase: string;
 };
+
+const artworkPanelUnderlap = 18;
 
 export class DayNightRenderSystem implements System {
   update(world: World): void {
@@ -32,16 +37,127 @@ export class DayNightRenderSystem implements System {
       overlay.shade.setVisible(lighting.alpha > 0);
 
       overlay.label.setText(
-        `Day ${clock.day}  ${timeLabel}\n${lighting.phase}`,
+        `Day ${clock.day}  |  ${timeLabel}  |  ${lighting.phase}`,
       );
-      overlay.label.setPosition(
-        worldX + (camera.width - overlay.screenX) * scale,
-        worldY + overlay.screenY * scale,
+      overlay.artwork.setRotation(clock.normalizedDayTime * Math.PI * 2);
+      this.handleButtonClicks(world, overlay);
+      this.positionOverlay(
+        overlay,
+        worldX,
+        worldY,
+        camera.width,
+        camera.height,
+        scale,
       );
-      overlay.label.setScale(scale);
-      overlay.label.setVisible(true);
+      overlay.container.setVisible(true);
+      overlay.buttonsContainer.setVisible(true);
+
+      overlay.buttons.forEach((button) => {
+        const isActive = isButtonActive(world, button.id);
+        const showActive = isActive || button.pressed;
+
+        button.active.setVisible(showActive);
+        button.inactive.setVisible(!showActive);
+      });
     }
   }
+
+  private positionOverlay(
+    overlay: DayNightOverlay,
+    worldX: number,
+    worldY: number,
+    cameraWidth: number,
+    cameraHeight: number,
+    scale: number,
+  ): void {
+    const heightBudget =
+      cameraHeight -
+      overlay.screenY * 2 -
+      overlay.buttonGapY -
+      overlay.buttonRowHeight;
+    const responsiveScale = Math.min(
+      overlay.displayScale,
+      (cameraWidth - overlay.screenX * 2) / overlay.width,
+      heightBudget / overlay.height,
+    );
+    const clampedScale = Math.max(0.32, responsiveScale);
+    const overlayScreenWidth = overlay.width * clampedScale;
+    const overlayScreenHeight = overlay.height * clampedScale;
+    const overlayScreenX = cameraWidth - overlay.screenX - overlayScreenWidth;
+    const overlayScreenY = overlay.screenY;
+    const buttonsScreenX =
+      overlayScreenX + (overlayScreenWidth - overlay.buttonRowWidth) / 2;
+    const buttonsScreenY =
+      overlayScreenY + overlayScreenHeight + overlay.buttonGapY;
+
+    overlay.container.setPosition(
+      worldX + overlayScreenX * scale,
+      worldY + overlayScreenY * scale,
+    );
+    overlay.container.setScale(scale * clampedScale);
+    overlay.artworkMask.clear();
+    overlay.artworkMask
+      .fillStyle(0xffffff, 1)
+      .fillRect(
+        worldX + overlayScreenX * scale,
+        worldY + overlayScreenY * scale,
+        overlayScreenWidth * scale,
+        (overlay.panelY + artworkPanelUnderlap) * clampedScale * scale,
+      );
+    overlay.buttonsContainer.setPosition(
+      worldX + buttonsScreenX * scale,
+      worldY + buttonsScreenY * scale,
+    );
+    overlay.buttonsContainer.setScale(scale);
+  }
+
+  private handleButtonClicks(world: World, overlay: DayNightOverlay): void {
+    const log = world.query(ActionLog)[0]?.[1];
+
+    for (const button of overlay.buttons) {
+      if (!button.pendingClick) {
+        continue;
+      }
+
+      button.pendingClick = false;
+
+      if (button.id === "journal") {
+        const panel = world.query(JournalPanel)[0]?.[1];
+
+        if (panel) {
+          panel.visible = !panel.visible;
+        }
+        continue;
+      }
+
+      if (button.id === "map") {
+        const minimap = world.query(BiomeMinimap)[0]?.[1];
+
+        if (minimap) {
+          minimap.visible = !minimap.visible;
+          log &&
+            (log.lastMessage = minimap.visible
+              ? "Map: minimap shown"
+              : "Map: minimap hidden");
+        }
+        continue;
+      }
+
+      log && (log.lastMessage = "Settings: not available yet");
+    }
+  }
+}
+
+function isButtonActive(world: World, buttonId: string): boolean {
+  if (buttonId === "journal") {
+    return Boolean(world.query(JournalPanel)[0]?.[1].visible);
+  }
+
+  if (buttonId === "map") {
+    return Boolean(world.query(BiomeMinimap)[0]?.[1].visible);
+  }
+
+  return false;
 }
 
 function getLighting(dayTime: number): Lighting {

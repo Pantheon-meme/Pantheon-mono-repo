@@ -5,6 +5,7 @@ export type ActionEffectResult = {
   message?: string;
   applied?: boolean;
   retry?: boolean;
+  energySettlement?: "confirmed" | "pending";
 };
 
 export type ActionDefinition = {

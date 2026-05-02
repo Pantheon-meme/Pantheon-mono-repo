@@ -1,211 +1,87 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  hexToString,
-  http,
-  type Hex,
-} from "viem";
+import { createPublicClient, createWalletClient, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
+import { stringToBytes32 } from "./MudCodec";
+import {
+  defaultPrivateKey,
+  defaultRpcUrl,
+  defaultWorldAddress,
+  pantheonWorldAbi,
+} from "./MudWorldAbi";
+import { MudSnapshotReader } from "./MudSnapshotReader";
+import type {
+  BankItemQuoteSnapshot,
+  MovePathStep,
+  MudBankBuyCallbacks,
+  MudBankSellCallbacks,
+  MudDigCallbacks,
+  MudDropObjectCallbacks,
+  MudForageCallbacks,
+  MudHarvestCallbacks,
+  MudMoveCallbacks,
+  MudPickupObjectCallbacks,
+  MudPlantCallbacks,
+  MudPlantCareCallbacks,
+  MudStartSleepCallbacks,
+  PlayerPresenceSnapshot,
+  PlayerSnapshot,
+  WorldObjectSnapshot,
+  WorldStateReadBounds,
+  WorldTimeConfig,
+} from "./MudWorldTypes";
 
-const defaultRpcUrl = "http://127.0.0.1:8545";
-const defaultWorldAddress = "0xfDf868Ea710FfD8cd33b829c5AFf79eDd15EcD5f";
-const defaultPrivateKey =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-
-const pantheonWorldAbi = [
-  {
-    type: "function",
-    name: "pantheon__dig",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "x", type: "int32" },
-      { name: "y", type: "int32" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "pantheon__forage",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "x", type: "int32" },
-      { name: "y", type: "int32" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "pantheon__move",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "x", type: "int32" },
-      { name: "y", type: "int32" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "pantheon__movePath",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "xs", type: "int32[]" },
-      { name: "ys", type: "int32[]" },
-    ],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "pantheon__sleep",
-    stateMutability: "nonpayable",
-    inputs: [],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "pantheon__resolveAction",
-    stateMutability: "nonpayable",
-    inputs: [],
-    outputs: [],
-  },
-  {
-    type: "function",
-    name: "pantheon__getLastForageResult",
-    stateMutability: "view",
-    inputs: [{ name: "player", type: "address" }],
-    outputs: [
-      { name: "x", type: "int32" },
-      { name: "y", type: "int32" },
-      { name: "itemId", type: "bytes32" },
-      { name: "amount", type: "uint32" },
-      { name: "exists", type: "bool" },
-    ],
-  },
-  {
-    type: "function",
-    name: "getStaticField",
-    stateMutability: "view",
-    inputs: [
-      { name: "tableId", type: "bytes32" },
-      { name: "keyTuple", type: "bytes32[]" },
-      { name: "fieldIndex", type: "uint8" },
-      { name: "fieldLayout", type: "bytes32" },
-    ],
-    outputs: [{ name: "data", type: "bytes32" }],
-  },
-] as const;
-
-const playerStateTableId =
-  "0x746270616e7468656f6e000000000000506c6179657253746174650000000000";
-const playerStateFieldLayout =
-  "0x001d070004040404080401000000000000000000000000000000000000000000";
-const playerXFieldIndex = 0;
-const playerYFieldIndex = 1;
-const playerEnergyFieldIndex = 2;
-const playerMaxEnergyFieldIndex = 3;
-const playerLastMoveAtFieldIndex = 4;
-const playerMoveSpeedFieldIndex = 5;
-const playerExistsFieldIndex = 6;
-const pendingActionTableId =
-  "0x746270616e7468656f6e00000000000050656e64696e67416374696f6e000000";
-const pendingActionFieldLayout =
-  "0x0055070020080404042001000000000000000000000000000000000000000000";
-const pendingActionReadyAtFieldIndex = 1;
-const pendingActionValueFieldIndex = 4;
-const pendingActionExistsFieldIndex = 6;
-const worldTimeTableId =
-  "0x746270616e7468656f6e000000000000576f726c6454696d6500000000000000";
-const worldTimeFieldLayout =
-  "0x0011030008080100000000000000000000000000000000000000000000000000";
-const worldTimeStartedAtFieldIndex = 0;
-const worldTimeDayLengthFieldIndex = 1;
-const worldTimeKey = "0x776f726c64000000000000000000000000000000000000000000000000000000";
-
-export type ConfirmedDig = {
-  x: number;
-  y: number;
-};
-
-export type ConfirmedForage = {
-  x: number;
-  y: number;
-  itemId: string;
-  amount: number;
-  playerEnergy?: PlayerEnergy;
-};
-
-export type ConfirmedMove = {
-  x: number;
-  y: number;
-  playerEnergy?: PlayerEnergy;
-};
-
-export type MovePathStep = {
-  x: number;
-  y: number;
-};
-
-export type PlayerEnergy = {
-  energy: number;
-  maxEnergy: number;
-};
-
-export type PlayerSnapshot = PlayerEnergy & {
-  x: number;
-  y: number;
-  lastMoveAt: number;
-  moveSpeed: number;
-  exists: boolean;
-};
-
-export type WorldTimeConfig = {
-  startedAt: number;
-  dayLength: number;
-};
-
-export type ConfirmedSleep = {
-  amount: number;
-  playerEnergy?: PlayerEnergy;
-};
-
-export type PendingSleep = {
-  readyAt: number;
-  energyGain: number;
-};
-
-export type MudDigCallbacks = {
-  onConfirmed: (dig: ConfirmedDig) => void;
-  onRejected: (message: string) => void;
-};
-
-export type MudForageCallbacks = {
-  onConfirmed: (forage: ConfirmedForage) => void;
-  onRejected: (message: string) => void;
-};
-
-export type MudMoveCallbacks = {
-  onConfirmed: (move: ConfirmedMove) => void;
-  onRejected: (message: string) => void;
-};
-
-export type MudSleepCallbacks = {
-  onConfirmed: (sleep: ConfirmedSleep) => void;
-  onRejected: (message: string) => void;
-};
-
-export type MudStartSleepCallbacks = {
-  onConfirmed: (sleep: PendingSleep) => void;
-  onRejected: (message: string) => void;
-};
+export type {
+  ActionLogSnapshot,
+  BankItemQuoteSnapshot,
+  ConfirmedDig,
+  ConfirmedDropObject,
+  ConfirmedForage,
+  ConfirmedHarvest,
+  ConfirmedMove,
+  ConfirmedPickupObject,
+  ConfirmedPlant,
+  ConfirmedPlantCare,
+  MovePathStep,
+  MudBankBuyCallbacks,
+  MudBankSellCallbacks,
+  MudDigCallbacks,
+  MudDropObjectCallbacks,
+  MudForageCallbacks,
+  MudHarvestCallbacks,
+  MudMoveCallbacks,
+  MudPickupObjectCallbacks,
+  MudPlantCallbacks,
+  MudPlantCareCallbacks,
+  MudStartSleepCallbacks,
+  PendingActionSnapshot,
+  PlayerInventorySnapshot,
+  PlayerInventorySlotSnapshot,
+  PlantStateSnapshot,
+  PlayerEnergy,
+  PlayerPresenceSnapshot,
+  PlayerSnapshot,
+  TerrainStateSnapshot,
+  WorldObjectSnapshot,
+  WorldStateReadBounds,
+  WorldStateSnapshot,
+  WorldTimeConfig,
+} from "./MudWorldTypes";
 
 export class MudWorldBridge {
   private readonly publicClient;
   private readonly walletClient;
   private readonly pendingDigs = new Set<string>();
   private readonly pendingForages = new Set<string>();
+  private readonly pendingPlants = new Set<string>();
+  private readonly pendingHarvests = new Set<string>();
+  private readonly pendingCareActions = new Set<string>();
+  private readonly pendingPickups = new Set<string>();
+  private readonly pendingDrops = new Set<string>();
+  private readonly pendingBankSales = new Set<string>();
+  private readonly pendingBankPurchases = new Set<string>();
+  private readonly snapshotReader: MudSnapshotReader;
   private pendingMove = false;
   private pendingSleep = false;
-  private pendingResolveAction = false;
 
   constructor(
     private readonly rpcUrl: string,
@@ -221,6 +97,11 @@ export class MudWorldBridge {
       chain: foundry,
       transport: http(rpcUrl),
     });
+    this.snapshotReader = new MudSnapshotReader(
+      this.publicClient,
+      this.worldAddress,
+      this.walletClient.account.address,
+    );
   }
 
   static fromEnv(): MudWorldBridge {
@@ -229,6 +110,18 @@ export class MudWorldBridge {
       import.meta.env.VITE_MUD_WORLD_ADDRESS ?? defaultWorldAddress,
       import.meta.env.VITE_MUD_PRIVATE_KEY ?? defaultPrivateKey,
     );
+  }
+
+  static fromPrivateKey(privateKey: Hex): MudWorldBridge {
+    return new MudWorldBridge(
+      import.meta.env.VITE_MUD_RPC_URL ?? defaultRpcUrl,
+      import.meta.env.VITE_MUD_WORLD_ADDRESS ?? defaultWorldAddress,
+      privateKey,
+    );
+  }
+
+  get accountAddress(): Hex {
+    return this.walletClient.account.address;
   }
 
   submitDig(x: number, y: number, callbacks: MudDigCallbacks): boolean {
@@ -255,6 +148,45 @@ export class MudWorldBridge {
     void this.confirmForage(x, y, key, callbacks);
 
     return true;
+  }
+
+  submitPlant(
+    x: number,
+    y: number,
+    plantId: string,
+    callbacks: MudPlantCallbacks,
+  ): boolean {
+    const key = `${x},${y}`;
+
+    if (this.pendingPlants.has(key)) {
+      return false;
+    }
+
+    this.pendingPlants.add(key);
+    void this.confirmPlant(x, y, plantId, key, callbacks);
+
+    return true;
+  }
+
+  submitHarvest(x: number, y: number, callbacks: MudHarvestCallbacks): boolean {
+    const key = `${x},${y}`;
+
+    if (this.pendingHarvests.has(key)) {
+      return false;
+    }
+
+    this.pendingHarvests.add(key);
+    void this.confirmHarvest(x, y, key, callbacks);
+
+    return true;
+  }
+
+  submitWater(x: number, y: number, callbacks: MudPlantCareCallbacks): boolean {
+    return this.submitPlantCare("water", x, y, callbacks);
+  }
+
+  submitTend(x: number, y: number, callbacks: MudPlantCareCallbacks): boolean {
+    return this.submitPlantCare("tend", x, y, callbacks);
   }
 
   submitMove(x: number, y: number, callbacks: MudMoveCallbacks): boolean {
@@ -290,97 +222,91 @@ export class MudWorldBridge {
     return true;
   }
 
-  submitResolveAction(amount: number, callbacks: MudSleepCallbacks): boolean {
-    if (this.pendingSleep || this.pendingResolveAction || amount <= 0) {
+  submitPickupObject(
+    objectId: Hex,
+    callbacks: MudPickupObjectCallbacks,
+  ): boolean {
+    if (this.pendingPickups.has(objectId)) {
       return false;
     }
 
-    this.pendingResolveAction = true;
-    void this.confirmResolveAction(Math.floor(amount), callbacks);
+    this.pendingPickups.add(objectId);
+    void this.confirmPickupObject(objectId, callbacks);
+
+    return true;
+  }
+
+  submitDropObject(
+    objectId: Hex,
+    x: number,
+    y: number,
+    callbacks: MudDropObjectCallbacks,
+  ): boolean {
+    if (this.pendingDrops.has(objectId)) {
+      return false;
+    }
+
+    this.pendingDrops.add(objectId);
+    void this.confirmDropObject(objectId, x, y, callbacks);
+
+    return true;
+  }
+
+  submitSellObjectsToBank(
+    objectIds: Hex[],
+    itemIds: string[],
+    callbacks: MudBankSellCallbacks,
+  ): boolean {
+    const key = objectIds.join(",");
+
+    if (this.pendingBankSales.has(key)) {
+      return false;
+    }
+
+    this.pendingBankSales.add(key);
+    void this.confirmSellObjectsToBank(objectIds, itemIds, key, callbacks);
+
+    return true;
+  }
+
+  submitBuyObjectFromBank(
+    itemId: string,
+    callbacks: MudBankBuyCallbacks,
+  ): boolean {
+    const key = `${itemId}:1`;
+
+    if (this.pendingBankPurchases.has(key)) {
+      return false;
+    }
+
+    this.pendingBankPurchases.add(key);
+    void this.confirmBuyObjectFromBank(itemId, key, callbacks);
 
     return true;
   }
 
   async readWorldTime(): Promise<WorldTimeConfig | undefined> {
-    try {
-      const keyTuple = [worldTimeKey as Hex];
-      const [startedAtBlob, dayLengthBlob] = await Promise.all([
-        this.publicClient.readContract({
-          address: this.worldAddress,
-          abi: pantheonWorldAbi,
-          functionName: "getStaticField",
-          args: [
-            worldTimeTableId,
-            keyTuple,
-            worldTimeStartedAtFieldIndex,
-            worldTimeFieldLayout,
-          ],
-        }),
-        this.publicClient.readContract({
-          address: this.worldAddress,
-          abi: pantheonWorldAbi,
-          functionName: "getStaticField",
-          args: [
-            worldTimeTableId,
-            keyTuple,
-            worldTimeDayLengthFieldIndex,
-            worldTimeFieldLayout,
-          ],
-        }),
-      ]);
-
-      const startedAt = decodeUint64StaticField(startedAtBlob);
-      const dayLength = decodeUint64StaticField(dayLengthBlob);
-
-      if (startedAt <= 0 || dayLength <= 0) {
-        return undefined;
-      }
-
-      return { startedAt, dayLength };
-    } catch {
-      return undefined;
-    }
+    return this.snapshotReader.readWorldTime();
   }
 
-  async readPlayerSnapshot(): Promise<PlayerSnapshot | undefined> {
-    try {
-      const keyTuple = [addressToBytes32(this.walletClient.account.address)];
-      const [
-        xBlob,
-        yBlob,
-        energyBlob,
-        maxEnergyBlob,
-        lastMoveAtBlob,
-        moveSpeedBlob,
-        existsBlob,
-      ] = await Promise.all([
-        this.readPlayerStaticField(keyTuple, playerXFieldIndex),
-        this.readPlayerStaticField(keyTuple, playerYFieldIndex),
-        this.readPlayerStaticField(keyTuple, playerEnergyFieldIndex),
-        this.readPlayerStaticField(keyTuple, playerMaxEnergyFieldIndex),
-        this.readPlayerStaticField(keyTuple, playerLastMoveAtFieldIndex),
-        this.readPlayerStaticField(keyTuple, playerMoveSpeedFieldIndex),
-        this.readPlayerStaticField(keyTuple, playerExistsFieldIndex),
-      ]);
+  async readPlayerSnapshot(
+    worldStateBounds?: WorldStateReadBounds,
+  ): Promise<PlayerSnapshot | undefined> {
+    return this.snapshotReader.readPlayerSnapshot(worldStateBounds);
+  }
 
-      const exists = decodeBoolStaticField(existsBlob);
+  async readPlayerPresence(): Promise<PlayerPresenceSnapshot | undefined> {
+    return this.snapshotReader.readPlayerPresence();
+  }
 
-      if (!exists) {
-        return undefined;
-      }
+  async readWorldObjects(): Promise<WorldObjectSnapshot[]> {
+    return this.snapshotReader.readWorldObjects();
+  }
 
-      return {
-        x: decodeInt32StaticField(xBlob),
-        y: decodeInt32StaticField(yBlob),
-        energy: decodeUint32StaticField(energyBlob),
-        maxEnergy: decodeUint32StaticField(maxEnergyBlob),
-        lastMoveAt: decodeUint64StaticField(lastMoveAtBlob),
-        moveSpeed: decodeUint32StaticField(moveSpeedBlob),
-        exists,
-      };
-    } catch {
-      return undefined;
-    }
+  async readBankItemQuotes(
+    itemIds: string[],
+  ): Promise<BankItemQuoteSnapshot[]> {
+    return this.snapshotReader.readBankItemQuotes(itemIds);
   }
 
   private async confirmDig(
@@ -399,11 +325,134 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed({ x, y });
+      callbacks.onConfirmed({
+        x,
+        y,
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+      });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingDigs.delete(key);
+    }
+  }
+
+  private async confirmPickupObject(
+    objectId: Hex,
+    callbacks: MudPickupObjectCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__pickupObject",
+        args: [objectId],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        objectId,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingPickups.delete(objectId);
+    }
+  }
+
+  private async confirmDropObject(
+    objectId: Hex,
+    x: number,
+    y: number,
+    callbacks: MudDropObjectCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__dropObject",
+        args: [objectId, x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        objectId,
+        x,
+        y,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingDrops.delete(objectId);
+    }
+  }
+
+  private async confirmSellObjectsToBank(
+    objectIds: Hex[],
+    itemIds: string[],
+    key: string,
+    callbacks: MudBankSellCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__sellObjectsToBank",
+        args: [objectIds],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        objectIds,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+        cucBalance: await this.snapshotReader.readCucBalanceAfterConfirmation(),
+        bankQuotes:
+          await this.snapshotReader.readBankItemQuotesAfterConfirmation(itemIds),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingBankSales.delete(key);
+    }
+  }
+
+  private async confirmBuyObjectFromBank(
+    itemId: string,
+    key: string,
+    callbacks: MudBankBuyCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__buyObjectsFromBank",
+        args: [stringToBytes32(itemId), 1],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        itemId,
+        quantity: 1,
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+        cucBalance: await this.snapshotReader.readCucBalanceAfterConfirmation(),
+        bankQuotes:
+          await this.snapshotReader.readBankItemQuotesAfterConfirmation([itemId]),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingBankPurchases.delete(key);
     }
   }
 
@@ -423,14 +472,144 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
+      const worldObjects = await this.readWorldObjectsForConfirmation();
       callbacks.onConfirmed({
-        ...(await this.readLastForageResultAfterConfirmation(x, y)),
-        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+        ...(await this.snapshotReader.readLastForageResultAfterConfirmation(
+          x,
+          y,
+        )),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        worldObjects,
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingForages.delete(key);
+    }
+  }
+
+  private async readWorldObjectsForConfirmation(): Promise<
+    WorldObjectSnapshot[] | undefined
+  > {
+    try {
+      return await this.snapshotReader.readWorldObjects();
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async confirmPlant(
+    x: number,
+    y: number,
+    plantId: string,
+    key: string,
+    callbacks: MudPlantCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__plant",
+        args: [x, y, stringToBytes32(plantId)],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        x,
+        y,
+        plantId,
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        inventory:
+          await this.snapshotReader.readPlayerInventoryAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingPlants.delete(key);
+    }
+  }
+
+  private async confirmHarvest(
+    x: number,
+    y: number,
+    key: string,
+    callbacks: MudHarvestCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: "pantheon__harvest",
+        args: [x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        ...(await this.snapshotReader.readLastHarvestResultAfterConfirmation(
+          x,
+          y,
+        )),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+        worldObjects: await this.readWorldObjectsForConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingHarvests.delete(key);
+    }
+  }
+
+  private submitPlantCare(
+    action: "water" | "tend",
+    x: number,
+    y: number,
+    callbacks: MudPlantCareCallbacks,
+  ): boolean {
+    const key = `${action}:${x},${y}`;
+
+    if (this.pendingCareActions.has(key)) {
+      return false;
+    }
+
+    this.pendingCareActions.add(key);
+    void this.confirmPlantCare(action, x, y, key, callbacks);
+
+    return true;
+  }
+
+  private async confirmPlantCare(
+    action: "water" | "tend",
+    x: number,
+    y: number,
+    key: string,
+    callbacks: MudPlantCareCallbacks,
+  ): Promise<void> {
+    try {
+      const hash = await this.walletClient.writeContract({
+        address: this.worldAddress,
+        abi: pantheonWorldAbi,
+        functionName: action === "water" ? "pantheon__water" : "pantheon__tend",
+        args: [x, y],
+        chain: foundry,
+      });
+
+      await this.publicClient.waitForTransactionReceipt({ hash });
+      callbacks.onConfirmed({
+        x,
+        y,
+        action,
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
+      });
+    } catch (error) {
+      callbacks.onRejected(formatMudError(error));
+    } finally {
+      this.pendingCareActions.delete(key);
     }
   }
 
@@ -452,7 +631,8 @@ export class MudWorldBridge {
       callbacks.onConfirmed({
         x,
         y,
-        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -479,7 +659,8 @@ export class MudWorldBridge {
       await this.publicClient.waitForTransactionReceipt({ hash });
       callbacks.onConfirmed({
         ...target,
-        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
+        playerEnergy:
+          await this.snapshotReader.readPlayerEnergyAfterConfirmation(),
       });
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
@@ -488,9 +669,7 @@ export class MudWorldBridge {
     }
   }
 
-  private async confirmSleep(
-    callbacks: MudStartSleepCallbacks,
-  ): Promise<void> {
+  private async confirmSleep(callbacks: MudStartSleepCallbacks): Promise<void> {
     try {
       const hash = await this.walletClient.writeContract({
         address: this.worldAddress,
@@ -501,154 +680,14 @@ export class MudWorldBridge {
       });
 
       await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed(await this.readPendingSleepAfterConfirmation());
+      callbacks.onConfirmed(
+        await this.snapshotReader.readPendingActionAfterConfirmation(),
+      );
     } catch (error) {
       callbacks.onRejected(formatMudError(error));
     } finally {
       this.pendingSleep = false;
     }
-  }
-
-  private async confirmResolveAction(
-    amount: number,
-    callbacks: MudSleepCallbacks,
-  ): Promise<void> {
-    try {
-      const hash = await this.walletClient.writeContract({
-        address: this.worldAddress,
-        abi: pantheonWorldAbi,
-        functionName: "pantheon__resolveAction",
-        args: [],
-        chain: foundry,
-      });
-
-      await this.publicClient.waitForTransactionReceipt({ hash });
-      callbacks.onConfirmed({
-        amount,
-        playerEnergy: await this.readPlayerEnergyAfterConfirmation(),
-      });
-    } catch (error) {
-      callbacks.onRejected(formatMudError(error));
-    } finally {
-      this.pendingResolveAction = false;
-    }
-  }
-
-  private async readPlayerEnergy(): Promise<PlayerEnergy | undefined> {
-    const keyTuple = [addressToBytes32(this.walletClient.account.address)];
-
-    const [energyBlob, maxEnergyBlob] = await Promise.all([
-      this.readPlayerStaticField(keyTuple, playerEnergyFieldIndex),
-      this.readPlayerStaticField(keyTuple, playerMaxEnergyFieldIndex),
-    ]);
-
-    return {
-      energy: decodeUint32StaticField(energyBlob),
-      maxEnergy: decodeUint32StaticField(maxEnergyBlob),
-    };
-  }
-
-  private async readPlayerEnergyAfterConfirmation(): Promise<
-    PlayerEnergy | undefined
-  > {
-    try {
-      return await this.readPlayerEnergy();
-    } catch {
-      return undefined;
-    }
-  }
-
-  private async readLastForageResultAfterConfirmation(
-    fallbackX: number,
-    fallbackY: number,
-  ): Promise<Omit<ConfirmedForage, "playerEnergy">> {
-    try {
-      const [x, y, itemId, amount, exists] = await this.publicClient.readContract({
-        address: this.worldAddress,
-        abi: pantheonWorldAbi,
-        functionName: "pantheon__getLastForageResult",
-        args: [this.walletClient.account.address],
-      });
-
-      if (exists) {
-        return {
-          x,
-          y,
-          itemId: decodeBytes32String(itemId),
-          amount,
-        };
-      }
-    } catch {
-      // Fall through to a no-drop result if the read is temporarily unavailable.
-    }
-
-    return { x: fallbackX, y: fallbackY, itemId: "", amount: 0 };
-  }
-
-  private async readPlayerStaticField(
-    keyTuple: Hex[],
-    fieldIndex: number,
-  ): Promise<Hex> {
-    return this.publicClient.readContract({
-      address: this.worldAddress,
-      abi: pantheonWorldAbi,
-      functionName: "getStaticField",
-      args: [
-        playerStateTableId,
-        keyTuple,
-        fieldIndex,
-        playerStateFieldLayout,
-      ],
-    });
-  }
-
-  private async readPendingSleepAfterConfirmation(): Promise<PendingSleep> {
-    try {
-      const pendingSleep = await this.readPendingSleep();
-
-      if (pendingSleep) {
-        return pendingSleep;
-      }
-    } catch {
-      // Fall back to the local default when the read is temporarily unavailable.
-    }
-
-    return { readyAt: 0, energyGain: 24 };
-  }
-
-  private async readPendingSleep(): Promise<PendingSleep | undefined> {
-    const keyTuple = [addressToBytes32(this.walletClient.account.address)];
-    const [readyAtBlob, valueBlob, existsBlob] = await Promise.all([
-      this.readPendingActionStaticField(keyTuple, pendingActionReadyAtFieldIndex),
-      this.readPendingActionStaticField(keyTuple, pendingActionValueFieldIndex),
-      this.readPendingActionStaticField(keyTuple, pendingActionExistsFieldIndex),
-    ]);
-
-    if (!decodeBoolStaticField(existsBlob)) {
-      return undefined;
-    }
-
-    return {
-      readyAt: decodeUint64StaticField(readyAtBlob),
-      energyGain: decodeUint32StaticField(valueBlob),
-    };
-  }
-
-  private async readPendingActionStaticField(
-    keyTuple: Hex[],
-    fieldIndex: number,
-  ): Promise<Hex> {
-    return this.publicClient.readContract({
-      address: this.worldAddress,
-      abi: pantheonWorldAbi,
-      functionName: "getStaticField",
-      args: [
-        pendingActionTableId,
-        keyTuple,
-        fieldIndex,
-        pendingActionFieldLayout,
-      ],
-    });
   }
 }
 
@@ -656,34 +695,10 @@ function formatMudError(error: unknown): string {
   if (typeof error === "object" && error) {
     const maybeError = error as { shortMessage?: string; message?: string };
 
-    return maybeError.shortMessage ?? maybeError.message ?? "MUD transaction failed";
+    return (
+      maybeError.shortMessage ?? maybeError.message ?? "MUD transaction failed"
+    );
   }
 
   return "MUD transaction failed";
-}
-
-function addressToBytes32(address: Hex): Hex {
-  return `0x${address.slice(2).padStart(64, "0")}`;
-}
-
-function decodeUint32StaticField(blob: Hex): number {
-  return Number.parseInt(blob.slice(2, 10), 16);
-}
-
-function decodeUint64StaticField(blob: Hex): number {
-  return Number.parseInt(blob.slice(2, 18), 16);
-}
-
-function decodeInt32StaticField(blob: Hex): number {
-  const value = decodeUint32StaticField(blob);
-
-  return value > 0x7fffffff ? value - 0x100000000 : value;
-}
-
-function decodeBoolStaticField(blob: Hex): boolean {
-  return Number.parseInt(blob.slice(2, 4), 16) !== 0;
-}
-
-function decodeBytes32String(value: Hex): string {
-  return hexToString(value, { size: 32 }).replace(/\0+$/, "");
 }
