@@ -813,6 +813,18 @@ export class MainGameScene extends Phaser.Scene {
         fontSize: "12px",
       })
       .setOrigin(0, 0);
+    const contentMaskShape = this.add.graphics();
+    contentMaskShape.fillStyle(0xffffff, 1);
+    contentMaskShape.fillRect(18, 116, width - 36, height - 138);
+    const contentMask = contentMaskShape.createGeometryMask();
+    contentMaskShape.setVisible(false);
+    const content = this.add.container(18, 116);
+    const scrollbarTrack = this.add
+      .rectangle(width - 16, 116, 4, height - 138, 0x2b3a42, 0.72)
+      .setOrigin(0, 0);
+    const scrollbarThumb = this.add
+      .rectangle(width - 18, 116, 8, 54, 0xf1d38b, 0.84)
+      .setOrigin(0, 0);
     const panel = new BankPanel(
       container,
       background,
@@ -823,6 +835,10 @@ export class MainGameScene extends Phaser.Scene {
       buyTab,
       buyTabLabel,
       status,
+      content,
+      contentMask,
+      scrollbarTrack,
+      scrollbarThumb,
       width,
       height,
     );
@@ -848,6 +864,10 @@ export class MainGameScene extends Phaser.Scene {
       buyTab,
       buyTabLabel,
       status,
+      contentMaskShape,
+      content,
+      scrollbarTrack,
+      scrollbarThumb,
     ]);
 
     return panel;

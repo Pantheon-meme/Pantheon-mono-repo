@@ -1,13 +1,13 @@
 import type { BankItemQuoteSnapshot } from "../../mud/MudWorldTypes";
 
 export type BankPanelTab = "sell" | "buy";
+export type BankPanelElement = Phaser.GameObjects.GameObject &
+  Phaser.GameObjects.Components.Visible;
 
 export type BankPanelRowView = {
   id: string;
-  background: Phaser.GameObjects.Rectangle;
-  title: Phaser.GameObjects.Text;
-  detail: Phaser.GameObjects.Text;
-  action: Phaser.GameObjects.Text;
+  y: number;
+  elements: BankPanelElement[];
 };
 
 export class BankPanel {
@@ -15,6 +15,8 @@ export class BankPanel {
   activeTab: BankPanelTab = "sell";
   loading = false;
   pending = false;
+  scrollY = 0;
+  maxScrollY = 0;
   message = "Focus the Central Uni Bank and press Enter.";
   signature = "";
   readonly quotes = new Map<string, BankItemQuoteSnapshot>();
@@ -30,6 +32,10 @@ export class BankPanel {
     public readonly buyTab: Phaser.GameObjects.Rectangle,
     public readonly buyTabLabel: Phaser.GameObjects.Text,
     public readonly status: Phaser.GameObjects.Text,
+    public readonly content: Phaser.GameObjects.Container,
+    public readonly contentMask: Phaser.Display.Masks.GeometryMask,
+    public readonly scrollbarTrack: Phaser.GameObjects.Rectangle,
+    public readonly scrollbarThumb: Phaser.GameObjects.Rectangle,
     public readonly width: number,
     public readonly height: number,
   ) {}

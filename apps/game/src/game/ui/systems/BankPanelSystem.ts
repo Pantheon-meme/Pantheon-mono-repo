@@ -5,24 +5,63 @@ import type { World } from "../../../ecs/World";
 import { ActionLog } from "../../actions/components/ActionLog";
 import { CucBalance } from "../../currency/components/CucBalance";
 import { PlayerInventory } from "../../inventory/components/PlayerInventory";
-import { itemDefinitions, itemLabel } from "../../items/ItemDefinitions";
+import {
+  forageItemSpriteTextureKey,
+  getForageItemSpriteAsset,
+  getForageItemSpriteCell,
+} from "../../items/ForageItemSpriteAssets";
+import { itemColor, itemDefinitions, itemLabel } from "../../items/ItemDefinitions";
 import { MudWorld } from "../../mud/components/MudWorld";
 import { FocusTarget } from "../../player/components/FocusTarget";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
-import { BankPanel, type BankPanelRowView } from "../components/BankPanel";
+import { plantDefinitions } from "../../plants/PlantDefinitions";
+import {
+  getHarvestItemSpriteFrameIndex,
+  getPlantSpriteAsset,
+  getPlantSpriteAssetBySeed,
+  getSeedItemSpriteFrameIndex,
+  plantSpriteTextureKey,
+  plantSpriteTextureKeyBySeed,
+} from "../../plants/PlantSpriteAssets";
+import {
+  BankPanel,
+  type BankPanelElement,
+  type BankPanelRowView,
+} from "../components/BankPanel";
 
-const maxRows = 8;
-const rowHeight = 46;
-const rowGap = 8;
+const contentX = 18;
+const contentY = 116;
+const contentWidth = 584;
+const contentHeight = 452;
+const cardWidth = 176;
+const cardHeight = 112;
+const cardGap = 12;
+const gridColumns = 3;
+const iconSize = 34;
+const scrollStep = 48;
 const itemIds = Object.keys(itemDefinitions);
 const zeroCuc = BigInt(0);
 
 export class BankPanelSystem implements System {
   private readonly escapeKey?: Phaser.Input.Keyboard.Key;
+  private wheelDeltaY = 0;
+  private wheelPointer?: Phaser.Input.Pointer;
 
   constructor(scene: Phaser.Scene) {
     this.escapeKey = scene.input.keyboard?.addKey(
       Phaser.Input.Keyboard.KeyCodes.ESC,
+    );
+    scene.input.on(
+      "wheel",
+      (
+        pointer: Phaser.Input.Pointer,
+        _objects: Phaser.GameObjects.GameObject[],
+        _deltaX: number,
+        deltaY: number,
+      ) => {
+        this.wheelPointer = pointer;
+        this.wheelDeltaY += deltaY;
+      },
     );
   }
 
@@ -44,6 +83,7 @@ export class BankPanelSystem implements System {
 
     const [actor, , , inventory] = player;
     this.updateInput(panel);
+    this.updateScroll(panel);
 
     if (!panel.visible) {
       this.setVisible(panel, false);
@@ -69,6 +109,41 @@ export class BankPanelSystem implements System {
     if (this.escapeKey && Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
       panel.visible = false;
     }
+  }
+
+  private updateScroll(panel: BankPanel): void {
+    if (!panel.visible) {
+      this.wheelDeltaY = 0;
+      this.wheelPointer = undefined;
+      return;
+    }
+
+    if (this.wheelDeltaY === 0 || !this.wheelPointer) {
+      return;
+    }
+
+    const scale = panel.container.scaleX || 1;
+    const localX = (this.wheelPointer.worldX - panel.container.x) / scale;
+    const localY = (this.wheelPointer.worldY - panel.container.y) / scale;
+    const isInsideContent =
+      localX >= contentX &&
+      localX <= contentX + contentWidth &&
+      localY >= contentY &&
+      localY <= contentY + contentHeight;
+
+    if (isInsideContent) {
+      panel.scrollY = Phaser.Math.Clamp(
+        panel.scrollY + Math.sign(this.wheelDeltaY) * scrollStep,
+        0,
+        panel.maxScrollY,
+      );
+      panel.content.setPosition(contentX, contentY - panel.scrollY);
+      this.updateCardVisibility(panel);
+      this.updateScrollbar(panel);
+    }
+
+    this.wheelDeltaY = 0;
+    this.wheelPointer = undefined;
   }
 
   private async refreshQuotes(
@@ -126,15 +201,17 @@ export class BankPanelSystem implements System {
     actor: number,
   ): void {
     for (const row of panel.rows) {
-      row.background.destroy();
-      row.title.destroy();
-      row.detail.destroy();
-      row.action.destroy();
+      for (const element of row.elements) {
+        element.destroy();
+      }
     }
 
     panel.rows.length = 0;
     panel.title.setText("Central Uni Bank");
     panel.status.setText(this.getStatusText(panel));
+    panel.content.setPosition(contentX, contentY - panel.scrollY);
+    this.updateCardVisibility(panel);
+    this.updateScrollbar(panel);
 
     const entries =
       panel.activeTab === "sell"
@@ -142,6 +219,11 @@ export class BankPanelSystem implements System {
         : this.getBuyEntries(panel);
 
     if (entries.length === 0) {
+      panel.scrollY = 0;
+      panel.maxScrollY = 0;
+      panel.content.setPosition(contentX, contentY);
+      this.updateCardVisibility(panel);
+      this.updateScrollbar(panel);
       this.createEmptyRow(
         panel,
         panel.activeTab === "sell"
@@ -151,23 +233,28 @@ export class BankPanelSystem implements System {
       return;
     }
 
-    entries.slice(0, maxRows).forEach((entry, index) => {
-      const row = this.createRow(panel, index, entry.title, entry.detail, entry.action);
+    entries.forEach((entry, index) => {
+      const row = this.createCard(panel, index, entry);
 
-      if (!panel.pending) {
-        row.background.on("pointerdown", () => {
+      if (!panel.pending && entry.enabled) {
+        const background = row.elements[0] as Phaser.GameObjects.Rectangle;
+        background.on("pointerdown", () => {
           if (entry.kind === "sell") {
             this.sellInventoryObjects(panel, inventory, mudWorld, world, actor, entry);
-          } else {
+          } else if (entry.kind === "buy") {
             this.buyBankObject(panel, mudWorld, world, actor, entry);
           }
         });
       }
     });
-
-    if (entries.length > maxRows) {
-      this.createEmptyRow(panel, `${entries.length - maxRows} more rows hidden.`);
-    }
+    panel.maxScrollY = Math.max(
+      0,
+      Math.ceil(entries.length / gridColumns) * (cardHeight + cardGap) - cardGap - contentHeight,
+    );
+    panel.scrollY = Phaser.Math.Clamp(panel.scrollY, 0, panel.maxScrollY);
+    panel.content.setPosition(contentX, contentY - panel.scrollY);
+    this.updateCardVisibility(panel);
+    this.updateScrollbar(panel);
   }
 
   private getSellEntries(
@@ -177,13 +264,7 @@ export class BankPanelSystem implements System {
     const grouped = new Map<string, string[]>();
 
     for (const slot of inventory.sortedSlots()) {
-      const quote = panel.quotes.get(slot.itemId);
-
-      if (
-        !quote?.priceExists ||
-        quote.buyPrice <= zeroCuc ||
-        slot.syncState === "pending"
-      ) {
+      if (slot.syncState === "pending") {
         continue;
       }
 
@@ -192,54 +273,172 @@ export class BankPanelSystem implements System {
       grouped.set(slot.itemId, objectIds);
     }
 
-    return [...grouped.entries()]
-      .map(([itemId, objectIds]) => {
+    return itemIds
+      .map((itemId) => {
         const quote = panel.quotes.get(itemId);
         const label = itemLabel(itemId);
+        const objectIds = grouped.get(itemId) ?? [];
+        const price = quote?.priceExists ? quote.buyPrice : zeroCuc;
         const maxQuantity = quote?.buyMaxQuantity && quote.buyMaxQuantity > 0
           ? quote.buyMaxQuantity
           : objectIds.length;
         const sellQuantity = Math.min(objectIds.length, maxQuantity);
+        const enabled = Boolean(quote?.priceExists && price > zeroCuc && sellQuantity > 0);
 
         return {
           kind: "sell" as const,
+          enabled,
           itemId,
           label,
           objectIds,
           sellQuantity,
           title: `${label} x${objectIds.length}`,
-          detail: `Bank pays ${formatPrice(quote?.buyPrice ?? zeroCuc)} each`,
-          action: sellQuantity > 1 ? `Sell ${sellQuantity}` : "Sell 1",
+          detail: `Bank pays ${formatPrice(price)} each`,
+          action: enabled
+            ? sellQuantity > 1
+              ? `Sell ${sellQuantity}`
+              : "Sell 1"
+            : getDisabledSellAction(quote?.priceExists ?? false, price, objectIds.length),
         };
       })
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort(
+        (a, b) =>
+          Number(b.enabled) - Number(a.enabled) || a.label.localeCompare(b.label),
+      );
   }
 
   private getBuyEntries(panel: BankPanel): BuyEntry[] {
-    return [...panel.quotes.values()]
-      .filter(
-        (quote) =>
-          quote.priceExists &&
-          quote.sellPrice > zeroCuc &&
-          quote.inventoryQuantity > 0,
-      )
-      .map((quote) => {
-        const label = itemLabel(quote.itemId);
+    return itemIds
+      .map((itemId) => {
+        const quote = panel.quotes.get(itemId);
+        const label = itemLabel(itemId);
+        const price = quote?.priceExists ? quote.sellPrice : zeroCuc;
+        const quantity = quote?.inventoryQuantity ?? 0;
+        const enabled = Boolean(quote?.priceExists && price > zeroCuc && quantity > 0);
 
         return {
           kind: "buy" as const,
-          itemId: quote.itemId,
+          enabled,
+          itemId,
           label,
-          title: `${label} x${quote.inventoryQuantity}`,
-          detail: `Bank sells ${formatPrice(quote.sellPrice)} each`,
-          action: "Buy 1",
+          quantity,
+          title: `${label} x${quantity}`,
+          detail: `Price ${formatPrice(price)}`,
+          action: enabled
+            ? "Buy 1"
+            : getDisabledBuyAction(quote?.priceExists ?? false, price, quantity),
         };
       })
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort(
+        (a, b) =>
+          Number(b.enabled) - Number(a.enabled) || a.label.localeCompare(b.label),
+      );
   }
 
   private createEmptyRow(panel: BankPanel, text: string): void {
     this.createRow(panel, panel.rows.length, text, "", "");
+  }
+
+  private createCard(
+    panel: BankPanel,
+    index: number,
+    entry: BankEntry,
+  ): BankPanelRowView {
+    const column = index % gridColumns;
+    const rowIndex = Math.floor(index / gridColumns);
+    const x = column * (cardWidth + cardGap);
+    const y = rowIndex * (cardHeight + cardGap);
+    const color = itemColor(entry.itemId);
+    const background = panel.container.scene.add
+      .rectangle(x, y, cardWidth, cardHeight, 0x15222b, 0.94)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, entry.enabled ? 0x8fbfd0 : 0x5f6f74, entry.enabled ? 0.62 : 0.42)
+      .setInteractive({ useHandCursor: entry.enabled });
+    const swatch = panel.container.scene.add
+      .rectangle(x + 12, y + 12, 22, 22, color, entry.enabled ? 1 : 0.58)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0xf6efd7, 0.45);
+    const icon = createItemIcon(
+      panel.container.scene,
+      entry.itemId,
+      x + 23,
+      y + 23,
+    );
+    const title = panel.container.scene.add
+      .text(x + 42, y + 10, entry.label, {
+        color: "#f6efd7",
+        fixedWidth: cardWidth - 54,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "13px",
+        fontStyle: "700",
+        wordWrap: { width: cardWidth - 54 },
+      })
+      .setOrigin(0, 0);
+    const quantity = panel.container.scene.add
+      .text(x + 12, y + 46, getQuantityText(entry), {
+        color: "#b9c9c8",
+        fixedWidth: cardWidth - 24,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "12px",
+      })
+      .setOrigin(0, 0);
+    const detail = panel.container.scene.add
+      .text(x + 12, y + 64, entry.detail, {
+        color: "#b9c9c8",
+        fixedWidth: cardWidth - 24,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "12px",
+        wordWrap: { width: cardWidth - 24 },
+      })
+      .setOrigin(0, 0);
+    const action = panel.container.scene.add
+      .text(x + 12, y + 86, entry.action, {
+        align: "center",
+        color: entry.enabled ? "#101820" : "#aeb8b5",
+        fixedWidth: cardWidth - 24,
+        fontFamily: "Inter, system-ui, sans-serif",
+        fontSize: "12px",
+        fontStyle: "700",
+        backgroundColor: entry.enabled ? "#f1d38b" : "#26343a",
+        padding: { x: 4, y: 4 },
+      })
+      .setOrigin(0, 0);
+    if (icon) {
+      swatch.setFillStyle(0x101820, 0.7);
+      icon.setAlpha(entry.enabled ? 1 : 0.55);
+    }
+
+    const elements: BankPanelElement[] = [
+      background,
+      swatch,
+      ...(icon ? [icon] : []),
+      title,
+      quantity,
+      detail,
+      action,
+    ];
+
+    if (!entry.enabled) {
+      const overlay = panel.container.scene.add
+        .rectangle(x, y, cardWidth, cardHeight, 0x071016, 0.42)
+        .setOrigin(0, 0);
+      elements.push(overlay);
+    }
+
+    background.on("pointerover", () => {
+      if (entry.enabled) {
+        background.setFillStyle(0x203644, 0.98);
+      }
+    });
+    background.on("pointerout", () => {
+      background.setFillStyle(0x15222b, 0.94);
+    });
+
+    panel.content.add(elements);
+    const row = { id: entry.title, y, elements };
+    panel.rows.push(row);
+
+    return row;
   }
 
   private createRow(
@@ -249,57 +448,15 @@ export class BankPanelSystem implements System {
     detailText: string,
     actionText: string,
   ): BankPanelRowView {
-    const y = 126 + index * (rowHeight + rowGap);
-    const background = panel.container.scene.add
-      .rectangle(18, y, panel.width - 36, rowHeight, 0x15222b, 0.94)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, 0x8fbfd0, 0.55)
-      .setInteractive({ useHandCursor: Boolean(actionText) });
-    const title = panel.container.scene.add
-      .text(32, y + 8, titleText, {
-        color: "#f6efd7",
-        fixedWidth: 220,
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: "14px",
-        fontStyle: "700",
-      })
-      .setOrigin(0, 0);
-    const detail = panel.container.scene.add
-      .text(256, y + 8, detailText, {
-        color: "#b9c9c8",
-        fixedWidth: 190,
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: "12px",
-        lineSpacing: 2,
-      })
-      .setOrigin(0, 0);
-    const action = panel.container.scene.add
-      .text(panel.width - 128, y + 13, actionText, {
-        align: "center",
-        color: actionText ? "#101820" : "#6f7f7d",
-        fixedWidth: 94,
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: "13px",
-        fontStyle: "700",
-        backgroundColor: actionText ? "#f1d38b" : undefined,
-        padding: { x: 4, y: 4 },
-      })
-      .setOrigin(0, 0);
-
-    background.on("pointerover", () => {
-      if (actionText) {
-        background.setFillStyle(0x203644, 0.98);
-      }
+    return this.createCard(panel, index, {
+      kind: "empty",
+      enabled: false,
+      itemId: "wild_fiber",
+      label: titleText,
+      title: titleText,
+      detail: detailText,
+      action: actionText,
     });
-    background.on("pointerout", () => {
-      background.setFillStyle(0x15222b, 0.94);
-    });
-
-    panel.container.add([background, title, detail, action]);
-    const row = { id: titleText, background, title, detail, action };
-    panel.rows.push(row);
-
-    return row;
   }
 
   private sellInventoryObjects(
@@ -450,6 +607,35 @@ export class BankPanelSystem implements System {
     panel.status.setText(this.getStatusText(panel));
   }
 
+  private updateScrollbar(panel: BankPanel): void {
+    const visible = panel.maxScrollY > 0;
+    panel.scrollbarTrack.setVisible(visible);
+    panel.scrollbarThumb.setVisible(visible);
+
+    if (!visible) {
+      return;
+    }
+
+    const contentRange = panel.maxScrollY + contentHeight;
+    const thumbHeight = Math.max(48, (contentHeight / contentRange) * contentHeight);
+    const thumbRange = contentHeight - thumbHeight;
+    const thumbY =
+      contentY + (panel.maxScrollY > 0 ? (panel.scrollY / panel.maxScrollY) * thumbRange : 0);
+
+    panel.scrollbarThumb.setSize(8, thumbHeight).setPosition(panel.width - 18, thumbY);
+  }
+
+  private updateCardVisibility(panel: BankPanel): void {
+    for (const row of panel.rows) {
+      const visibleY = row.y - panel.scrollY;
+      const visible = visibleY > -cardHeight && visibleY < contentHeight;
+
+      for (const element of row.elements) {
+        element.setVisible(visible);
+      }
+    }
+  }
+
   private getStatusText(panel: BankPanel): string {
     return panel.pending || panel.loading ? panel.message : `${panel.message}  Esc close`;
   }
@@ -471,6 +657,7 @@ export class BankPanelSystem implements System {
 
 type SellEntry = {
   kind: "sell";
+  enabled: boolean;
   itemId: string;
   label: string;
   objectIds: string[];
@@ -482,12 +669,166 @@ type SellEntry = {
 
 type BuyEntry = {
   kind: "buy";
+  enabled: boolean;
+  itemId: string;
+  label: string;
+  quantity: number;
+  title: string;
+  detail: string;
+  action: string;
+};
+
+type EmptyEntry = {
+  kind: "empty";
+  enabled: false;
   itemId: string;
   label: string;
   title: string;
   detail: string;
   action: string;
 };
+
+type BankEntry = SellEntry | BuyEntry | EmptyEntry;
+
+function getQuantityText(entry: BankEntry): string {
+  if (entry.kind === "sell") {
+    return `Carry ${entry.objectIds.length}`;
+  }
+
+  if (entry.kind === "buy") {
+    return `Stock ${entry.quantity}`;
+  }
+
+  return "";
+}
+
+function getDisabledBuyAction(
+  priceExists: boolean,
+  price: bigint,
+  quantity: number,
+): string {
+  if (!priceExists || price <= zeroCuc) {
+    return "No price";
+  }
+
+  if (quantity <= 0) {
+    return "Out of stock";
+  }
+
+  return "Unavailable";
+}
+
+function getDisabledSellAction(
+  priceExists: boolean,
+  price: bigint,
+  quantity: number,
+): string {
+  if (!priceExists || price <= zeroCuc) {
+    return "No price";
+  }
+
+  if (quantity <= 0) {
+    return "None held";
+  }
+
+  return "Unavailable";
+}
+
+function createItemIcon(
+  scene: Phaser.Scene,
+  itemId: string,
+  x: number,
+  y: number,
+): Phaser.GameObjects.Sprite | undefined {
+  return (
+    createForageItemIcon(scene, itemId, x, y) ??
+    createSeedItemIcon(scene, itemId, x, y) ??
+    createHarvestItemIcon(scene, itemId, x, y)
+  );
+}
+
+function createForageItemIcon(
+  scene: Phaser.Scene,
+  itemId: string,
+  x: number,
+  y: number,
+): Phaser.GameObjects.Sprite | undefined {
+  const spriteCell = getForageItemSpriteCell(itemId);
+  const spriteAsset = getForageItemSpriteAsset(itemId);
+  const textureKey = forageItemSpriteTextureKey(itemId);
+
+  if (!spriteCell || !spriteAsset || !textureKey) {
+    return undefined;
+  }
+
+  const frameIndex =
+    spriteCell.row * spriteAsset.manifest.columns + spriteCell.column;
+
+  return scene.add
+    .sprite(x, y, textureKey)
+    .setOrigin(0.5)
+    .setFrame(frameIndex)
+    .setDisplaySize(iconSize, iconSize);
+}
+
+function createSeedItemIcon(
+  scene: Phaser.Scene,
+  itemId: string,
+  x: number,
+  y: number,
+): Phaser.GameObjects.Sprite | undefined {
+  const spriteAsset = getPlantSpriteAssetBySeed(itemId);
+  const textureKey = plantSpriteTextureKeyBySeed(itemId);
+
+  if (!spriteAsset || !textureKey) {
+    return undefined;
+  }
+
+  const frameIndex = getSeedItemSpriteFrameIndex(spriteAsset);
+
+  if (frameIndex === undefined) {
+    return undefined;
+  }
+
+  return scene.add
+    .sprite(x, y, textureKey)
+    .setOrigin(0.5)
+    .setFrame(frameIndex)
+    .setDisplaySize(iconSize, iconSize);
+}
+
+function createHarvestItemIcon(
+  scene: Phaser.Scene,
+  itemId: string,
+  x: number,
+  y: number,
+): Phaser.GameObjects.Sprite | undefined {
+  const plant = Object.values(plantDefinitions).find(
+    (definition) => `${definition.id}_harvest` === itemId,
+  );
+
+  if (!plant) {
+    return undefined;
+  }
+
+  const spriteAsset = getPlantSpriteAsset(plant.id);
+
+  if (!spriteAsset) {
+    return undefined;
+  }
+
+  const frameIndex = getHarvestItemSpriteFrameIndex(spriteAsset, 0);
+
+  if (frameIndex === undefined) {
+    return undefined;
+  }
+
+  return scene.add
+    .sprite(x, y, plantSpriteTextureKey(plant.id))
+    .setOrigin(0.5)
+    .setFrame(frameIndex)
+    .setDisplaySize(iconSize, iconSize);
+}
 
 function formatPrice(price: bigint): string {
   return `${price.toString()} CUC`;
