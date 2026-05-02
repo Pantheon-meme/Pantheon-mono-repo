@@ -4,6 +4,7 @@ export class SleepProgressBar {
   constructor(
     public readonly background: Phaser.GameObjects.Rectangle,
     public readonly fill: Phaser.GameObjects.Rectangle,
+    public readonly icon: Phaser.GameObjects.Image,
     public readonly label: Phaser.GameObjects.Text,
     public readonly width: number,
     public readonly height: number,

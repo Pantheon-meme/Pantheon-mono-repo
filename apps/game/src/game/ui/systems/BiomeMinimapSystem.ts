@@ -1,11 +1,17 @@
 import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
+import {
+  minimapFrameMapUnderlap,
+  minimapFrameSlices,
+  minimapFrameVisualInset,
+} from "../../../assets/ui/UiFrameAssets";
 import type { BiomeDefinition } from "../../biome/BiomeDefinitions";
 import {
   createBiomeRegionPlan,
   getDominantRegion,
 } from "../../biome/BiomeRegionGeneration";
 import type { BiomeSurfaceTile } from "../../biome/BiomeSurfacePlan";
+import { FacingDirection } from "../../player/components/FacingDirection";
 import { PlayerControlled } from "../../player/components/PlayerControlled";
 import { Position } from "../../shared/components/Position";
 import { TerrainGrid } from "../../terrain/components/TerrainGrid";
@@ -23,9 +29,19 @@ const terrainColors: Record<string, number> = {
   path: 0xf4d88d,
 };
 const regionColors = [0xff71ce, 0x7bdff2, 0xb2f7aa, 0xf7d794, 0xcdb4db, 0xf29e4c];
+const hoveredMinimapScale = 1.5;
+const minimapScaleInDuration = 0.1;
+const minimapScaleOutDuration = 0.14;
+
+type MinimapMapBounds = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 export class BiomeMinimapSystem implements System {
-  update(world: World): void {
+  update(world: World, deltaSeconds: number): void {
     const grid = world.query(TerrainGrid)[0]?.[1];
 
     if (!grid) {
@@ -33,26 +49,34 @@ export class BiomeMinimapSystem implements System {
     }
 
     for (const [, minimap] of world.query(BiomeMinimap)) {
+      applyVisibility(minimap);
+      layoutMinimapFrame(minimap);
+      updateScaleTransition(minimap, deltaSeconds);
+      positionMinimap(minimap);
+
       if (!minimap.rendered) {
         renderStaticMinimap(minimap, grid);
         minimap.rendered = true;
       }
 
-      positionMinimap(minimap);
       renderDynamicOverlay(world, minimap, grid);
     }
   }
 }
 
+function applyVisibility(minimap: BiomeMinimap): void {
+  minimap.container.setVisible(minimap.visible);
+}
+
 function renderStaticMinimap(minimap: BiomeMinimap, grid: TerrainGrid): void {
   minimap.terrainLayer.clear();
   minimap.regionLayer.clear();
-  minimap.labelLayer.removeAll(true);
 
   const regionPlan = createBiomeRegionPlan(grid, minimap.biome);
   const regionColorById = createRegionColorMap(minimap.biome);
-  const cellWidth = minimap.width / grid.width;
-  const cellHeight = minimap.height / grid.height;
+  const mapBounds = getMinimapMapBounds(minimap);
+  const cellWidth = mapBounds.width / grid.width;
+  const cellHeight = mapBounds.height / grid.height;
 
   for (let y = 0; y < grid.height; y += 1) {
     for (let x = 0; x < grid.width; x += 1) {
@@ -61,8 +85,8 @@ function renderStaticMinimap(minimap: BiomeMinimap, grid: TerrainGrid): void {
 
       minimap.terrainLayer.fillStyle(terrainColor, 0.96);
       minimap.terrainLayer.fillRect(
-        x * cellWidth,
-        y * cellHeight,
+        mapBounds.x + x * cellWidth,
+        mapBounds.y + y * cellHeight,
         Math.ceil(cellWidth),
         Math.ceil(cellHeight),
       );
@@ -70,8 +94,8 @@ function renderStaticMinimap(minimap: BiomeMinimap, grid: TerrainGrid): void {
       if (tile.regionId) {
         minimap.regionLayer.fillStyle(regionColorById.get(tile.regionId) ?? 0xffffff, 0.1);
         minimap.regionLayer.fillRect(
-          x * cellWidth,
-          y * cellHeight,
+          mapBounds.x + x * cellWidth,
+          mapBounds.y + y * cellHeight,
           Math.ceil(cellWidth),
           Math.ceil(cellHeight),
         );
@@ -80,7 +104,6 @@ function renderStaticMinimap(minimap: BiomeMinimap, grid: TerrainGrid): void {
   }
 
   drawRegionBoundaries(minimap, grid, regionPlan, regionColorById);
-  drawRegionLabels(minimap, regionColorById);
 }
 
 function drawRegionBoundaries(
@@ -89,8 +112,9 @@ function drawRegionBoundaries(
   regionPlan: ReturnType<typeof createBiomeRegionPlan>,
   regionColorById: ReadonlyMap<string, number>,
 ): void {
-  const cellWidth = minimap.width / grid.width;
-  const cellHeight = minimap.height / grid.height;
+  const mapBounds = getMinimapMapBounds(minimap);
+  const cellWidth = mapBounds.width / grid.width;
+  const cellHeight = mapBounds.height / grid.height;
 
   minimap.regionLayer.lineStyle(1.4, 0xf8fff8, 0.48);
 
@@ -102,19 +126,19 @@ function drawRegionBoundaries(
 
       if (tile.regionId && right.regionId && tile.regionId !== right.regionId) {
         minimap.regionLayer.lineBetween(
-          (x + 1) * cellWidth,
-          y * cellHeight,
-          (x + 1) * cellWidth,
-          (y + 1) * cellHeight,
+          mapBounds.x + (x + 1) * cellWidth,
+          mapBounds.y + y * cellHeight,
+          mapBounds.x + (x + 1) * cellWidth,
+          mapBounds.y + (y + 1) * cellHeight,
         );
       }
 
       if (tile.regionId && down.regionId && tile.regionId !== down.regionId) {
         minimap.regionLayer.lineBetween(
-          x * cellWidth,
-          (y + 1) * cellHeight,
-          (x + 1) * cellWidth,
-          (y + 1) * cellHeight,
+          mapBounds.x + x * cellWidth,
+          mapBounds.y + (y + 1) * cellHeight,
+          mapBounds.x + (x + 1) * cellWidth,
+          mapBounds.y + (y + 1) * cellHeight,
         );
       }
     }
@@ -125,41 +149,11 @@ function drawRegionBoundaries(
 
     minimap.regionLayer.fillStyle(color, 0.92);
     minimap.regionLayer.fillCircle(
-      anchor.tileX * cellWidth,
-      anchor.tileY * cellHeight,
+      mapBounds.x + anchor.tileX * cellWidth,
+      mapBounds.y + anchor.tileY * cellHeight,
       2.8,
     );
   }
-}
-
-function drawRegionLabels(
-  minimap: BiomeMinimap,
-  regionColorById: ReadonlyMap<string, number>,
-): void {
-  const labelX = minimap.width + 10;
-
-  minimap.biome.regions.forEach((region, index) => {
-    const y = index * 18;
-    const swatch = minimap.container.scene.add
-      .rectangle(labelX, y + 2, 8, 8, regionColorById.get(region.id) ?? 0xffffff, 0.92)
-      .setOrigin(0);
-    const label = minimap.container.scene.add
-      .text(labelX + 12, y - 2, region.label, {
-        color: "#eef7f4",
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: "11px",
-        shadow: {
-          color: "#071018",
-          blur: 3,
-          fill: true,
-          offsetX: 1,
-          offsetY: 1,
-        },
-      })
-      .setOrigin(0);
-
-    minimap.labelLayer.add([swatch, label]);
-  });
 }
 
 function renderDynamicOverlay(
@@ -167,9 +161,10 @@ function renderDynamicOverlay(
   minimap: BiomeMinimap,
   grid: TerrainGrid,
 ): void {
-  const player = world.query(PlayerControlled, Position)[0];
+  const player = world.query(PlayerControlled, Position, FacingDirection)[0];
 
   minimap.overlayLayer.clear();
+  minimap.playerMarker.setVisible(false);
 
   if (!player) {
     return;
@@ -179,29 +174,169 @@ function renderDynamicOverlay(
   const camera = minimap.container.scene.cameras.main;
   const worldWidth = grid.width * grid.tileSize;
   const worldHeight = grid.height * grid.tileSize;
-  const playerX = (position.x / worldWidth) * minimap.width;
-  const playerY = (position.y / worldHeight) * minimap.height;
-  const viewX = (camera.worldView.x / worldWidth) * minimap.width;
-  const viewY = (camera.worldView.y / worldHeight) * minimap.height;
-  const viewWidth = (camera.worldView.width / worldWidth) * minimap.width;
-  const viewHeight = (camera.worldView.height / worldHeight) * minimap.height;
+  const mapBounds = getMinimapMapBounds(minimap);
+  const playerX = mapBounds.x + (position.x / worldWidth) * mapBounds.width;
+  const playerY = mapBounds.y + (position.y / worldHeight) * mapBounds.height;
+  const viewX = mapBounds.x + (camera.worldView.x / worldWidth) * mapBounds.width;
+  const viewY = mapBounds.y + (camera.worldView.y / worldHeight) * mapBounds.height;
+  const viewWidth = (camera.worldView.width / worldWidth) * mapBounds.width;
+  const viewHeight = (camera.worldView.height / worldHeight) * mapBounds.height;
+  const facing = player[3];
 
   minimap.overlayLayer.lineStyle(1.5, 0xffffff, 0.72);
   minimap.overlayLayer.strokeRect(viewX, viewY, viewWidth, viewHeight);
-  minimap.overlayLayer.fillStyle(0xfff3a1, 1);
-  minimap.overlayLayer.fillCircle(playerX, playerY, 3.5);
-  minimap.overlayLayer.lineStyle(1.5, 0x071018, 0.9);
-  minimap.overlayLayer.strokeCircle(playerX, playerY, 4.2);
+  minimap.playerMarker
+    .setPosition(playerX, playerY)
+    .setRotation(getMarkerRotation(facing))
+    .setVisible(true);
+}
+
+function getMarkerRotation(facing: FacingDirection): number {
+  if (facing.y < 0) {
+    return 0;
+  }
+
+  if (facing.x > 0) {
+    return Math.PI / 2;
+  }
+
+  if (facing.y > 0) {
+    return Math.PI;
+  }
+
+  if (facing.x < 0) {
+    return -Math.PI / 2;
+  }
+
+  return 0;
 }
 
 function positionMinimap(minimap: BiomeMinimap): void {
   const camera = minimap.container.scene.cameras.main;
-  const scale = 1 / camera.zoom;
-  const worldX = camera.worldView.x + minimap.screenX * scale;
-  const worldY = camera.worldView.y + minimap.screenY * scale;
+  const cameraScale = 1 / camera.zoom;
+  const displayScale =
+    minimap.displayScale * minimap.scaleMultiplier * cameraScale;
+  const localRight = minimap.background.x + minimap.background.width;
+  const localBottom = minimap.background.y + minimap.background.height;
+  const worldX =
+    camera.worldView.x +
+    (camera.width - minimap.screenX) * cameraScale -
+    localRight * displayScale;
+  const worldY =
+    camera.worldView.y +
+    (camera.height - minimap.screenY) * cameraScale -
+    localBottom * displayScale;
 
   minimap.container.setPosition(worldX, worldY);
-  minimap.container.setScale(scale);
+  minimap.container.setScale(displayScale);
+}
+
+function updateScaleTransition(
+  minimap: BiomeMinimap,
+  deltaSeconds: number,
+): void {
+  const targetScale = minimap.hovered ? hoveredMinimapScale : 1;
+
+  if (targetScale !== minimap.scaleTransitionTo) {
+    minimap.scaleTransitionFrom = minimap.scaleMultiplier;
+    minimap.scaleTransitionTo = targetScale;
+    minimap.scaleTransitionElapsed = 0;
+    minimap.scaleTransitionDuration = minimap.hovered
+      ? minimapScaleInDuration
+      : minimapScaleOutDuration;
+  }
+
+  if (minimap.scaleMultiplier === minimap.scaleTransitionTo) {
+    return;
+  }
+
+  const duration = minimap.scaleTransitionDuration;
+  minimap.scaleTransitionElapsed = Math.min(
+    duration,
+    minimap.scaleTransitionElapsed + deltaSeconds,
+  );
+
+  const progress =
+    duration <= 0
+      ? 1
+      : Math.min(1, minimap.scaleTransitionElapsed / duration);
+  const easedProgress =
+    minimap.scaleTransitionTo > minimap.scaleTransitionFrom
+      ? easeOutCubic(progress)
+      : easeInOutCubic(progress);
+
+  minimap.scaleMultiplier =
+    minimap.scaleTransitionFrom +
+    (minimap.scaleTransitionTo - minimap.scaleTransitionFrom) * easedProgress;
+
+  if (progress >= 1) {
+    minimap.scaleMultiplier = minimap.scaleTransitionTo;
+  }
+}
+
+function easeOutCubic(progress: number): number {
+  return 1 - (1 - progress) ** 3;
+}
+
+function easeInOutCubic(progress: number): number {
+  return progress < 0.5
+    ? 4 * progress ** 3
+    : 1 - (-2 * progress + 2) ** 3 / 2;
+}
+
+function layoutMinimapFrame(minimap: BiomeMinimap): void {
+  minimap.terrainLayer.setVisible(true);
+  minimap.regionLayer.setVisible(true);
+  minimap.overlayLayer.setVisible(true);
+
+  const frameWidth =
+    minimap.width +
+    minimapFrameSlices.left +
+    minimapFrameSlices.right;
+  const frameHeight =
+    minimap.height + minimapFrameSlices.top + minimapFrameSlices.bottom;
+
+  minimap.background.setPosition(
+    -minimapFrameSlices.left,
+    -minimapFrameSlices.top,
+  );
+  minimap.background.setSlices(
+    frameWidth,
+    frameHeight,
+    minimapFrameSlices.left,
+    minimapFrameSlices.right,
+    minimapFrameSlices.top,
+    minimapFrameSlices.bottom,
+  );
+}
+
+function getMinimapMapBounds(
+  minimap: BiomeMinimap,
+): MinimapMapBounds {
+  const x =
+    minimapFrameVisualInset.left -
+    minimapFrameSlices.left -
+    minimapFrameMapUnderlap;
+  const y =
+    minimapFrameVisualInset.top -
+    minimapFrameSlices.top -
+    minimapFrameMapUnderlap;
+  const width =
+    minimap.width +
+    minimapFrameSlices.left -
+    minimapFrameVisualInset.left +
+    minimapFrameSlices.right -
+    minimapFrameVisualInset.right +
+    minimapFrameMapUnderlap * 2;
+  const height =
+    minimap.height +
+    minimapFrameSlices.top -
+    minimapFrameVisualInset.top +
+    minimapFrameSlices.bottom -
+    minimapFrameVisualInset.bottom +
+    minimapFrameMapUnderlap * 2;
+
+  return { x, y, width, height };
 }
 
 function getMinimapTile(
