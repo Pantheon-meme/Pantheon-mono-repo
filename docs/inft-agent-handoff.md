@@ -52,6 +52,14 @@ File: `contracts/src/tokens/PantheonAgentINFT.sol`
 This contract implements the INFT token for agents:
 
 - `mint(IntelligentData[], to, publicURI, encryptedStorageURI, memoryRoot)`
+- `createMintOffer(displayName, IntelligentData[], publicURI, encryptedStorageURI, memoryRoot)`
+- `approveMintOffer(offerId, wallet)`
+- `revokeMintOfferApproval(offerId)`
+- `claimMintOffer(offerId)`
+- `mintOfferOf(offerId)`
+- `mintOfferIntelligentDataOf(offerId)`
+- `approvedMintOfferIdsOf(wallet)`
+- `approvedMintOffersOf(wallet)`
 - `update(tokenId, IntelligentData[])`
 - `iTransfer` and `iTransferFrom`
 - `iClone` and `iCloneFrom`
@@ -66,10 +74,15 @@ This contract implements the INFT token for agents:
 
 Important distinction:
 
+- Admin mint offers are preconfigured claimable agent slots. Users only mint
+  offers approved for their wallet.
 - ERC-7857 authorized users are the standard-level usage group.
 - Pantheon permission bytes are game/runtime permissions for executor keys.
 - The INFT owner remains the custody key.
 - The executor key should be a hot wallet with scoped permissions.
+- Executor private keys are runtime secrets only. Users configure them in
+  Docker/runtime env; the INFT contract only stores executor addresses and
+  permission bytes.
 
 ### Mock Verifier
 
@@ -185,12 +198,63 @@ noise and a sandbox warning about Foundry being unable to write
 
 ## Next Steps
 
+### 0. Admin-Approved User Minting
+
+Status: contract functions implemented in `PantheonAgentINFT`.
+
+The intended product flow is:
+
+1. Admin creates a claimable mint offer:
+
+```solidity
+createMintOffer(displayName, intelligentData, publicURI, encryptedStorageURI, memoryRoot)
+```
+
+2. Admin approves a user wallet:
+
+```solidity
+approveMintOffer(offerId, userWallet)
+```
+
+3. UI lists available offers for the connected wallet:
+
+```solidity
+approvedMintOffersOf(userWallet)
+```
+
+4. User claims the approved offer from their custody wallet:
+
+```solidity
+claimMintOffer(offerId)
+```
+
+This mints the INFT to the user wallet and marks the offer claimed. It does not
+store any private key and does not automatically configure Docker.
+
+5. User later configures the runtime executor:
+
+- Docker/runtime receives `AGENT_EXECUTOR_PRIVATE_KEY`.
+- The custody wallet authorizes the derived executor address with
+  `authorizeUsageWithPermissions(...)`.
+- MUD mirrors that authorization with `pantheon__mirrorINFTAuthorization(...)`.
+
 ### 1. Mint The First Local Agent
 
-Create a script that:
+Status: implemented in `contracts/script/MintDevAgent.s.sol`.
+
+Run it against a deployed local MUD world:
+
+```sh
+cd contracts
+forge script script/MintDevAgent.s.sol \
+  --rpc-url ${MUD_RPC_URL:-http://127.0.0.1:8545} \
+  --broadcast
+```
+
+The script:
 
 1. Reads the deployed `PantheonAgentINFT` address from the latest deploy output
-   or env.
+   via MUD `AgentConfig`, or from `AGENT_INFT_ADDRESS`.
 2. Builds `IntelligentData[]`:
 
 ```txt
@@ -201,19 +265,22 @@ strategy-profile     hash(private strategy config)
 
 3. Calls `mint(...)`.
 4. Calls `pantheon__registerAgent(tokenId, executor, name, publicURI)`.
+5. Calls `authorizeUsageWithPermissions(...)`.
+6. Calls `pantheon__mirrorINFTAuthorization(...)`.
 
-Recommended file:
+By default the custody owner is `PRIVATE_KEY`, while the runtime executor is
+`AGENT_EXECUTOR_PRIVATE_KEY` when provided. If no executor key or address is
+provided, the script falls back to the owner address for local smoke tests.
 
-```txt
-contracts/script/MintDevAgent.s.sol
-```
-
-or a TypeScript script in `packages/player-agent` if easier to integrate with
-capsule generation.
+If `AGENT_EXECUTOR_PRIVATE_KEY` is provided and that address has not spawned in
+MUD yet, the script broadcasts a `pantheon__spawn(100, 100)` from the executor
+before minting.
 
 ### 2. Authorize The Executor
 
-Owner should call:
+Status: implemented as part of `MintDevAgent.s.sol`.
+
+Owner calls:
 
 ```solidity
 authorizeUsageWithPermissions(tokenId, executor, abi.encode(permissionBits), expiresAt)
@@ -242,7 +309,16 @@ CAN_APPEND_MEMORY
 
 ### 3. Add Player-Agent INFT Client
 
-In `packages/player-agent`, add a small client that can:
+Status: client helpers implemented.
+
+Files:
+
+```txt
+packages/player-agent/src/mastra/inft/inft-client.ts
+packages/player-agent/src/mastra/inft/memory-writer.ts
+```
+
+The client can:
 
 - read `AGENT_INFT_ADDRESS`
 - read `AGENT_TOKEN_ID`
@@ -251,14 +327,9 @@ In `packages/player-agent`, add a small client that can:
 - check `pantheon__isAuthorized`
 - call `pantheon__appendMemory`
 
-Suggested files:
-
-```txt
-packages/player-agent/src/mastra/inft/inft-client.ts
-packages/player-agent/src/mastra/inft/memory-writer.ts
-```
-
 ### 4. Append Memory After Economic Cycle
+
+Status: helper exists, but not yet wired into `run-economic-cycle`.
 
 After `run-economic-cycle`, create an encrypted memory delta.
 

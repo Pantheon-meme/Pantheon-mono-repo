@@ -45,6 +45,20 @@ struct IntelligentData {
   bytes32 dataHash;
 }
 
+struct AgentMintOffer {
+  uint256 offerId;
+  address approvedWallet;
+  uint256 mintedTokenId;
+  string displayName;
+  string publicURI;
+  string encryptedStorageURI;
+  bytes32 memoryRoot;
+  uint64 createdAt;
+  bool active;
+  bool claimed;
+  bool exists;
+}
+
 interface IERC7857DataVerifier {
   function verifyTransferValidity(
     TransferValidityProof[] calldata proofs
@@ -160,6 +174,36 @@ interface IERC7857 {
 }
 
 interface IPantheonAgentINFT is IERC7857, IERC7857Metadata {
+  function createMintOffer(
+    string calldata displayName,
+    IntelligentData[] calldata intelligentData,
+    string calldata publicURI,
+    string calldata encryptedStorageURI,
+    bytes32 memoryRoot
+  ) external returns (uint256 offerId);
+
+  function approveMintOffer(uint256 offerId, address wallet) external;
+
+  function revokeMintOfferApproval(uint256 offerId) external;
+
+  function claimMintOffer(uint256 offerId) external returns (uint256 tokenId);
+
+  function mintOfferOf(
+    uint256 offerId
+  ) external view returns (AgentMintOffer memory);
+
+  function mintOfferIntelligentDataOf(
+    uint256 offerId
+  ) external view returns (IntelligentData[] memory);
+
+  function approvedMintOfferIdsOf(
+    address wallet
+  ) external view returns (uint256[] memory);
+
+  function approvedMintOffersOf(
+    address wallet
+  ) external view returns (AgentMintOffer[] memory);
+
   function usageAuthorization(
     uint256 tokenId,
     address executor
