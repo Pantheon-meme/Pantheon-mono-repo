@@ -51,9 +51,13 @@ library PantheonConstants {
   bytes32 internal constant ACTION_TEND = bytes32("tend");
   bytes32 internal constant ACTION_WATER = bytes32("water");
   bytes32 internal constant BANK_AGENT_ID = bytes32("centralUniBankAgent");
-  bytes32 internal constant BANK_INVENTORY_COUNTER_ID = bytes32("centralUniBankInventory");
-  bytes32 internal constant BANK_TRADE_COUNTER_ID = bytes32("centralUniBankTrades");
-  bytes32 internal constant WORLD_OBJECT_COUNTER_ID = bytes32("world_object_count");
+  bytes32 internal constant AGENT_CONFIG_ID = bytes32("pantheonAgentINFT");
+  bytes32 internal constant BANK_INVENTORY_COUNTER_ID =
+    bytes32("centralUniBankInventory");
+  bytes32 internal constant BANK_TRADE_COUNTER_ID =
+    bytes32("centralUniBankTrades");
+  bytes32 internal constant WORLD_OBJECT_COUNTER_ID =
+    bytes32("world_object_count");
   bytes32 internal constant TERRAIN_ADMIN_ID = bytes32("terrainAdmin");
   bytes32 internal constant TERRAIN_DIRT = bytes32("dirt");
   bytes32 internal constant TERRAIN_FOREST_FLOOR = bytes32("forest-floor");

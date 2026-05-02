@@ -181,6 +181,82 @@ export default defineWorld({
       },
       key: ["id"],
     },
+    AgentConfig: {
+      schema: {
+        id: "bytes32",
+        inftContract: "address",
+        exists: "bool",
+      },
+      key: ["id"],
+    },
+    AgentIdentity: {
+      schema: {
+        tokenId: "uint256",
+        player: "address",
+        owner: "address",
+        executor: "address",
+        active: "bool",
+        publicName: "string",
+        publicURI: "string",
+      },
+      key: ["tokenId"],
+    },
+    AgentPlayer: {
+      schema: {
+        player: "address",
+        tokenId: "uint256",
+        exists: "bool",
+      },
+      key: ["player"],
+    },
+    AgentPermission: {
+      schema: {
+        tokenId: "uint256",
+        executor: "address",
+        permissionBits: "uint256",
+        expiresAt: "uint64",
+        maxActionsPerEpoch: "uint32",
+        maxCucSpendPerEpoch: "uint256",
+        usedActions: "uint32",
+        usedCucSpend: "uint256",
+        epoch: "uint32",
+        exists: "bool",
+      },
+      key: ["tokenId", "executor"],
+    },
+    AgentMemoryCount: {
+      schema: {
+        tokenId: "uint256",
+        count: "uint32",
+        exists: "bool",
+      },
+      key: ["tokenId"],
+    },
+    AgentMemoryDelta: {
+      schema: {
+        tokenId: "uint256",
+        sequence: "uint32",
+        executor: "address",
+        deltaHash: "bytes32",
+        action: "bytes32",
+        createdAt: "uint64",
+        exists: "bool",
+        encryptedDeltaURI: "string",
+      },
+      key: ["tokenId", "sequence"],
+    },
+    AgentMemoryCheckpoint: {
+      schema: {
+        tokenId: "uint256",
+        checkpointHash: "bytes32",
+        memoryRoot: "bytes32",
+        updatedBy: "address",
+        updatedAt: "uint64",
+        exists: "bool",
+        encryptedCheckpointURI: "string",
+      },
+      key: ["tokenId"],
+    },
     CucBalance: {
       schema: {
         account: "address",

@@ -7,6 +7,8 @@ import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 
 import { IWorld } from "../src/codegen/world/IWorld.sol";
 import { PantheonConstants } from "../src/libraries/PantheonConstants.sol";
+import { PantheonAgentINFT } from "../src/tokens/PantheonAgentINFT.sol";
+import { MockERC7857Verifier } from "../src/verifiers/MockERC7857Verifier.sol";
 
 contract PostDeploy is Script {
   function run(address worldAddress) external {
@@ -21,6 +23,20 @@ contract PostDeploy is Script {
 
     IWorld(worldAddress).pantheon__spawn(100, 100);
     console.log("Seeded deployer player in world:", worldAddress);
+
+    MockERC7857Verifier verifier = new MockERC7857Verifier();
+    console.log("Deployed mock ERC-7857 verifier:", address(verifier));
+
+    PantheonAgentINFT agentINFT = new PantheonAgentINFT(
+      "Pantheon Agent INFT",
+      "PINFT",
+      "0g-storage://local-dev",
+      address(verifier)
+    );
+    console.log("Deployed Pantheon Agent INFT:", address(agentINFT));
+
+    IWorld(worldAddress).pantheon__setAgentINFTContract(address(agentINFT));
+    console.log("Registered Pantheon Agent INFT in world:", worldAddress);
 
     vm.stopBroadcast();
   }
