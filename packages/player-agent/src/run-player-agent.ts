@@ -7,6 +7,7 @@ import {
   createPlayerAgentP2pRuntime,
   type P2pSendResult,
 } from './mastra/p2p/player-agent-p2p';
+import { startPlayerConversationLoop } from './mastra/p2p/player-conversation-loop';
 import { makePantheonMudClient } from './mastra/pantheon/mud-client';
 
 const turnDelayMs = readIntegerEnv('PLAYER_AGENT_TURN_DELAY_MS', 5000);
@@ -18,8 +19,9 @@ const useLlmLoop = readBooleanEnv('PLAYER_AGENT_USE_LLM', false);
 const llmEveryTurns = readIntegerEnv('PLAYER_AGENT_LLM_EVERY_TURNS', 0);
 const p2pBroadcastEveryTurns = readIntegerEnv(
   'PLAYER_AGENT_AXL_BROADCAST_EVERY_TURNS',
-  1,
+  0,
 );
+const conversationEnabled = readBooleanEnv('PLAYER_AGENT_CONVERSATION_ENABLED', true);
 const debugStrategyOnly = readBooleanEnv(
   'PLAYER_AGENT_DEBUG_STRATEGY_ONLY',
   false,
@@ -72,6 +74,7 @@ async function runAutoplayer() {
 
   await assertPlayerExecutorMatch();
   const p2p = await createPlayerAgentP2pRuntime({ threadId, resourceId });
+  const conversationLoop = p2p ? startPlayerConversationLoop(p2p) : undefined;
 
   console.log('[player-agent] autonomous loop started');
   console.log(
@@ -99,7 +102,7 @@ async function runAutoplayer() {
     console.log(`\n[player-agent] turn ${turn}`);
 
     try {
-      if (p2p) {
+      if (p2p && !conversationEnabled) {
         const poll = await p2p.pollAndRemember({ turnId: `autoplayer-${turn}` });
         if (poll.received > 0 || poll.rejected > 0) {
           console.log(
@@ -135,7 +138,7 @@ async function runAutoplayer() {
         });
 
         console.log(result.text.trim() || '[player-agent] turn finished');
-        if (p2p && shouldBroadcastP2p(turn)) {
+        if (p2p && !conversationEnabled && shouldBroadcastP2p(turn)) {
           const broadcasts = await p2p.broadcastAndRemember(
             result.text.trim() || `LLM turn ${turn} finished.`,
             {
@@ -171,7 +174,7 @@ async function runAutoplayer() {
         result.memory = await rememberEconomicCycle(result);
 
         console.log(formatEconomicCycle(result));
-        if (p2p && shouldBroadcastP2p(turn)) {
+        if (p2p && !conversationEnabled && shouldBroadcastP2p(turn)) {
           const broadcasts = await p2p.broadcastAndRemember(
             formatP2pCycleMessage(result),
             {
@@ -190,6 +193,10 @@ async function runAutoplayer() {
     if (!stopping) {
       await sleep(turnDelayMs);
     }
+  }
+
+  if (conversationLoop) {
+    await conversationLoop.stop();
   }
 
   console.log('[player-agent] autonomous loop stopped');

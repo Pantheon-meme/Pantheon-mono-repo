@@ -19,8 +19,12 @@ export type PlayerAgentPeer = {
 export type PlayerAgentP2pRuntime = {
   ownPeerId: string;
   peers: PlayerAgentPeer[];
+  refreshPeers: () => Promise<PlayerAgentPeer[]>;
   pollAndRemember: (options: { turnId: string }) => Promise<P2pPollResult>;
-  broadcastAndRemember: (body: string, options: { turnId: string; channel?: string }) => Promise<P2pSendResult[]>;
+  broadcastAndRemember: (
+    body: string,
+    options: { turnId: string; channel?: string; peers?: PlayerAgentPeer[] },
+  ) => Promise<P2pSendResult[]>;
 };
 
 export type P2pPollResult = {
@@ -28,6 +32,7 @@ export type P2pPollResult = {
   remembered: number;
   rejected: number;
   errors: string[];
+  messages: PantheonP2pEnvelope[];
 };
 
 export type P2pSendResult = {
@@ -68,6 +73,15 @@ export async function createPlayerAgentP2pRuntime(options: {
   const runtime: PlayerAgentP2pRuntime = {
     ownPeerId,
     peers,
+    refreshPeers: async () => {
+      if (mudDiscovery) {
+        await mudDiscovery.register();
+        peers = mergePeers(staticPeers, await mudDiscovery.discover());
+        runtime.peers = peers;
+      }
+
+      return peers;
+    },
     pollAndRemember: (pollOptions) =>
       pollAndRemember(client, {
         ...options,
@@ -76,18 +90,14 @@ export async function createPlayerAgentP2pRuntime(options: {
         turnId: pollOptions.turnId,
       }),
     broadcastAndRemember: async (body, sendOptions) => {
-      if (mudDiscovery) {
-        await mudDiscovery.register();
-        peers = mergePeers(staticPeers, await mudDiscovery.discover());
-        runtime.peers = peers;
-      }
+      await runtime.refreshPeers();
 
       return broadcastAndRemember(client, {
         ...options,
         body,
         channel: sendOptions.channel,
         ownPeerId,
-        peers,
+        peers: sendOptions.peers ?? peers,
         privateKey,
         tokenId,
         turnId: sendOptions.turnId,
@@ -187,6 +197,7 @@ async function pollAndRemember(
     remembered: 0,
     rejected: 0,
     errors: [],
+    messages: [],
   };
 
   for (let index = 0; index < options.receiveLimit; index += 1) {
@@ -216,6 +227,7 @@ async function pollAndRemember(
       });
 
       if (memory.stored) result.remembered += 1;
+      result.messages.push(envelope);
     } catch (error) {
       result.rejected += 1;
       result.errors.push(formatError(error));

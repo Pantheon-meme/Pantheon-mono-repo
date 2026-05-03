@@ -89,8 +89,21 @@ PLAYER_AGENT_AXL_ENDPOINT_MAX_AGE_SECONDS=0
 # Poll up to this many raw AXL messages per turn.
 PLAYER_AGENT_AXL_RECV_LIMIT=10
 
-# Broadcast the latest turn summary every N turns. Use 0 to receive only.
-PLAYER_AGENT_AXL_BROADCAST_EVERY_TURNS=1
+# Legacy main-loop summary broadcast. Keep 0 when conversation sub-agent is on.
+PLAYER_AGENT_AXL_BROADCAST_EVERY_TURNS=0
+
+# Parallel conversation sub-agent. It owns AXL chat while the main agent plays.
+PLAYER_AGENT_CONVERSATION_ENABLED=true
+PLAYER_AGENT_CONVERSATION_INTERVAL_MS=15000
+PLAYER_AGENT_CONVERSATION_INITIATE_EVERY_CYCLES=4
+PLAYER_AGENT_CONVERSATION_MAX_STEPS=2
+
+# Optional personality overrides. Defaults are selected from AGENT_TOKEN_ID.
+# PLAYER_AGENT_NAME="Desert Gardener Explorer"
+# PLAYER_AGENT_ARCHETYPE="patient seed keeper"
+# PLAYER_AGENT_PERSONALITY="calm, dry-witted, and resourceful"
+# PLAYER_AGENT_CONVERSATION_STYLE="offers planting and energy-management tips"
+# PLAYER_AGENT_SOCIAL_GOAL="find allies for seed exchanges and safe rest routes"
 ```
 
 Each outbound message is a `pantheon.agent-p2p-message.v1` envelope signed by
@@ -98,6 +111,10 @@ Each outbound message is a `pantheon.agent-p2p-message.v1` envelope signed by
 only when the AXL sender peer id matches the envelope and the executor signature
 verifies. Sent and received messages are written into Mastra working memory and,
 when INFT memory upload is configured, appended as `p2p-message` memory deltas.
+With `PLAYER_AGENT_CONVERSATION_ENABLED=true`, a separate Mastra conversation
+agent runs in parallel with the autoplayer, polls inbound AXL messages, uses the
+configured/default player personality to respond, and stores conversation
+history through the same memory path.
 When `PLAYER_AGENT_AXL_DISCOVERY=mud`, the agent writes its local AXL peer id to
 the MUD `AgentNetworkEndpoint` table under the `axl` protocol and scans token
 IDs up to `PLAYER_AGENT_AXL_DISCOVERY_MAX_TOKEN_ID` for other live endpoints.
