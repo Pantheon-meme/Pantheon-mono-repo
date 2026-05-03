@@ -139,6 +139,32 @@ const pantheonWorldAbi = [
   },
   {
     type: 'function',
+    name: 'pantheon__setAgentNetworkEndpoint',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'protocol', type: 'bytes32' },
+      { name: 'endpoint', type: 'string' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'pantheon__getAgentNetworkEndpoint',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'protocol', type: 'bytes32' },
+    ],
+    outputs: [
+      { name: 'endpoint', type: 'string' },
+      { name: 'updatedBy', type: 'address' },
+      { name: 'updatedAt', type: 'uint64' },
+      { name: 'exists', type: 'bool' },
+    ],
+  },
+  {
+    type: 'function',
     name: 'pantheon__getLastForageResult',
     stateMutability: 'view',
     inputs: [{ name: 'player', type: 'address' }],
@@ -416,6 +442,20 @@ export type ForageExpeditionResult = {
     stored: boolean;
     note?: string;
     reason?: string;
+    inft?: {
+      stored: boolean;
+      uri?: string;
+      rootHash?: `0x${string}`;
+      txHash?: `0x${string}`;
+      intelligentData?: {
+        description: string;
+        dataHash: `0x${string}`;
+        txHash?: `0x${string}`;
+        updated: boolean;
+        reason?: string;
+      };
+      reason?: string;
+    };
   };
 };
 
@@ -439,6 +479,15 @@ export type BankItemPriceInput = {
   sellMaxQuantity: number;
   validUntil: number;
   epoch: number;
+};
+
+export type AgentNetworkEndpointSnapshot = {
+  tokenId: string;
+  protocol: string;
+  endpoint: string;
+  updatedBy: Hex;
+  updatedAt: number;
+  exists: boolean;
 };
 
 const seedToPlantId = new Map<string, string>([
@@ -507,6 +556,10 @@ export class PantheonMudClient {
         process.env.VITE_MUD_PRIVATE_KEY ??
         defaultPrivateKey) as Hex,
     );
+  }
+
+  get playerAddress(): Hex {
+    return this.walletClient.account.address;
   }
 
   async getPlayer(): Promise<PlayerSnapshot | undefined> {
@@ -786,6 +839,82 @@ export class PantheonMudClient {
     await this.publicClient.waitForTransactionReceipt({ hash });
 
     return { hash, price };
+  }
+
+  async setAgentNetworkEndpoint(input: {
+    tokenId: string | bigint | number;
+    protocol: string;
+    endpoint: string;
+  }) {
+    const hash = await this.walletClient.writeContract({
+      address: this.worldAddress,
+      abi: pantheonWorldAbi,
+      functionName: 'pantheon__setAgentNetworkEndpoint',
+      args: [BigInt(input.tokenId), bytes32(input.protocol), input.endpoint],
+      chain: foundry,
+    });
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+
+    return { hash, ...input };
+  }
+
+  async getAgentNetworkEndpoint(input: {
+    tokenId: string | bigint | number;
+    protocol: string;
+  }): Promise<AgentNetworkEndpointSnapshot | undefined> {
+    try {
+      const [endpoint, updatedBy, updatedAt, exists] =
+        await this.publicClient.readContract({
+          address: this.worldAddress,
+          abi: pantheonWorldAbi,
+          functionName: 'pantheon__getAgentNetworkEndpoint',
+          args: [BigInt(input.tokenId), bytes32(input.protocol)],
+        });
+
+      if (!exists) return undefined;
+
+      return {
+        tokenId: BigInt(input.tokenId).toString(),
+        protocol: input.protocol,
+        endpoint,
+        updatedBy,
+        updatedAt: Number(updatedAt),
+        exists,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async discoverAgentNetworkEndpoints(input: {
+    protocol: string;
+    ownTokenId?: string | bigint | number;
+    maxTokenId: number;
+    maxAgeSeconds?: number;
+  }): Promise<AgentNetworkEndpointSnapshot[]> {
+    const now = nowSeconds();
+    const ownTokenId = input.ownTokenId === undefined
+      ? undefined
+      : BigInt(input.ownTokenId).toString();
+    const endpoints = await Promise.all(
+      Array.from({ length: Math.max(0, input.maxTokenId) }, (_, index) => index + 1)
+        .map((tokenId) =>
+          this.getAgentNetworkEndpoint({
+            tokenId,
+            protocol: input.protocol,
+          }),
+        ),
+    );
+
+    return endpoints
+      .filter((endpoint): endpoint is AgentNetworkEndpointSnapshot => Boolean(endpoint))
+      .filter((endpoint) => endpoint.tokenId !== ownTokenId)
+      .filter((endpoint) =>
+        input.maxAgeSeconds
+          ? endpoint.updatedAt > 0 && now - endpoint.updatedAt <= input.maxAgeSeconds
+          : true,
+      );
   }
 
   async getBankItemQuote(itemId: string): Promise<BankItemQuoteSnapshot> {

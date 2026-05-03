@@ -3,7 +3,7 @@ import type { BiomeDefinition } from "./BiomeDefinitions";
 import {
   createBiomeRegionPlan,
   getDominantRegion,
-  getTerrainRegionScore,
+  getRegionInfluence,
   tileDistance,
 } from "./BiomeRegionGeneration";
 
@@ -32,17 +32,35 @@ export type BiomeSurfacePlan = {
   getTile: (x: number, y: number) => BiomeSurfaceTile | undefined;
 };
 
+const terrainSemanticIds = [
+  "plain",
+  "grass",
+  "forest-floor",
+  "dirt",
+  "sand",
+  "stone",
+  "swamp",
+  "water",
+  "path",
+] as const;
+
+type TerrainSemanticId = (typeof terrainSemanticIds)[number];
+
 export function createBiomeSurfacePlan(
   grid: TerrainGrid,
   biome: BiomeDefinition,
   spawnTileX: number,
   spawnTileY: number,
 ): BiomeSurfacePlan {
-  if (biome.id !== "uniswap") {
+  if (!usesPlannedBiomeSurface(biome)) {
     return createFallbackSurfacePlan(grid, biome);
   }
 
-  return createUniswapSurfacePlan(grid, biome, spawnTileX, spawnTileY);
+  return createProtocolSurfacePlan(grid, biome, spawnTileX, spawnTileY);
+}
+
+export function usesPlannedBiomeSurface(biome: BiomeDefinition): boolean {
+  return biome.regions.length > 1;
 }
 
 export function surfaceMatchesTerrainIds(
@@ -51,13 +69,15 @@ export function surfaceMatchesTerrainIds(
   tileY: number,
   terrainIds: readonly string[] | undefined,
 ): boolean | undefined {
-  if (!surfacePlan || surfacePlan.biomeId !== "uniswap" || !terrainIds) {
+  if (!surfacePlan || !terrainIds) {
     return undefined;
   }
 
   const tile = surfacePlan.getTile(tileX, tileY);
 
-  return tile ? terrainIds.includes(tile.terrainId) : false;
+  return tile
+    ? terrainIds.some((terrainId) => terrainMatches(tile.terrainId, terrainId))
+    : false;
 }
 
 export function isTreeAllowedOnSurface(
@@ -69,25 +89,23 @@ export function isTreeAllowedOnSurface(
     return true;
   }
 
-  if (surfacePlan.biomeId !== "uniswap") {
-    return true;
-  }
-
   const tile = surfacePlan.getTile(tileX, tileY);
 
   if (!tile) {
     return false;
   }
 
-  if (tile.route > 0.5 || tile.terrainId === "path") {
+  const terrainSemantic = getTerrainSemanticId(tile.terrainId);
+
+  if (tile.route > 0.5 || terrainSemantic === "path") {
     return false;
   }
 
   return (
-    tile.terrainId === "forest-floor" ||
-    tile.terrainId === "grass" ||
-    (tile.terrainId === "sand" && tile.moisture > 0.46) ||
-    (tile.terrainId === "swamp" && tile.canopy > 0.34)
+    terrainSemantic === "forest-floor" ||
+    terrainSemantic === "grass" ||
+    (terrainSemantic === "sand" && tile.moisture > 0.46) ||
+    (terrainSemantic === "swamp" && tile.canopy > 0.34)
   );
 }
 
@@ -96,17 +114,23 @@ export function getSurfaceTreePlacementChance(
   tileX: number,
   tileY: number,
 ): number | undefined {
-  if (!surfacePlan || surfacePlan.biomeId !== "uniswap") {
+  if (!surfacePlan) {
     return undefined;
   }
 
   const tile = surfacePlan.getTile(tileX, tileY);
 
-  if (!tile || tile.route > 0.5 || tile.terrainId === "path") {
+  if (!tile) {
     return 0;
   }
 
-  switch (tile.terrainId) {
+  const terrainSemantic = getTerrainSemanticId(tile.terrainId);
+
+  if (tile.route > 0.5 || terrainSemantic === "path") {
+    return 0;
+  }
+
+  switch (terrainSemantic) {
     case "forest-floor":
       return 0.08 + tile.canopy * 0.28;
     case "swamp":
@@ -130,21 +154,25 @@ export function isObjectAllowedOnSurface(
     return true;
   }
 
-  if (surfacePlan.biomeId !== "uniswap") {
-    return true;
-  }
-
   const tile = surfacePlan.getTile(tileX, tileY);
 
   if (!tile) {
     return false;
   }
 
-  if (terrainIds && !terrainIds.includes(tile.terrainId)) {
+  if (
+    terrainIds &&
+    !terrainIds.some((terrainId) => terrainMatches(tile.terrainId, terrainId))
+  ) {
     return false;
   }
 
-  return tile.terrainId !== "water" || Boolean(terrainIds?.includes("water"));
+  return (
+    getTerrainSemanticId(tile.terrainId) !== "water" ||
+    Boolean(
+      terrainIds?.some((terrainId) => getTerrainSemanticId(terrainId) === "water"),
+    )
+  );
 }
 
 export function getSurfacePlacementScore(
@@ -162,22 +190,26 @@ export function getSurfacePlacementScore(
 ): number {
   const tile = surfacePlan?.getTile(tileX, tileY);
 
-  if (!surfacePlan || surfacePlan.biomeId !== "uniswap" || !tile) {
+  if (!surfacePlan || !tile) {
     return 1;
   }
+
+  const terrainSemantic = getTerrainSemanticId(tile.terrainId);
 
   switch (placementKind) {
     case "fixed-tile":
     case "region-center":
       return 1;
     case "path-edge":
-      return tile.route > 0.25 && tile.terrainId !== "water" ? tile.route : 0;
+      return tile.route > 0.25 && terrainSemantic !== "water" ? tile.route : 0;
     case "pool-edge":
-      return tile.shore > 0.24 || tile.terrainId === "swamp" ? Math.max(tile.shore, tile.wetness) : 0;
+      return tile.shore > 0.24 || terrainSemantic === "swamp"
+        ? Math.max(tile.shore, tile.wetness)
+        : 0;
     case "grove-edge":
-      return tile.canopy > 0.28 && tile.terrainId !== "water" ? tile.canopy : 0;
+      return tile.canopy > 0.28 && terrainSemantic !== "water" ? tile.canopy : 0;
     case "scattered":
-      return tile.terrainId === "water" ? 0 : Math.max(0.18, tile.fertility);
+      return terrainSemantic === "water" ? 0 : Math.max(0.18, tile.fertility);
     case "spawn-ring":
       return 1;
   }
@@ -215,7 +247,7 @@ function createFallbackSurfacePlan(
   };
 }
 
-function createUniswapSurfacePlan(
+function createProtocolSurfacePlan(
   grid: TerrainGrid,
   biome: BiomeDefinition,
   spawnTileX: number,
@@ -226,7 +258,7 @@ function createUniswapSurfacePlan(
 
   for (let y = 1; y < grid.height - 1; y += 1) {
     for (let x = 1; x < grid.width - 1; x += 1) {
-      const tile = createUniswapSurfaceTile(
+      const tile = createProtocolSurfaceTile(
         x,
         y,
         biome,
@@ -248,7 +280,7 @@ function createUniswapSurfacePlan(
   };
 }
 
-function createUniswapSurfaceTile(
+function createProtocolSurfaceTile(
   x: number,
   y: number,
   biome: BiomeDefinition,
@@ -278,10 +310,10 @@ function createUniswapSurfaceTile(
     y * 0.09 - 3,
     biome.worldGeneration.seed + 503,
   );
-  const lake = getTerrainRegionScore(regionPlan, "water", x, y);
-  const swamp = getTerrainRegionScore(regionPlan, "swamp", x, y);
-  const forest = getTerrainRegionScore(regionPlan, "forest-floor", x, y);
-  const city = getTerrainRegionScore(regionPlan, "stone", x, y);
+  const lake = getSemanticTerrainRegionScore(regionPlan, "water", x, y);
+  const swamp = getSemanticTerrainRegionScore(regionPlan, "swamp", x, y);
+  const forest = getSemanticTerrainRegionScore(regionPlan, "forest-floor", x, y);
+  const city = getSemanticTerrainRegionScore(regionPlan, "stone", x, y);
   const route = getRouteCorridorScore(regionPlan, x, y);
   const oraclePattern = octaveValueNoise(
     x * 0.052 - 31,
@@ -320,44 +352,58 @@ function createUniswapSurfaceTile(
     0,
     Math.min(1, moisture * 0.42 + canopy * 0.42 + (1 - roughness) * 0.16),
   );
-  let terrainId = biome.backgroundTerrainId;
+  let terrainSemanticId: TerrainSemanticId = "plain";
 
   if (spawnDistance <= biome.worldGeneration.spawnClearingRadius) {
-    terrainId = "plain";
+    terrainSemanticId = "plain";
   } else if (
     swamp > 0.2 &&
     islandPattern > 0.72 &&
     waterScore < 0.86 &&
     route < 0.42
   ) {
-    terrainId = height + roughness > 0.96 ? "stone" : "forest-floor";
+    terrainSemanticId = height + roughness > 0.96 ? "stone" : "forest-floor";
   } else if (
     swamp > 0.22 &&
     islandPattern > 0.62 &&
     wetness < 0.82 &&
     route < 0.42
   ) {
-    terrainId = "sand";
+    terrainSemanticId = "sand";
+  } else if (
+    city > 0.34 &&
+    height + roughness * 0.8 > 0.48 &&
+    waterScore < 0.72
+  ) {
+    terrainSemanticId = "stone";
   } else if (waterScore > 0.72) {
-    terrainId = "water";
+    terrainSemanticId = "water";
   } else if (swampScore > 0.7) {
-    terrainId = "swamp";
+    terrainSemanticId = "swamp";
   } else if (waterScore < 0.66 && swampScore < 0.72 && route > 0.58) {
-    terrainId = "path";
+    terrainSemanticId = "path";
   } else if (shore > 0.48 && lake > 0.08) {
-    terrainId = "sand";
+    terrainSemanticId = "sand";
   } else if (city > 0.22 && height + roughness * 0.7 > 0.68) {
-    terrainId = "stone";
+    terrainSemanticId = "stone";
   } else if (
     forest > 0.32 &&
     moisture + (1 - temperature) * 0.22 + detail * 0.2 > 0.72
   ) {
-    terrainId = "forest-floor";
+    terrainSemanticId = "forest-floor";
   } else if (city > 0.12 && detail > 0.63 && moisture < 0.7) {
-    terrainId = "dirt";
+    terrainSemanticId = "dirt";
   } else if (forest > 0.12 || moisture > 0.48) {
-    terrainId = "grass";
+    terrainSemanticId = "grass";
   }
+
+  const terrainId = resolveSurfaceTerrainId(
+    biome,
+    regionPlan,
+    terrainSemanticId,
+    x,
+    y,
+  );
 
   return {
     x,
@@ -375,6 +421,90 @@ function createUniswapSurfaceTile(
     canopy,
     fertility,
   };
+}
+
+function getSemanticTerrainRegionScore(
+  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
+  terrainSemanticId: TerrainSemanticId,
+  x: number,
+  y: number,
+): number {
+  let score = 0;
+
+  for (const anchor of regionPlan.anchors) {
+    for (const terrain of anchor.definition.terrains) {
+      if (getTerrainSemanticId(terrain.terrainId) !== terrainSemanticId) {
+        continue;
+      }
+
+      score = Math.max(
+        score,
+        terrain.weight * getRegionInfluence(anchor, x, y),
+      );
+    }
+  }
+
+  return Math.max(
+    score,
+    getSemanticConnectionTerrainScore(regionPlan, terrainSemanticId, x, y),
+  );
+}
+
+function getSemanticConnectionTerrainScore(
+  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
+  terrainSemanticId: TerrainSemanticId,
+  x: number,
+  y: number,
+): number {
+  if (terrainSemanticId !== "path" && terrainSemanticId !== "stone") {
+    return 0;
+  }
+
+  let score = 0;
+
+  for (const connection of regionPlan.connections) {
+    const distance = distanceToSegment(
+      x,
+      y,
+      connection.from.tileX,
+      connection.from.tileY,
+      connection.to.tileX,
+      connection.to.tileY,
+    );
+
+    if (distance > 2.2) {
+      continue;
+    }
+
+    const routeScore = terrainSemanticId === "path" ? 0.9 : 0.22;
+
+    score = Math.max(score, routeScore * (1 - distance / 2.2));
+  }
+
+  return score;
+}
+
+function resolveSurfaceTerrainId(
+  biome: BiomeDefinition,
+  regionPlan: ReturnType<typeof createBiomeRegionPlan>,
+  terrainSemanticId: TerrainSemanticId,
+  x: number,
+  y: number,
+): string {
+  const dominantRegion = getDominantRegion(regionPlan, x, y);
+  const regionTerrainId = dominantRegion?.definition.terrains.find(
+    (terrain) => getTerrainSemanticId(terrain.terrainId) === terrainSemanticId,
+  )?.terrainId;
+
+  if (regionTerrainId) {
+    return regionTerrainId;
+  }
+
+  return (
+    biome.terrains.find(
+      (terrain) => getTerrainSemanticId(terrain.id) === terrainSemanticId,
+    )?.id ?? biome.backgroundTerrainId
+  );
 }
 
 function getRouteCorridorScore(
@@ -475,6 +605,26 @@ function smoothstep(value: number): number {
 
 function lerp(a: number, b: number, amount: number): number {
   return a + (b - a) * amount;
+}
+
+function terrainMatches(
+  actualTerrainId: string,
+  expectedTerrainId: string,
+): boolean {
+  return (
+    actualTerrainId === expectedTerrainId ||
+    getTerrainSemanticId(actualTerrainId) ===
+      getTerrainSemanticId(expectedTerrainId)
+  );
+}
+
+function getTerrainSemanticId(terrainId: string): TerrainSemanticId | string {
+  return (
+    terrainSemanticIds.find(
+      (semanticId) =>
+        terrainId === semanticId || terrainId.endsWith(`-${semanticId}`),
+    ) ?? terrainId
+  );
 }
 
 function cellKey(x: number, y: number): string {

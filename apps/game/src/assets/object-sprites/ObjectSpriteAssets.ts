@@ -1,3 +1,7 @@
+import asset0gMirrorReedSpriteUrl from "./0g-mirror-reed/0g-mirror-reed-sprite-sheet.png?url";
+import asset0gNaturePropsSpriteUrl from "./0g-nature-props/0g-nature-props-sprite-sheet.png?url";
+import asset0gPacketBloomSpriteUrl from "./0g-packet-bloom/0g-packet-bloom-sprite-sheet.png?url";
+import asset0gRoutevineSpriteUrl from "./0g-routevine/0g-routevine-sprite-sheet.png?url";
 import applewoodSpriteUrl from "./applewood/applewood-sprite-sheet.png?url";
 import centralUniBankSpriteUrl from "./central-uni-bank/central-uni-bank-sprite-sheet.png?url";
 import cityCloverSpriteUrl from "./city-clover/city-clover-sprite-sheet.png?url";
@@ -8,6 +12,10 @@ import forageResourcesASpriteUrl from "./forage-resources-a/forage-resources-a-s
 import forageResourcesBSpriteUrl from "./forage-resources-b/forage-resources-b-sprite-sheet.png?url";
 import frostbarleySpriteUrl from "./frostbarley/frostbarley-sprite-sheet.png?url";
 import frostpineSpriteUrl from "./frostpine/frostpine-sprite-sheet.png?url";
+import gensynGradientVineSpriteUrl from "./gensyn-gradient-vine/gensyn-gradient-vine-sprite-sheet.png?url";
+import gensynNaturePropsSpriteUrl from "./gensyn-nature-props/gensyn-nature-props-sprite-sheet.png?url";
+import gensynPeerCloverSpriteUrl from "./gensyn-peer-clover/gensyn-peer-clover-sprite-sheet.png?url";
+import gensynProofReedSpriteUrl from "./gensyn-proof-reed/gensyn-proof-reed-sprite-sheet.png?url";
 import honeyfigSpriteUrl from "./honeyfig/honeyfig-sprite-sheet.png?url";
 import ironbarkSpriteUrl from "./ironbark/ironbark-sprite-sheet.png?url";
 import liquidityReedSpriteUrl from "./liquidity-reed/liquidity-reed-sprite-sheet.png?url";
@@ -63,6 +71,758 @@ export type ObjectSpriteAsset = {
 };
 
 export const objectSpriteAssets = {
+  "0g-mirror-reed": {
+    imageUrl: asset0gMirrorReedSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "0g-nature-props": {
+    imageUrl: asset0gNaturePropsSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "0g-packet-bloom": {
+    imageUrl: asset0gPacketBloomSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "0g-routevine": {
+    imageUrl: asset0gRoutevineSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
   "applewood": {
     imageUrl: applewoodSpriteUrl,
     manifest: {
@@ -1767,6 +2527,758 @@ export const objectSpriteAssets = {
             {
                 "stateId": "harvested",
                 "stateTitle": "Harvested",
+                "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "gensyn-gradient-vine": {
+    imageUrl: gensynGradientVineSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "gensyn-nature-props": {
+    imageUrl: gensynNaturePropsSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-0",
+                "stateTitle": "Prop Row 0",
+                "columnLabel": "slot 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-1",
+                "stateTitle": "Prop Row 1",
+                "columnLabel": "slot 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-2",
+                "stateTitle": "Prop Row 2",
+                "columnLabel": "slot 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "row-3",
+                "stateTitle": "Prop Row 3",
+                "columnLabel": "slot 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "gensyn-peer-clover": {
+    imageUrl: gensynPeerCloverSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 4",
+                "row": 3,
+                "column": 3,
+                "x": 768,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            }
+        ]
+    },
+  },
+  "gensyn-proof-reed": {
+    imageUrl: gensynProofReedSpriteUrl,
+    manifest: {
+        "rows": 4,
+        "columns": 4,
+        "cellSize": 256,
+        "atlasWidth": 1024,
+        "atlasHeight": 1024,
+        "cells": [
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 1",
+                "row": 0,
+                "column": 0,
+                "x": 0,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 2",
+                "row": 0,
+                "column": 1,
+                "x": 256,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 3",
+                "row": 0,
+                "column": 2,
+                "x": 512,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "seed",
+                "stateTitle": "Seed",
+                "columnLabel": "step 4",
+                "row": 0,
+                "column": 3,
+                "x": 768,
+                "y": 0,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 1",
+                "row": 1,
+                "column": 0,
+                "x": 0,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 2",
+                "row": 1,
+                "column": 1,
+                "x": 256,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 3",
+                "row": 1,
+                "column": 2,
+                "x": 512,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "growing",
+                "stateTitle": "Growing",
+                "columnLabel": "step 4",
+                "row": 1,
+                "column": 3,
+                "x": 768,
+                "y": 256,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 1",
+                "row": 2,
+                "column": 0,
+                "x": 0,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 2",
+                "row": 2,
+                "column": 1,
+                "x": 256,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 3",
+                "row": 2,
+                "column": 2,
+                "x": 512,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "grown",
+                "stateTitle": "Grown And Stressed",
+                "columnLabel": "step 4",
+                "row": 2,
+                "column": 3,
+                "x": 768,
+                "y": 512,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 1",
+                "row": 3,
+                "column": 0,
+                "x": 0,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 2",
+                "row": 3,
+                "column": 1,
+                "x": 256,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
+                "columnLabel": "step 3",
+                "row": 3,
+                "column": 2,
+                "x": 512,
+                "y": 768,
+                "width": 256,
+                "height": 256
+            },
+            {
+                "stateId": "harvested",
+                "stateTitle": "Harvested And Flourishing",
                 "columnLabel": "step 4",
                 "row": 3,
                 "column": 3,

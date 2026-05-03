@@ -257,6 +257,17 @@ export default defineWorld({
       },
       key: ["tokenId"],
     },
+    AgentNetworkEndpoint: {
+      schema: {
+        tokenId: "uint256",
+        protocol: "bytes32",
+        updatedBy: "address",
+        updatedAt: "uint64",
+        exists: "bool",
+        endpoint: "string",
+      },
+      key: ["tokenId", "protocol"],
+    },
     CucBalance: {
       schema: {
         account: "address",

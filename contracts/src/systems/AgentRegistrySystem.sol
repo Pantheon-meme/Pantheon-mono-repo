@@ -2,7 +2,7 @@
 pragma solidity >=0.8.24;
 
 import {System} from "@latticexyz/world/src/System.sol";
-import {AgentConfig, AgentIdentity, AgentMemoryCheckpoint, AgentMemoryCount, AgentMemoryDelta, AgentPermission, AgentPlayer, TerrainAdmin} from "../codegen/index.sol";
+import {AgentConfig, AgentIdentity, AgentMemoryCheckpoint, AgentMemoryCount, AgentMemoryDelta, AgentNetworkEndpoint, AgentPermission, AgentPlayer, TerrainAdmin} from "../codegen/index.sol";
 import {IPantheonAgentINFT} from "../interfaces/IERC7857.sol";
 import {AgentPermissionLib} from "../libraries/AgentPermissionLib.sol";
 import {PantheonConstants} from "../libraries/PantheonConstants.sol";
@@ -144,6 +144,60 @@ contract AgentRegistrySystem is System {
     AgentIdentity.setOwner(tokenId, _agentINFT().ownerOf(tokenId));
   }
 
+  function setAgentNetworkEndpoint(
+    uint256 tokenId,
+    bytes32 protocol,
+    string calldata endpoint
+  ) public {
+    require(protocol != bytes32(0), "missing protocol");
+    require(bytes(endpoint).length > 0, "missing endpoint");
+    _requireProfileUpdatePermission(tokenId);
+    require(AgentIdentity.getActive(tokenId), "agent missing");
+
+    AgentNetworkEndpoint.set(
+      tokenId,
+      protocol,
+      _msgSender(),
+      uint64(block.timestamp),
+      true,
+      endpoint
+    );
+    AgentIdentity.setOwner(tokenId, _agentINFT().ownerOf(tokenId));
+  }
+
+  function clearAgentNetworkEndpoint(uint256 tokenId, bytes32 protocol) public {
+    require(protocol != bytes32(0), "missing protocol");
+    _requireProfileUpdatePermission(tokenId);
+
+    AgentNetworkEndpoint.deleteRecord(tokenId, protocol);
+  }
+
+  function getAgentNetworkEndpoint(
+    uint256 tokenId,
+    bytes32 protocol
+  )
+    public
+    view
+    returns (
+      string memory endpoint,
+      address updatedBy,
+      uint64 updatedAt,
+      bool exists
+    )
+  {
+    exists = AgentNetworkEndpoint.getExists(tokenId, protocol);
+    if (!exists) {
+      return ("", address(0), 0, false);
+    }
+
+    return (
+      AgentNetworkEndpoint.getEndpoint(tokenId, protocol),
+      AgentNetworkEndpoint.getUpdatedBy(tokenId, protocol),
+      AgentNetworkEndpoint.getUpdatedAt(tokenId, protocol),
+      exists
+    );
+  }
+
   function appendMemory(
     uint256 tokenId,
     string calldata encryptedDeltaURI,
@@ -242,6 +296,17 @@ contract AgentRegistrySystem is System {
     uint256 cucSpend
   ) public {
     _consumePermission(tokenId, _msgSender(), requiredBits, cucSpend);
+  }
+
+  function _requireProfileUpdatePermission(uint256 tokenId) private {
+    if (_msgSender() != _agentINFT().ownerOf(tokenId)) {
+      _consumePermission(
+        tokenId,
+        _msgSender(),
+        AgentPermissionLib.CAN_UPDATE_PUBLIC_PROFILE,
+        0
+      );
+    }
   }
 
   function _consumePermission(

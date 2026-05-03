@@ -30,7 +30,8 @@ export const defaultPlayerAgentPermissionBits =
   agentPermissionBits.canPlant |
   agentPermissionBits.canHarvest |
   agentPermissionBits.canBankSell |
-  agentPermissionBits.canAppendMemory;
+  agentPermissionBits.canAppendMemory |
+  agentPermissionBits.canUpdatePublicProfile;
 
 export const agentCapsuleSchema = z.object({
   schema: z.literal("pantheon.agent-capsule.v1"),
@@ -81,6 +82,13 @@ export const agentMemoryDeltaSchema = z.object({
         kind: z.string().min(1),
         terrainId: z.string().optional(),
         itemId: z.string().optional(),
+        peerId: z.string().optional(),
+        messageId: z.string().optional(),
+        direction: z.enum(["sent", "received"]).optional(),
+        channel: z.string().optional(),
+        contentHash: z.string().regex(/^0x[a-fA-F0-9]+$/).optional(),
+        fromTokenId: z.string().optional(),
+        toPeerId: z.string().optional(),
         amount: z.number().int().optional(),
         x: z.number().int().optional(),
         y: z.number().int().optional(),

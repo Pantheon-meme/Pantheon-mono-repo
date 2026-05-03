@@ -62,6 +62,7 @@ import { seedBiomeTerrainGrid } from "../game/biome/BiomeTerrainGeneration";
 import {
   createBiomeSurfacePlan,
   type BiomeSurfacePlan,
+  usesPlannedBiomeSurface,
 } from "../game/biome/BiomeSurfacePlan";
 import { seedBiomeObjects } from "../game/biome/BiomeObjectGeneration";
 import { blobAtlasCellSize } from "../game/terrain/autotile/BlobAutotile";
@@ -155,6 +156,8 @@ const inventoryHudDisplayScale = 0.72;
 const inventoryHudPanelPadding = 16;
 const inventoryHudSlotGap = 16;
 const inventoryHudScreenYFromBottom = 126;
+const showSideCurrencyAndInventoryHud = false;
+const showObjectWeightHud = false;
 const energyBarScreenX = 14;
 const energyBarScreenY = 12;
 const actionToastScreenX = 18;
@@ -259,20 +262,26 @@ export class MainGameScene extends Phaser.Scene {
     );
     const actionProgressBar = this.createActionProgressBar();
     const energyBar = this.createEnergyBar();
-    const currencyDisplay = this.createCurrencyDisplay();
+    const currencyDisplay = showSideCurrencyAndInventoryHud
+      ? this.createCurrencyDisplay()
+      : undefined;
     const dayNightOverlay = this.createDayNightOverlay();
     const sleepProgressBar = this.createSleepProgressBar();
     const sleepVisual = this.createSleepVisual();
     const journalPanel = this.createJournalPanel();
     const handHudDisplay = this.createHandHud();
-    const inventoryHudDisplay = this.createInventoryHud();
+    const inventoryHudDisplay = showSideCurrencyAndInventoryHud
+      ? this.createInventoryHud()
+      : undefined;
     const actionToastDisplay = this.createActionToastStack();
     const toolInventoryDisplay = this.createToolInventoryHud();
     const targetActionMenuDisplay = this.createTargetActionMenu();
     const bankPanelDisplay = this.createBankPanel();
     const plantStatusPanelDisplay = this.createPlantStatusPanel();
     const virtualJoystickDisplay = this.createVirtualJoystick();
-    const weightLabel = this.createWeightLabel();
+    const weightLabel = showObjectWeightHud
+      ? this.createWeightLabel()
+      : undefined;
     const needs = new NeedState();
     const freeExplore = isFreeExploreMode();
 
@@ -343,10 +352,9 @@ export class MainGameScene extends Phaser.Scene {
     const terrainGrids = new Map<string, TerrainGrid>();
     const spawnTileX = Math.floor(spawnX / tileSize);
     const spawnTileY = Math.floor(spawnY / tileSize);
-    const surfacePlan =
-      biome.id === "uniswap"
-        ? createBiomeSurfacePlan(baseGrid, biome, spawnTileX, spawnTileY)
-        : undefined;
+    const surfacePlan = usesPlannedBiomeSurface(biome)
+      ? createBiomeSurfacePlan(baseGrid, biome, spawnTileX, spawnTileY)
+      : undefined;
     const minimapDisplay = this.createBiomeMinimap(biome, surfacePlan);
 
     visibleTerrainDefinitions.forEach((terrainDefinition) => {
@@ -413,7 +421,9 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
     world.addComponent(journal, JournalPanel, journalPanel);
     world.addComponent(handHud, HandHud, handHudDisplay);
-    world.addComponent(inventoryHud, InventoryHud, inventoryHudDisplay);
+    if (inventoryHudDisplay) {
+      world.addComponent(inventoryHud, InventoryHud, inventoryHudDisplay);
+    }
     world.addComponent(actionToasts, ActionToastStack, actionToastDisplay);
     world.addComponent(
       toolInventoryHud,
@@ -439,7 +449,11 @@ export class MainGameScene extends Phaser.Scene {
     );
 
     world.addComponent(player, PlayerControlled, new PlayerControlled());
-    world.addComponent(player, PlayerAvatar, new PlayerAvatar(this.playerSpriteId));
+    world.addComponent(
+      player,
+      PlayerAvatar,
+      new PlayerAvatar(this.playerSpriteId),
+    );
     world.addComponent(player, InputState, new InputState());
     world.addComponent(player, MovementState, new MovementState());
     world.addComponent(player, FacingDirection, new FacingDirection(0, 1));
@@ -494,7 +508,9 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(player, ActionLog, new ActionLog());
     world.addComponent(player, EnergyBar, energyBar);
     world.addComponent(player, CucBalance, new CucBalance());
-    world.addComponent(player, CurrencyDisplay, currencyDisplay);
+    if (currencyDisplay) {
+      world.addComponent(player, CurrencyDisplay, currencyDisplay);
+    }
     world.addComponent(player, Renderable, new Renderable(playerSprite));
     world.addComponent(player, SleepVisual, sleepVisual);
     world.addComponent(

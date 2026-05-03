@@ -5,6 +5,8 @@ export type BiomeTerrainAssetDefinition = {
   sampleStyleAtlasId: string;
 };
 
+import { allProtocolTerrainAssets } from "./protocol-biome-asset-plan.js";
+
 const calmerTerrainTextureDirection =
   "use larger 2x-scale readable shapes, fewer tiny repeated flecks, lower micro-detail density, clear quiet negative space for characters and objects";
 
@@ -83,3 +85,27 @@ export const uniswapRegionTerrainAssets: BiomeTerrainAssetDefinition[] =
     ...asset,
     texture: calmerTerrainTexture(asset.texture),
   }));
+
+export const allBiomeTerrainAssets: BiomeTerrainAssetDefinition[] = [
+  ...uniswapRegionTerrainAssets,
+  ...allProtocolTerrainAssets.map((asset) => ({
+    ...asset,
+    texture: calmerTerrainTexture(asset.texture),
+  })),
+];
+
+export function getBiomeTerrainAssets(
+  biomeId: string | undefined,
+): BiomeTerrainAssetDefinition[] {
+  if (!biomeId) {
+    return allBiomeTerrainAssets;
+  }
+
+  if (biomeId === "uniswap") {
+    return uniswapRegionTerrainAssets;
+  }
+
+  return allBiomeTerrainAssets.filter((asset) =>
+    asset.id.startsWith(`${biomeId}-`),
+  );
+}

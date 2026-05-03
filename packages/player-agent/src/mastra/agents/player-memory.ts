@@ -1,5 +1,12 @@
 import { Memory } from '@mastra/memory';
 import type { ForageExpeditionResult } from '../pantheon/mud-client';
+import { PantheonInftClient } from '../inft/inft-client';
+import { writeAgentMemoryDelta } from '../inft/memory-writer';
+import {
+  hashPantheonP2pBody,
+  type PantheonP2pEnvelope,
+} from '../p2p/message-envelope';
+import { isZeroGStorageConfigured } from '../zerog/storage';
 
 const recentExpeditionLimit = 8;
 const terrainLearningLimit = 12;
@@ -27,6 +34,9 @@ export const playerAgentMemory = new Memory({
 ## Terrain Learnings
 - No forage observations yet.
 
+## Agent Communications
+- No agent messages yet.
+
 ## Next Strategic Goal
 - Build a useful local forage map while keeping enough energy to sleep before wasteful actions.
 `,
@@ -37,14 +47,107 @@ export const playerAgentMemory = new Memory({
 export type ExpeditionMemoryContext = {
   threadId?: string;
   resourceId?: string;
+  action?: string;
+  turnId?: string;
+};
+
+export type AgentMessageMemoryContext = {
+  threadId?: string;
+  resourceId?: string;
+  direction: 'sent' | 'received';
+  remotePeerId: string;
+  turnId?: string;
 };
 
 export async function rememberForageExpedition(
   result: ForageExpeditionResult,
   context: ExpeditionMemoryContext | undefined,
-): Promise<{ stored: boolean; note?: string; reason?: string }> {
+): Promise<{
+  stored: boolean;
+  note?: string;
+  reason?: string;
+  inft?: {
+    stored: boolean;
+    uri?: string;
+    rootHash?: `0x${string}`;
+    txHash?: `0x${string}`;
+    intelligentData?: {
+      description: string;
+      dataHash: `0x${string}`;
+      txHash?: `0x${string}`;
+      updated: boolean;
+      reason?: string;
+    };
+    reason?: string;
+  };
+}> {
   const threadId = context?.threadId;
   const resourceId = context?.resourceId;
+  const note = formatExpeditionNote(result);
+  const inft = await attachMemoryToInft(result, context, note);
+
+  if (!threadId || !resourceId) {
+    return {
+      stored: false,
+      reason: 'Missing Mastra memory thread/resource id.',
+      note,
+      inft,
+    };
+  }
+
+  try {
+    const existing =
+      (await playerAgentMemory.getWorkingMemory({
+        threadId,
+        resourceId,
+      })) ?? '';
+    const workingMemory = buildWorkingMemory(existing, result, note);
+
+    await playerAgentMemory.updateWorkingMemory({
+      threadId,
+      resourceId,
+      workingMemory,
+    });
+  } catch (error) {
+    return {
+      stored: false,
+      reason: `Mastra working memory unavailable: ${formatError(error)}`,
+      note,
+      inft,
+    };
+  }
+
+  return {
+    stored: true,
+    note,
+    inft,
+  };
+}
+
+export async function rememberAgentMessage(
+  envelope: PantheonP2pEnvelope,
+  context: AgentMessageMemoryContext,
+): Promise<{
+  stored: boolean;
+  note?: string;
+  reason?: string;
+  inft?: {
+    stored: boolean;
+    uri?: string;
+    rootHash?: `0x${string}`;
+    txHash?: `0x${string}`;
+    intelligentData?: {
+      description: string;
+      dataHash: `0x${string}`;
+      txHash?: `0x${string}`;
+      updated: boolean;
+      reason?: string;
+    };
+    reason?: string;
+  };
+}> {
+  const threadId = context.threadId;
+  const resourceId = context.resourceId;
 
   if (!threadId || !resourceId) {
     return {
@@ -58,8 +161,8 @@ export async function rememberForageExpedition(
       threadId,
       resourceId,
     })) ?? '';
-  const note = formatExpeditionNote(result);
-  const workingMemory = buildWorkingMemory(existing, result, note);
+  const note = formatAgentMessageNote(envelope, context);
+  const workingMemory = upsertAgentCommunication(existing, note);
 
   await playerAgentMemory.updateWorkingMemory({
     threadId,
@@ -67,7 +170,107 @@ export async function rememberForageExpedition(
     workingMemory,
   });
 
-  return { stored: true, note };
+  return {
+    stored: true,
+    note,
+    inft: await attachAgentMessageToInft(envelope, context, note),
+  };
+}
+
+async function attachMemoryToInft(
+  result: ForageExpeditionResult,
+  context: ExpeditionMemoryContext | undefined,
+  note: string,
+): Promise<{
+  stored: boolean;
+  uri?: string;
+  rootHash?: `0x${string}`;
+  txHash?: `0x${string}`;
+  intelligentData?: {
+    description: string;
+    dataHash: `0x${string}`;
+    txHash?: `0x${string}`;
+    updated: boolean;
+    reason?: string;
+  };
+  reason?: string;
+}> {
+  if (!isInftMemoryEnabled()) {
+    return {
+      stored: false,
+      reason: 'INFT memory upload is not configured.',
+    };
+  }
+
+  try {
+    const client = PantheonInftClient.fromEnv();
+    const ownerClient = process.env.AGENT_OWNER_PRIVATE_KEY?.trim()
+      ? PantheonInftClient.fromEnv({ privateKeyEnv: 'AGENT_OWNER_PRIVATE_KEY' })
+      : undefined;
+    const write = await writeAgentMemoryDelta(client, {
+      turnId: context?.turnId ?? createTurnId(result),
+      action: context?.action ?? 'economic-cycle',
+      intelligentDataClient: ownerClient,
+      summary: result.summary,
+      observations: result.forages.map((forage) => ({
+        kind: 'forage',
+        terrainId: forage.terrainId,
+        itemId: forage.itemId,
+        amount: forage.amount,
+        x: forage.x,
+        y: forage.y,
+      })),
+      metadata: {
+        note,
+        status: result.status,
+        actions: result.actions,
+        tilesConsidered: result.tilesConsidered,
+        player: result.player
+          ? {
+              x: result.player.x,
+              y: result.player.y,
+              energy: result.player.energy,
+              maxEnergy: result.player.maxEnergy,
+              pendingAction: result.player.pendingAction,
+            }
+          : undefined,
+        threadId: context?.threadId,
+        resourceId: context?.resourceId,
+      },
+    });
+
+    return {
+      stored: true,
+      uri: write.encryptedDeltaURI,
+      rootHash: write.storage?.rootHash,
+      txHash: write.txHash,
+      intelligentData: write.intelligentData,
+    };
+  } catch (error) {
+    return {
+      stored: false,
+      reason: `INFT memory unavailable: ${formatError(error)}`,
+    };
+  }
+}
+
+function isInftMemoryEnabled(): boolean {
+  const configured =
+    Boolean(process.env.AGENT_INFT_ADDRESS?.trim()) &&
+    Boolean(process.env.AGENT_TOKEN_ID?.trim()) &&
+    isZeroGStorageConfigured();
+  const value = process.env.AGENT_MEMORY_0G_ENABLED?.trim().toLowerCase();
+
+  if (!value) return configured;
+
+  return ['1', 'true', 'yes', 'on'].includes(value);
+}
+
+function createTurnId(result: ForageExpeditionResult): string {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const position = result.player ? `${result.player.x}-${result.player.y}` : 'unknown';
+
+  return `${stamp}-${result.status}-${position}`;
 }
 
 function buildWorkingMemory(
@@ -106,9 +309,126 @@ ${limitLines(recentExpeditions, recentExpeditionLimit).join('\n') || '- None yet
 ## Terrain Learnings
 ${limitLines(terrainLearnings, terrainLearningLimit).join('\n') || '- No forage observations yet.'}
 
+## Agent Communications
+${extractAgentCommunications(existing)}
+
 ## Next Strategic Goal
 - ${nextStrategicGoal(result)}
 `;
+}
+
+async function attachAgentMessageToInft(
+  envelope: PantheonP2pEnvelope,
+  context: AgentMessageMemoryContext,
+  note: string,
+): Promise<{
+  stored: boolean;
+  uri?: string;
+  rootHash?: `0x${string}`;
+  txHash?: `0x${string}`;
+  intelligentData?: {
+    description: string;
+    dataHash: `0x${string}`;
+    txHash?: `0x${string}`;
+    updated: boolean;
+    reason?: string;
+  };
+  reason?: string;
+}> {
+  if (!isInftMemoryEnabled()) {
+    return {
+      stored: false,
+      reason: 'INFT memory upload is not configured.',
+    };
+  }
+
+  try {
+    const client = PantheonInftClient.fromEnv();
+    const ownerClient = process.env.AGENT_OWNER_PRIVATE_KEY?.trim()
+      ? PantheonInftClient.fromEnv({ privateKeyEnv: 'AGENT_OWNER_PRIVATE_KEY' })
+      : undefined;
+    const write = await writeAgentMemoryDelta(client, {
+      turnId: context.turnId ?? `p2p-${context.direction}-${envelope.messageId}`,
+      action: `p2p-${context.direction}`,
+      intelligentDataClient: ownerClient,
+      summary: note,
+      observations: [
+        {
+          kind: 'p2p-message',
+          peerId: context.remotePeerId,
+          messageId: envelope.messageId,
+          direction: context.direction,
+          channel: envelope.channel,
+          contentHash: hashPantheonP2pBody(envelope),
+          fromTokenId: envelope.fromTokenId,
+          toPeerId: envelope.toPeerId,
+        },
+      ],
+      metadata: {
+        envelope,
+        threadId: context.threadId,
+        resourceId: context.resourceId,
+      },
+    });
+
+    return {
+      stored: true,
+      uri: write.encryptedDeltaURI,
+      rootHash: write.storage?.rootHash,
+      txHash: write.txHash,
+      intelligentData: write.intelligentData,
+    };
+  } catch (error) {
+    return {
+      stored: false,
+      reason: `INFT memory unavailable: ${formatError(error)}`,
+    };
+  }
+}
+
+function formatAgentMessageNote(
+  envelope: PantheonP2pEnvelope,
+  context: AgentMessageMemoryContext,
+): string {
+  const body = envelope.body.length > 160
+    ? `${envelope.body.slice(0, 157)}...`
+    : envelope.body;
+
+  return `${new Date().toISOString()} ${context.direction} p2p ${envelope.channel} token=${envelope.fromTokenId} peer=${context.remotePeerId} message=${envelope.messageId}: ${body}`;
+}
+
+function upsertAgentCommunication(existing: string, note: string): string {
+  const sectionLines = [
+    `- ${note}`,
+    ...extractSectionBullets(existing, 'Agent Communications'),
+  ].filter((line) => !line.includes('No agent messages yet.'));
+  const communications = limitLines(sectionLines, recentExpeditionLimit).join('\n') ||
+    '- No agent messages yet.';
+
+  if (existing.includes('## Agent Communications')) {
+    return existing.replace(
+      /## Agent Communications\n[\s\S]*?(?=\n## |\n?$)/,
+      `## Agent Communications\n${communications}\n`,
+    );
+  }
+
+  const nextGoalHeader = '\n## Next Strategic Goal';
+  if (existing.includes(nextGoalHeader)) {
+    return existing.replace(
+      nextGoalHeader,
+      `\n## Agent Communications\n${communications}\n${nextGoalHeader}`,
+    );
+  }
+
+  return `${existing.trim()}\n\n## Agent Communications\n${communications}\n`;
+}
+
+function extractAgentCommunications(existing: string): string {
+  const communications = extractSectionBullets(existing, 'Agent Communications')
+    .filter((line) => !line.includes('No agent messages yet.'));
+
+  return limitLines(communications, recentExpeditionLimit).join('\n') ||
+    '- No agent messages yet.';
 }
 
 function formatExpeditionNote(result: ForageExpeditionResult): string {
@@ -212,4 +532,8 @@ function limitLines(lines: string[], limit: number): string[] {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -244,7 +244,8 @@ contract MintDevAgent is Script {
       AgentPermissionLib.CAN_PLANT |
       AgentPermissionLib.CAN_HARVEST |
       AgentPermissionLib.CAN_BANK_SELL |
-      AgentPermissionLib.CAN_APPEND_MEMORY;
+      AgentPermissionLib.CAN_APPEND_MEMORY |
+      AgentPermissionLib.CAN_UPDATE_PUBLIC_PROFILE;
   }
 
   function _hashEnvOrUri(

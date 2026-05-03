@@ -1,0 +1,242 @@
+{
+  "generatedAt": "2026-05-03T14:52:58.006Z",
+  "request": {
+    "spriteKind": "object-batch",
+    "objectId": "gensyn-nature-props",
+    "objectName": "Gensyn Nature Props",
+    "objectPrompt": "A cost-efficient batch sheet of static natural Gensyn biome scatter props for peer plains, model lakes, gradient groves, proof marshes, and research ridges.\nA cost-efficient batch sheet of separate static Gensyn biome and land scatter props.\nEach cell is a different independent object, not a variant or animation frame.\nThese are natural biome objects for terrain richness: stones, bushes, reeds, moss, flowers, crystals, puddles, roots, fallen branches, and magical habitat details.\nAvoid buildings, furniture, civic architecture, tools, signs, benches, tables, and town decorations.\nUse the row and column map exactly.\nRow 0 column 0: Gradient Clover - bright green clover cluster with white chalk flecks and amber metric dew.\nRow 1 column 0: Signal Reeds - thin green proof reeds with off-white stems and amber tips.\nRow 1 column 1: Checkpoint Grass - low green path grass with tiny amber checkpoint beads, no icons or text.\nRow 2 column 0: Metric Pebbles - small black and off-white pebble cluster with green seams and amber flecks.\nRow 2 column 3: Proof Marker - natural proof-stone outcrop with green seams and amber verification glow, no symbols or text.",
+    "stylePrompt": "cozy hand-painted 2D biome scatter props, three-quarter top-down view, transparent background, crisp readable silhouettes at small scale, Gensyn-inspired black and white base, bright green signal, amber verification light, and clean research-lab palette, props must feel native to gensyn-training-grounds, soft natural edges, warm but balanced highlights, no readable text, no logos, no UI",
+    "styleReferencePath": "/Users/ajand/Projects/Pantheon/apps/game/src/assets/autotiles/gensyn-grass/autotile-blob-7x7.png",
+    "styleReferenceCell": {
+      "row": 1,
+      "column": 1,
+      "cellSize": 256
+    },
+    "imageModel": "openai/gpt-5.4-image-2",
+    "reasoningEffort": "high",
+    "states": [
+      {
+        "id": "row-0",
+        "title": "Prop Row 0",
+        "prompt": "column 0: Gradient Clover - bright green clover cluster with white chalk flecks and amber metric dew"
+      },
+      {
+        "id": "row-1",
+        "title": "Prop Row 1",
+        "prompt": "column 0: Signal Reeds - thin green proof reeds with off-white stems and amber tips; column 1: Checkpoint Grass - low green path grass with tiny amber checkpoint beads, no icons or text"
+      },
+      {
+        "id": "row-2",
+        "title": "Prop Row 2",
+        "prompt": "column 0: Metric Pebbles - small black and off-white pebble cluster with green seams and amber flecks; column 3: Proof Marker - natural proof-stone outcrop with green seams and amber verification glow, no symbols or text"
+      },
+      {
+        "id": "row-3",
+        "title": "Prop Row 3",
+        "prompt": ""
+      }
+    ],
+    "columns": 4,
+    "columnLabels": [
+      "slot 1",
+      "slot 2",
+      "slot 3",
+      "slot 4"
+    ],
+    "cellSize": 256,
+    "background": "transparent",
+    "outputDir": "generated/object-sprites/gensyn-nature-props"
+  },
+  "imageModel": "openai/gpt-5.4-image-2",
+  "rows": 4,
+  "columns": 4,
+  "cellSize": 256,
+  "atlasWidth": 1024,
+  "atlasHeight": 1024,
+  "image": {
+    "id": "gensyn-nature-props-sprite-sheet",
+    "title": "Gensyn Nature Props sprite sheet",
+    "prompt": "Create a game object sprite sheet for Gensyn Nature Props.\nObject brief: A cost-efficient batch sheet of static natural Gensyn biome scatter props for peer plains, model lakes, gradient groves, proof marshes, and research ridges.\nA cost-efficient batch sheet of separate static Gensyn biome and land scatter props.\nEach cell is a different independent object, not a variant or animation frame.\nThese are natural biome objects for terrain richness: stones, bushes, reeds, moss, flowers, crystals, puddles, roots, fallen branches, and magical habitat details.\nAvoid buildings, furniture, civic architecture, tools, signs, benches, tables, and town decorations.\nUse the row and column map exactly.\nRow 0 column 0: Gradient Clover - bright green clover cluster with white chalk flecks and amber metric dew.\nRow 1 column 0: Signal Reeds - thin green proof reeds with off-white stems and amber tips.\nRow 1 column 1: Checkpoint Grass - low green path grass with tiny amber checkpoint beads, no icons or text.\nRow 2 column 0: Metric Pebbles - small black and off-white pebble cluster with green seams and amber flecks.\nRow 2 column 3: Proof Marker - natural proof-stone outcrop with green seams and amber verification glow, no symbols or text..\n\nReference image 1 is a checkerboard layout guide. Use it as the exact composition template with exact sizes, all cells are square all equal size.\nPreserve its 4:4 sheet ratio and its 4 columns by 4 rows of equal square cells.\nThe exact guide has also been saved locally at generated/object-sprites/gensyn-nature-props/object-sprite-layout-guide.png for verification.\nPlace exactly one frame in the center of each checkerboard cell.\nAlign the center of each object frame to the center of its cell.\nKeep every frame fully inside its own cell, with consistent margins and no overlap into neighboring cells.\nKeep the checkerboard grid visible in the final image so the generated frames can be verified against the grid.\nPreserve the alternating white and gray cell backgrounds from the guide.\nDraw the object frames on top of the provided checkerboard cells.\n\nTarget runtime atlas metadata: 1024x1024 logical units, arranged as 4 rows by 4 columns.\nEach logical grid cell is 256x256 units. The generated image may be higher resolution, but it must keep the same 4:4 grid ratio.\nKeep the object scale, anchor point, perspective, and lighting consistent across cells.\nDo not crop any object. Leave enough breathing room inside each cell for animation motion.\nDo not draw labels, text, numbers, watermarks, decorative borders, or UI.\nUse a transparent background for every cell.\n\nRows, top to bottom:\nRow 0: Prop Row 0 (row-0) - column 0: Gradient Clover - bright green clover cluster with white chalk flecks and amber metric dew\nRow 1: Prop Row 1 (row-1) - column 0: Signal Reeds - thin green proof reeds with off-white stems and amber tips; column 1: Checkpoint Grass - low green path grass with tiny amber checkpoint beads, no icons or text\nRow 2: Prop Row 2 (row-2) - column 0: Metric Pebbles - small black and off-white pebble cluster with green seams and amber flecks; column 3: Proof Marker - natural proof-stone outcrop with green seams and amber verification glow, no symbols or text\nRow 3: Prop Row 3 (row-3)\n\nColumns, left to right:\nColumn 0: slot 1.\nColumn 1: slot 2.\nColumn 2: slot 3.\nColumn 3: slot 4.\n\nColumn behavior:\nThis is a batch sheet of separate static world props, not animation frames.\nEach cell must contain the specific prop named by its row and column.\nDo not evolve, transform, or animate objects across columns.\nKeep perspective, lighting, palette, shadow softness, and scale language consistent across all cells.\nSmall props may leave more transparent space inside their cell; large landmarks should still fit fully inside their cell.\nEvery prop must be isolated on a transparent background and usable as an independent in-world object.\n\nStyle direction:\ncozy hand-painted 2D biome scatter props, three-quarter top-down view, transparent background, crisp readable silhouettes at small scale, Gensyn-inspired black and white base, bright green signal, amber verification light, and clean research-lab palette, props must feel native to gensyn-training-grounds, soft natural edges, warm but balanced highlights, no readable text, no logos, no UI\nReference image 2 is a style reference. Use it for palette, rendering texture, edge softness, contrast, and game-art finish. Do not copy its subject unless it matches the object brief.\n\nReturn one PNG containing the full sprite sheet only.",
+    "model": "openai/gpt-5.4-image-2",
+    "contentType": "image/png",
+    "filePath": "generated/object-sprites/gensyn-nature-props/gensyn-nature-props-sprite-sheet.png"
+  },
+  "cells": [
+    {
+      "stateId": "row-0",
+      "stateTitle": "Prop Row 0",
+      "columnLabel": "slot 1",
+      "row": 0,
+      "column": 0,
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-0",
+      "stateTitle": "Prop Row 0",
+      "columnLabel": "slot 2",
+      "row": 0,
+      "column": 1,
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-0",
+      "stateTitle": "Prop Row 0",
+      "columnLabel": "slot 3",
+      "row": 0,
+      "column": 2,
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-0",
+      "stateTitle": "Prop Row 0",
+      "columnLabel": "slot 4",
+      "row": 0,
+      "column": 3,
+      "x": 768,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Prop Row 1",
+      "columnLabel": "slot 1",
+      "row": 1,
+      "column": 0,
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Prop Row 1",
+      "columnLabel": "slot 2",
+      "row": 1,
+      "column": 1,
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Prop Row 1",
+      "columnLabel": "slot 3",
+      "row": 1,
+      "column": 2,
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-1",
+      "stateTitle": "Prop Row 1",
+      "columnLabel": "slot 4",
+      "row": 1,
+      "column": 3,
+      "x": 768,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Prop Row 2",
+      "columnLabel": "slot 1",
+      "row": 2,
+      "column": 0,
+      "x": 0,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Prop Row 2",
+      "columnLabel": "slot 2",
+      "row": 2,
+      "column": 1,
+      "x": 256,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Prop Row 2",
+      "columnLabel": "slot 3",
+      "row": 2,
+      "column": 2,
+      "x": 512,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-2",
+      "stateTitle": "Prop Row 2",
+      "columnLabel": "slot 4",
+      "row": 2,
+      "column": 3,
+      "x": 768,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Prop Row 3",
+      "columnLabel": "slot 1",
+      "row": 3,
+      "column": 0,
+      "x": 0,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Prop Row 3",
+      "columnLabel": "slot 2",
+      "row": 3,
+      "column": 1,
+      "x": 256,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Prop Row 3",
+      "columnLabel": "slot 3",
+      "row": 3,
+      "column": 2,
+      "x": 512,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "stateId": "row-3",
+      "stateTitle": "Prop Row 3",
+      "columnLabel": "slot 4",
+      "row": 3,
+      "column": 3,
+      "x": 768,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    }
+  ]
+}

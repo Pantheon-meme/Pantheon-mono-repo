@@ -20,6 +20,8 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@0gfoundation/0g-compute-ts-sdk": "^0.8.0",
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.8",
     "@mastra/core": "^1.30.0",
     "@mastra/duckdb": "^1.2.0",
     "@mastra/evals": "^1.2.2",
@@ -27,6 +29,7 @@
     "@mastra/loggers": "^1.1.1",
     "@mastra/memory": "^1.17.4",
     "@mastra/observability": "^1.10.3",
+    "ethers": "6.13.1",
     "viem": "^2.35.1",
     "zod": "^4"
   },

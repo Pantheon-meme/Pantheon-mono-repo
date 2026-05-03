@@ -18,6 +18,39 @@ const defaultPrivateKey =
 const pantheonAgentInftAbi = [
   {
     type: 'function',
+    name: 'intelligentDataOf',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [
+      {
+        name: '',
+        type: 'tuple[]',
+        components: [
+          { name: 'dataDescription', type: 'string' },
+          { name: 'dataHash', type: 'bytes32' },
+        ],
+      },
+    ],
+  },
+  {
+    type: 'function',
+    name: 'update',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      {
+        name: 'newData',
+        type: 'tuple[]',
+        components: [
+          { name: 'dataDescription', type: 'string' },
+          { name: 'dataHash', type: 'bytes32' },
+        ],
+      },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
     name: 'usageAuthorization',
     stateMutability: 'view',
     inputs: [
@@ -74,6 +107,11 @@ export type AppendAgentMemoryInput = {
   encryptedDeltaURI: string;
   deltaHash: Hex;
   action: Hex;
+};
+
+export type IntelligentDataCommitment = {
+  dataDescription: string;
+  dataHash: Hex;
 };
 
 export class PantheonInftClient {
@@ -165,6 +203,34 @@ export class PantheonInftClient {
       exists,
       expired: expiresAt !== 0n && now > expiresAt,
     };
+  }
+
+  async getIntelligentData(): Promise<IntelligentDataCommitment[]> {
+    const data = await this.publicClient.readContract({
+      address: this.inftAddress,
+      abi: pantheonAgentInftAbi,
+      functionName: 'intelligentDataOf',
+      args: [this.tokenId],
+    });
+
+    return data.map((entry) => ({
+      dataDescription: entry.dataDescription,
+      dataHash: entry.dataHash,
+    }));
+  }
+
+  async updateIntelligentData(
+    data: IntelligentDataCommitment[],
+  ): Promise<Hex> {
+    const hash = await this.walletClient.writeContract({
+      address: this.inftAddress,
+      abi: pantheonAgentInftAbi,
+      functionName: 'update',
+      args: [this.tokenId, data],
+    });
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+    return hash;
   }
 
   async isMudAuthorized(

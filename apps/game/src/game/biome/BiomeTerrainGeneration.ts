@@ -9,6 +9,7 @@ import {
 import {
   createBiomeSurfacePlan,
   type BiomeSurfacePlan,
+  usesPlannedBiomeSurface,
 } from "./BiomeSurfacePlan";
 import type { TerrainGrid } from "../terrain/components/TerrainGrid";
 
@@ -24,7 +25,7 @@ export function seedBiomeTerrainGrid(
     return;
   }
 
-  if (biome.id === "uniswap") {
+  if (usesPlannedBiomeSurface(biome)) {
     seedPlannedTerrainGrid(
       grid,
       terrain,

@@ -2,6 +2,12 @@
 
 This document describes the intended shape of the project. It is not an implemented architecture yet.
 
+For the current end-to-end stack diagram, see
+[`docs/system-diagram.md`](./system-diagram.md).
+
+For the current Central Uni Bank agent and planned Gold/Uniswap v3 economy
+layer, see [`docs/economy-gold-and-bank.md`](./economy-gold-and-bank.md).
+
 ## Layers
 
 ```txt

@@ -1,0 +1,44 @@
+name: pantheon-player-agent
+
+services:
+  axl:
+    build:
+      context: ../..
+      dockerfile: docker/axl/Dockerfile
+      args:
+        AXL_REPO: ${AXL_REPO:-https://github.com/gensyn-ai/axl.git}
+        AXL_REF: ${AXL_REF:-main}
+    environment:
+      AXL_PEERS: ${AXL_PEERS:-tls://34.46.48.224:9001,tls://136.111.135.206:9001}
+      AXL_LISTEN: ${AXL_LISTEN:-}
+      AXL_API_PORT: 9002
+      AXL_BRIDGE_ADDR: 0.0.0.0
+    ports:
+      - "127.0.0.1:${PANTHEON_AXL_HOST_PORT:-9002}:9002"
+    volumes:
+      - axl-data:/data
+    restart: unless-stopped
+
+  player-agent:
+    build:
+      context: ../..
+      dockerfile: docker/player-agent/Dockerfile
+    env_file:
+      - ${PANTHEON_PLAYER_AGENT_ENV:-./player-agent.env}
+    environment:
+      AXL_BASE_URL: http://axl:9002
+      PLAYER_AGENT_AXL_ENABLED: ${PLAYER_AGENT_AXL_ENABLED:-true}
+      PLAYER_AGENT_AXL_DISCOVERY: ${PLAYER_AGENT_AXL_DISCOVERY:-mud}
+      MUD_RPC_URL: ${MUD_RPC_URL:-http://host.docker.internal:8545}
+      VITE_MUD_RPC_URL: ${VITE_MUD_RPC_URL:-http://host.docker.internal:8545}
+    depends_on:
+      - axl
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - player-agent-data:/app/packages/player-agent/src/mastra/public
+    restart: unless-stopped
+
+volumes:
+  axl-data:
+  player-agent-data:
