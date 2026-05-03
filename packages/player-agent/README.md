@@ -66,6 +66,41 @@ resolve to the same address. Set `MUD_PRIVATE_KEY` and
 Use `PLAYER_AGENT_REQUIRE_EXECUTOR_MATCH=false` only when intentionally testing
 split custody.
 
+## AXL Player-Agent P2P
+
+The player autoplayer can exchange signed peer messages through a local Gensyn
+AXL bridge. Run AXL beside the player agent, persist its node key, then point
+the agent at the bridge:
+
+```shell
+PLAYER_AGENT_AXL_ENABLED=true
+AXL_BASE_URL=http://127.0.0.1:9002
+
+# Comma-separated peer list. Entries can be either peerId or tokenId:peerId.
+PLAYER_AGENT_AXL_PEERS=2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+# Poll up to this many raw AXL messages per turn.
+PLAYER_AGENT_AXL_RECV_LIMIT=10
+
+# Broadcast the latest turn summary every N turns. Use 0 to receive only.
+PLAYER_AGENT_AXL_BROADCAST_EVERY_TURNS=1
+```
+
+Each outbound message is a `pantheon.agent-p2p-message.v1` envelope signed by
+`AGENT_EXECUTOR_PRIVATE_KEY` or `MUD_PRIVATE_KEY`. Inbound messages are accepted
+only when the AXL sender peer id matches the envelope and the executor signature
+verifies. Sent and received messages are written into Mastra working memory and,
+when INFT memory upload is configured, appended as `p2p-message` memory deltas.
+
+To find your local AXL peer id:
+
+```shell
+curl http://127.0.0.1:9002/topology
+```
+
+Use the returned `our_public_key` as the peer id other agents should put in
+`PLAYER_AGENT_AXL_PEERS`.
+
 ## Learn more
 
 To learn more about Mastra, visit our [documentation](https://mastra.ai/docs/). Your bootstrapped project includes example code for [agents](https://mastra.ai/docs/agents/overview), [tools](https://mastra.ai/docs/agents/using-tools), [workflows](https://mastra.ai/docs/workflows/overview), [scorers](https://mastra.ai/docs/evals/overview), and [observability](https://mastra.ai/docs/observability/overview).

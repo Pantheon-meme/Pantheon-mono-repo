@@ -3,6 +3,10 @@ import { playerAgent } from './mastra/agents/player-agent';
 import { rememberForageExpedition } from './mastra/agents/player-memory';
 import { PantheonInftClient } from './mastra/inft/inft-client';
 import { playerAgentModel } from './mastra/model-config';
+import {
+  createPlayerAgentP2pRuntime,
+  type P2pSendResult,
+} from './mastra/p2p/player-agent-p2p';
 import { makePantheonMudClient } from './mastra/pantheon/mud-client';
 
 const turnDelayMs = readIntegerEnv('PLAYER_AGENT_TURN_DELAY_MS', 5000);
@@ -12,6 +16,10 @@ const threadId = process.env.PLAYER_AGENT_THREAD_ID ?? 'pantheon-autoplayer';
 const resourceId = process.env.PLAYER_AGENT_RESOURCE_ID ?? 'pantheon-player';
 const useLlmLoop = readBooleanEnv('PLAYER_AGENT_USE_LLM', false);
 const llmEveryTurns = readIntegerEnv('PLAYER_AGENT_LLM_EVERY_TURNS', 0);
+const p2pBroadcastEveryTurns = readIntegerEnv(
+  'PLAYER_AGENT_AXL_BROADCAST_EVERY_TURNS',
+  1,
+);
 const debugStrategyOnly = readBooleanEnv(
   'PLAYER_AGENT_DEBUG_STRATEGY_ONLY',
   false,
@@ -63,11 +71,17 @@ async function runAutoplayer() {
   let turn = 0;
 
   await assertPlayerExecutorMatch();
+  const p2p = await createPlayerAgentP2pRuntime({ threadId, resourceId });
 
   console.log('[player-agent] autonomous loop started');
   console.log(
     `[player-agent] delay=${turnDelayMs}ms maxTurns=${maxTurns || 'infinite'} mode=${formatMode()} maxSteps=${maxSteps}`,
   );
+  if (p2p) {
+    console.log(
+      `[player-agent] AXL p2p enabled peer=${p2p.ownPeerId} configuredPeers=${p2p.peers.length}`,
+    );
+  }
   console.log(formatStrategy(currentStrategy));
 
   if (!useLlmLoop && llmEveryTurns > 0) {
@@ -85,6 +99,18 @@ async function runAutoplayer() {
     console.log(`\n[player-agent] turn ${turn}`);
 
     try {
+      if (p2p) {
+        const poll = await p2p.pollAndRemember({ turnId: `autoplayer-${turn}` });
+        if (poll.received > 0 || poll.rejected > 0) {
+          console.log(
+            `[player-agent] p2p received=${poll.received} remembered=${poll.remembered} rejected=${poll.rejected}`,
+          );
+          for (const error of poll.errors.slice(0, 3)) {
+            console.log(`[player-agent] p2p rejected: ${error}`);
+          }
+        }
+      }
+
       if (useLlmLoop) {
         const result = await playerAgent.generate(nextTurnPrompt(turn), {
           maxSteps,
@@ -109,6 +135,17 @@ async function runAutoplayer() {
         });
 
         console.log(result.text.trim() || '[player-agent] turn finished');
+        if (p2p && shouldBroadcastP2p(turn)) {
+          const broadcasts = await p2p.broadcastAndRemember(
+            result.text.trim() || `LLM turn ${turn} finished.`,
+            {
+              turnId: `autoplayer-${turn}`,
+              channel: 'agent-chat',
+            },
+          );
+
+          logP2pBroadcasts(broadcasts);
+        }
       } else {
         if (shouldRefreshStrategy(turn)) {
           currentStrategy = await refreshEconomicStrategy(turn, currentStrategy);
@@ -134,6 +171,17 @@ async function runAutoplayer() {
         result.memory = await rememberEconomicCycle(result);
 
         console.log(formatEconomicCycle(result));
+        if (p2p && shouldBroadcastP2p(turn)) {
+          const broadcasts = await p2p.broadcastAndRemember(
+            formatP2pCycleMessage(result),
+            {
+              turnId: `autoplayer-${turn}`,
+              channel: 'economic-cycle',
+            },
+          );
+
+          logP2pBroadcasts(broadcasts);
+        }
       }
     } catch (error) {
       console.error('[player-agent] turn failed:', formatError(error));
@@ -241,6 +289,10 @@ Return JSON only.`;
 
 function shouldRefreshStrategy(turn: number): boolean {
   return llmEveryTurns > 0 && turn > 0 && turn % llmEveryTurns === 0;
+}
+
+function shouldBroadcastP2p(turn: number): boolean {
+  return p2pBroadcastEveryTurns > 0 && turn % p2pBroadcastEveryTurns === 0;
 }
 
 function readDefaultEconomicStrategy(): EconomicStrategy {
@@ -431,6 +483,37 @@ function formatEconomicCycle(result: Awaited<ReturnType<typeof client.runEconomi
   ]
     .filter((line): line is string => Boolean(line))
     .join('\n');
+}
+
+function formatP2pCycleMessage(
+  result: Awaited<ReturnType<typeof client.runEconomicCycle>>,
+): string {
+  const player = result.player;
+  const position = player ? `${player.x},${player.y}` : 'unknown';
+  const energy = player ? `${player.energy}/${player.maxEnergy}` : 'unknown';
+  const gained = result.forages.length
+    ? result.forages.map((forage) => `${forage.amount} ${forage.itemId}`).join(', ')
+    : 'no forage';
+  const sold = result.sale
+    ? `sold ${result.sale.objectIds.length} object(s) for about ${result.sale.estimatedCuc} CUC`
+    : 'no sale';
+
+  return `${result.status}: ${result.summary} Position ${position}, energy ${energy}, gained ${gained}, ${sold}.`;
+}
+
+function logP2pBroadcasts(broadcasts: P2pSendResult[]) {
+  if (broadcasts.length === 0) return;
+
+  const sent = broadcasts.filter((broadcast) => broadcast.sent).length;
+  const remembered = broadcasts.filter((broadcast) => broadcast.remembered).length;
+  const failed = broadcasts.length - sent;
+
+  console.log(
+    `[player-agent] p2p broadcast sent=${sent}/${broadcasts.length} remembered=${remembered} failed=${failed}`,
+  );
+  for (const broadcast of broadcasts.filter((item) => item.error).slice(0, 3)) {
+    console.log(`[player-agent] p2p send failed peer=${broadcast.peerId}: ${broadcast.error}`);
+  }
 }
 
 function formatMemoryStatus(
