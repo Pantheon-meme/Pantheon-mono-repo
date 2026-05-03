@@ -16,6 +16,7 @@ packages/assets/generated/
 .env
 .env.*
 !.env.example
+docker/player-agent/player-agent.env
 
 # Logs
 *.log

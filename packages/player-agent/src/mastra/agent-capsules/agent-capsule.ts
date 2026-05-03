@@ -30,7 +30,8 @@ export const defaultPlayerAgentPermissionBits =
   agentPermissionBits.canPlant |
   agentPermissionBits.canHarvest |
   agentPermissionBits.canBankSell |
-  agentPermissionBits.canAppendMemory;
+  agentPermissionBits.canAppendMemory |
+  agentPermissionBits.canUpdatePublicProfile;
 
 export const agentCapsuleSchema = z.object({
   schema: z.literal("pantheon.agent-capsule.v1"),

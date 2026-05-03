@@ -9,6 +9,7 @@ import {
 } from './message-envelope';
 import { rememberAgentMessage } from '../agents/player-memory';
 import { loadLocalEnvFiles } from '../load-env';
+import { makePantheonMudClient } from '../pantheon/mud-client';
 
 export type PlayerAgentPeer = {
   tokenId?: string;
@@ -52,11 +53,19 @@ export async function createPlayerAgentP2pRuntime(options: {
 
   const client = new AxlClient();
   const ownPeerId = await client.getPeerId();
-  const peers = parsePeerList(process.env.PLAYER_AGENT_AXL_PEERS)
+  const staticPeers = parsePeerList(process.env.PLAYER_AGENT_AXL_PEERS)
     .filter((peer) => peer.peerId !== ownPeerId);
   const receiveLimit = readIntegerEnv('PLAYER_AGENT_AXL_RECV_LIMIT', 10);
+  const mudDiscovery = createMudDiscovery({
+    ownPeerId,
+    tokenId,
+  });
+  if (mudDiscovery) {
+    await mudDiscovery.register();
+  }
+  let peers = mergePeers(staticPeers, mudDiscovery ? await mudDiscovery.discover() : []);
 
-  return {
+  const runtime: PlayerAgentP2pRuntime = {
     ownPeerId,
     peers,
     pollAndRemember: (pollOptions) =>
@@ -66,8 +75,14 @@ export async function createPlayerAgentP2pRuntime(options: {
         receiveLimit,
         turnId: pollOptions.turnId,
       }),
-    broadcastAndRemember: (body, sendOptions) =>
-      broadcastAndRemember(client, {
+    broadcastAndRemember: async (body, sendOptions) => {
+      if (mudDiscovery) {
+        await mudDiscovery.register();
+        peers = mergePeers(staticPeers, await mudDiscovery.discover());
+        runtime.peers = peers;
+      }
+
+      return broadcastAndRemember(client, {
         ...options,
         body,
         channel: sendOptions.channel,
@@ -76,7 +91,84 @@ export async function createPlayerAgentP2pRuntime(options: {
         privateKey,
         tokenId,
         turnId: sendOptions.turnId,
-      }),
+      });
+    },
+  };
+
+  return runtime;
+}
+
+function createMudDiscovery(options: {
+  ownPeerId: string;
+  tokenId: string;
+}): {
+  register: () => Promise<void>;
+  discover: () => Promise<PlayerAgentPeer[]>;
+} | undefined {
+  const mode = process.env.PLAYER_AGENT_AXL_DISCOVERY?.trim().toLowerCase();
+  if (mode && !['mud', 'onchain', 'true', '1', 'yes', 'on'].includes(mode)) {
+    return undefined;
+  }
+
+  const enabled = mode
+    ? ['mud', 'onchain', 'true', '1', 'yes', 'on'].includes(mode)
+    : readBooleanEnv('PLAYER_AGENT_AXL_REGISTER_MUD_ENDPOINT', true);
+  if (!enabled) return undefined;
+
+  const mud = makePantheonMudClient();
+  const protocol = process.env.PLAYER_AGENT_AXL_PROTOCOL ?? 'axl';
+  const maxTokenId = readIntegerEnv('PLAYER_AGENT_AXL_DISCOVERY_MAX_TOKEN_ID', 20);
+  const maxAgeSeconds = readIntegerEnv('PLAYER_AGENT_AXL_ENDPOINT_MAX_AGE_SECONDS', 0);
+  const registerEverySeconds = readIntegerEnv(
+    'PLAYER_AGENT_AXL_REGISTER_EVERY_SECONDS',
+    300,
+  );
+  let lastRegisteredAt = 0;
+
+  return {
+    register: async () => {
+      const now = nowSeconds();
+      if (lastRegisteredAt > 0 && now - lastRegisteredAt < registerEverySeconds) {
+        return;
+      }
+
+      try {
+        await mud.setAgentNetworkEndpoint({
+          tokenId: options.tokenId,
+          protocol,
+          endpoint: options.ownPeerId,
+        });
+        lastRegisteredAt = now;
+        console.log(
+          `[player-agent] registered ${protocol} endpoint for token=${options.tokenId}`,
+        );
+      } catch (error) {
+        console.warn(
+          `[player-agent] MUD endpoint registration failed: ${formatError(error)}`,
+        );
+      }
+    },
+    discover: async () => {
+      try {
+        const endpoints = await mud.discoverAgentNetworkEndpoints({
+          protocol,
+          ownTokenId: options.tokenId,
+          maxTokenId,
+          maxAgeSeconds: maxAgeSeconds > 0 ? maxAgeSeconds : undefined,
+        });
+
+        return endpoints
+          .filter((endpoint) => endpoint.endpoint !== options.ownPeerId)
+          .filter((endpoint) => axlPeerIdSchema.safeParse(endpoint.endpoint).success)
+          .map((endpoint) => ({
+            tokenId: endpoint.tokenId,
+            peerId: endpoint.endpoint,
+          }));
+      } catch (error) {
+        console.warn(`[player-agent] MUD endpoint discovery failed: ${formatError(error)}`);
+        return [];
+      }
+    },
   };
 }
 
@@ -211,6 +303,18 @@ function parsePeerList(value: string | undefined): PlayerAgentPeer[] {
     });
 }
 
+function mergePeers(...peerSets: PlayerAgentPeer[][]): PlayerAgentPeer[] {
+  const byPeerId = new Map<string, PlayerAgentPeer>();
+
+  for (const peer of peerSets.flat()) {
+    if (!byPeerId.has(peer.peerId)) {
+      byPeerId.set(peer.peerId, peer);
+    }
+  }
+
+  return Array.from(byPeerId.values());
+}
+
 function readExecutorPrivateKey(): Hex {
   const privateKey =
     process.env.AGENT_EXECUTOR_PRIVATE_KEY ??
@@ -247,4 +351,8 @@ function readBooleanEnv(name: string, fallback: boolean): boolean {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
 }

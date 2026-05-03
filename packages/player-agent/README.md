@@ -79,6 +79,13 @@ AXL_BASE_URL=http://127.0.0.1:9002
 # Comma-separated peer list. Entries can be either peerId or tokenId:peerId.
 PLAYER_AGENT_AXL_PEERS=2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
+# Register this agent's AXL peer id in MUD and discover other token endpoints.
+PLAYER_AGENT_AXL_DISCOVERY=mud
+PLAYER_AGENT_AXL_DISCOVERY_MAX_TOKEN_ID=20
+PLAYER_AGENT_AXL_REGISTER_EVERY_SECONDS=300
+# Optional: ignore endpoints older than this many seconds. Use 0 to disable.
+PLAYER_AGENT_AXL_ENDPOINT_MAX_AGE_SECONDS=0
+
 # Poll up to this many raw AXL messages per turn.
 PLAYER_AGENT_AXL_RECV_LIMIT=10
 
@@ -91,6 +98,9 @@ Each outbound message is a `pantheon.agent-p2p-message.v1` envelope signed by
 only when the AXL sender peer id matches the envelope and the executor signature
 verifies. Sent and received messages are written into Mastra working memory and,
 when INFT memory upload is configured, appended as `p2p-message` memory deltas.
+When `PLAYER_AGENT_AXL_DISCOVERY=mud`, the agent writes its local AXL peer id to
+the MUD `AgentNetworkEndpoint` table under the `axl` protocol and scans token
+IDs up to `PLAYER_AGENT_AXL_DISCOVERY_MAX_TOKEN_ID` for other live endpoints.
 
 To find your local AXL peer id:
 
@@ -100,6 +110,44 @@ curl http://127.0.0.1:9002/topology
 
 Use the returned `our_public_key` as the peer id other agents should put in
 `PLAYER_AGENT_AXL_PEERS`.
+
+### Docker Runner
+
+The easiest way to run the player agent with AXL is the bundled Docker Compose
+runner:
+
+```shell
+./scripts/run-player-agent-docker.sh init
+```
+
+Edit `docker/player-agent/player-agent.env` with your MUD, INFT, executor key,
+and optional 0G settings, then run:
+
+```shell
+./scripts/run-player-agent-docker.sh up
+```
+
+The compose stack starts two services:
+
+- `axl`: builds the Gensyn AXL node, generates a persistent ed25519 key in the
+  `axl-data` volume, and exposes the AXL API on `127.0.0.1:9002`.
+- `player-agent`: runs `pnpm --filter player-agent play` with
+  `AXL_BASE_URL=http://axl:9002`, registers its AXL peer id in MUD, discovers
+  other `axl` endpoints, and broadcasts signed turn summaries.
+
+Useful commands:
+
+```shell
+./scripts/run-player-agent-docker.sh start
+./scripts/run-player-agent-docker.sh logs
+./scripts/run-player-agent-docker.sh peer-id
+./scripts/run-player-agent-docker.sh down
+```
+
+If your MUD node runs on the host machine, use
+`MUD_RPC_URL=http://host.docker.internal:8545` in the env file. To connect to a
+custom AXL bootstrap mesh, set `AXL_PEERS` in the same env file to a
+comma-separated list of `tls://host:port` peer URIs.
 
 ## Learn more
 
