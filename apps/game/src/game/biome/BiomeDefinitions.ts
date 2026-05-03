@@ -1,4 +1,5 @@
 import type { TerrainAtlasAssetId } from "../../assets/autotiles/TerrainAtlasAssets";
+import { createPantheonBiome } from "./CompositeBiomeDefinitions";
 import { protocolBiomeDefinitions } from "./ProtocolBiomeDefinitions";
 
 export type TerrainGenerationPrompt = {
@@ -1187,7 +1188,9 @@ export const biomeDefinitions: Record<string, BiomeDefinition> = {
   ...protocolBiomeDefinitions,
 };
 
-export const activeBiomeId = "uniswap";
+biomeDefinitions.pantheon = createPantheonBiome(biomeDefinitions);
+
+export const activeBiomeId = "pantheon";
 
 export function getActiveBiome(): BiomeDefinition {
   return biomeDefinitions[activeBiomeId] ?? biomeDefinitions.meadow;
