@@ -24,6 +24,21 @@ import mapInactiveUrl from "./map_inactive.png?url";
 import playerMarkerUrl from "./player_marker.png?url";
 import settingsActiveUrl from "./settings_active.png?url";
 import settingsInactiveUrl from "./settings_inactive.png?url";
+import panelCloseButtonUrl from "./panel/close button.png?url";
+import panelHeaderUrl from "./panel/header.png?url";
+import panelItemsGridPanelUrl from "./panel/items_grid_panel.png?url";
+import panelItemsGridPanelBuyUrl from "./panel/items_grid_panel_buy.png?url";
+import panelItemsGridPanelSellUrl from "./panel/items_grid_panel_sell.png?url";
+import panelPaginationButtonNextActiveUrl from "./panel/pagination_button_next_active.png?url";
+import panelPaginationButtonNextInactiveUrl from "./panel/pagination_button_next_inactive.png?url";
+import panelPaginationButtonPrevActiveUrl from "./panel/pagination_button_prev_active.png?url";
+import panelPaginationButtonPrevInactiveUrl from "./panel/pagination_button_prev_inactive.png?url";
+import panelPaginationPanelUrl from "./panel/pagination_panel.png?url";
+import panelTabLabelActiveBlueUrl from "./panel/panel_tab_label_active_blue.png?url";
+import panelTabLabelActiveGreenUrl from "./panel/panel_tab_label_active_green.png?url";
+import panelTabLabelInactiveUrl from "./panel/panel_tab_label_inactive.png?url";
+import panelTabStandUrl from "./panel/panel_tab_stand.png?url";
+import panelUrl from "./panel/panel.png?url";
 import toastCardKindIconMessageUrl from "./toastcard_kindicon_message.png?url";
 import toastCardKindIconStarUrl from "./toastcard_kindicon_star.png?url";
 import toastCardKindIconSystemUrl from "./toastcard_kindicon_system.png?url";
@@ -76,6 +91,30 @@ export const inventorySlotSelectedTextureKey = "ui:inventory-slot-selected";
 export const playerMarkerTextureKey = "ui:player-marker";
 export const joystickPlainTextureKey = "ui:joystick-plain";
 export const joystickControlTextureKey = "ui:joystick-control";
+export const panelTextureKey = "ui:panel";
+export const panelCloseButtonTextureKey = "ui:panel-close-button";
+export const panelHeaderTextureKey = "ui:panel-header";
+export const panelItemsGridPanelTextureKey = "ui:panel-items-grid-panel";
+export const panelItemsGridPanelBuyTextureKey =
+  "ui:panel-items-grid-panel-buy";
+export const panelItemsGridPanelSellTextureKey =
+  "ui:panel-items-grid-panel-sell";
+export const panelPaginationButtonNextActiveTextureKey =
+  "ui:panel-pagination-button-next-active";
+export const panelPaginationButtonNextInactiveTextureKey =
+  "ui:panel-pagination-button-next-inactive";
+export const panelPaginationButtonPrevActiveTextureKey =
+  "ui:panel-pagination-button-prev-active";
+export const panelPaginationButtonPrevInactiveTextureKey =
+  "ui:panel-pagination-button-prev-inactive";
+export const panelPaginationPanelTextureKey = "ui:panel-pagination-panel";
+export const panelTabLabelActiveBlueTextureKey =
+  "ui:panel-tab-label-active-blue";
+export const panelTabLabelActiveGreenTextureKey =
+  "ui:panel-tab-label-active-green";
+export const panelTabLabelInactiveTextureKey =
+  "ui:panel-tab-label-inactive";
+export const panelTabStandTextureKey = "ui:panel-tab-stand";
 export const toastCardPanelTextureKey = "ui:toast-card-panel";
 
 const uiSystemButtonAssets = {
@@ -245,6 +284,13 @@ export const inventoryPanelSlices = {
   left: 135,
 } as const;
 
+export const panelSlices = {
+  top: 87,
+  right: 66,
+  bottom: 94,
+  left: 65,
+} as const;
+
 export const toastCardPanelSlices = {
   top: 42,
   right: 60,
@@ -392,6 +438,111 @@ export const joystickControlAsset = {
   height: 182,
 } as const;
 
+export const panelAsset = {
+  textureKey: panelTextureKey,
+  imageUrl: panelUrl,
+  width: 440,
+  height: 362,
+} as const;
+
+export const panelCloseButtonAsset = {
+  textureKey: panelCloseButtonTextureKey,
+  imageUrl: panelCloseButtonUrl,
+  width: 80,
+  height: 79,
+} as const;
+
+export const panelHeaderAsset = {
+  textureKey: panelHeaderTextureKey,
+  imageUrl: panelHeaderUrl,
+  width: 415,
+  height: 100,
+} as const;
+
+export const panelItemsGridPanelAsset = {
+  textureKey: panelItemsGridPanelTextureKey,
+  imageUrl: panelItemsGridPanelUrl,
+  width: 117,
+  height: 190,
+} as const;
+
+export const panelItemsGridPanelBuyAsset = {
+  textureKey: panelItemsGridPanelBuyTextureKey,
+  imageUrl: panelItemsGridPanelBuyUrl,
+  width: 101,
+  height: 48,
+} as const;
+
+export const panelItemsGridPanelSellAsset = {
+  textureKey: panelItemsGridPanelSellTextureKey,
+  imageUrl: panelItemsGridPanelSellUrl,
+  width: 101,
+  height: 48,
+} as const;
+
+export const panelPaginationButtonNextActiveAsset = {
+  textureKey: panelPaginationButtonNextActiveTextureKey,
+  imageUrl: panelPaginationButtonNextActiveUrl,
+  width: 40,
+  height: 45,
+} as const;
+
+export const panelPaginationButtonNextInactiveAsset = {
+  textureKey: panelPaginationButtonNextInactiveTextureKey,
+  imageUrl: panelPaginationButtonNextInactiveUrl,
+  width: 40,
+  height: 45,
+} as const;
+
+export const panelPaginationButtonPrevActiveAsset = {
+  textureKey: panelPaginationButtonPrevActiveTextureKey,
+  imageUrl: panelPaginationButtonPrevActiveUrl,
+  width: 40,
+  height: 45,
+} as const;
+
+export const panelPaginationButtonPrevInactiveAsset = {
+  textureKey: panelPaginationButtonPrevInactiveTextureKey,
+  imageUrl: panelPaginationButtonPrevInactiveUrl,
+  width: 40,
+  height: 45,
+} as const;
+
+export const panelPaginationPanelAsset = {
+  textureKey: panelPaginationPanelTextureKey,
+  imageUrl: panelPaginationPanelUrl,
+  width: 225,
+  height: 48,
+} as const;
+
+export const panelTabLabelActiveBlueAsset = {
+  textureKey: panelTabLabelActiveBlueTextureKey,
+  imageUrl: panelTabLabelActiveBlueUrl,
+  width: 92,
+  height: 42,
+} as const;
+
+export const panelTabLabelActiveGreenAsset = {
+  textureKey: panelTabLabelActiveGreenTextureKey,
+  imageUrl: panelTabLabelActiveGreenUrl,
+  width: 92,
+  height: 42,
+} as const;
+
+export const panelTabLabelInactiveAsset = {
+  textureKey: panelTabLabelInactiveTextureKey,
+  imageUrl: panelTabLabelInactiveUrl,
+  width: 90,
+  height: 41,
+} as const;
+
+export const panelTabStandAsset = {
+  textureKey: panelTabStandTextureKey,
+  imageUrl: panelTabStandUrl,
+  width: 133,
+  height: 45,
+} as const;
+
 export const toastCardPanelAsset = {
   textureKey: toastCardPanelTextureKey,
   imageUrl: toastCardPanelUrl,
@@ -420,6 +571,21 @@ export const uiImageAssets = [
   playerMarkerAsset,
   joystickPlainAsset,
   joystickControlAsset,
+  panelAsset,
+  panelCloseButtonAsset,
+  panelHeaderAsset,
+  panelItemsGridPanelAsset,
+  panelItemsGridPanelBuyAsset,
+  panelItemsGridPanelSellAsset,
+  panelPaginationButtonNextActiveAsset,
+  panelPaginationButtonNextInactiveAsset,
+  panelPaginationButtonPrevActiveAsset,
+  panelPaginationButtonPrevInactiveAsset,
+  panelPaginationPanelAsset,
+  panelTabLabelActiveBlueAsset,
+  panelTabLabelActiveGreenAsset,
+  panelTabLabelInactiveAsset,
+  panelTabStandAsset,
   toastCardPanelAsset,
   ...Object.values(uiSystemButtonAssets).flatMap((button) => [
     button.active,

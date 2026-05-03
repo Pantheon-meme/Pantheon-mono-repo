@@ -17,6 +17,7 @@ import {
   uiIconAssets,
   type UiIconAsset,
 } from "../../../assets/ui/UiImageAssets";
+import { MarketplacePanel } from "../components/MarketplacePanel";
 import { TargetActionMenu } from "../components/TargetActionMenu";
 
 const buttonMinWidth = 300;
@@ -54,6 +55,14 @@ export class TargetActionMenuSystem implements System {
 
     const [actor, , queue, progress] = player;
     const actions = getTargetActions(world, actor);
+    const marketplaceOpen = world
+      .query(MarketplacePanel)
+      .some(([, panel]) => panel.visible);
+
+    if (marketplaceOpen) {
+      this.setVisible(menu, false);
+      return;
+    }
 
     if (actions.length === 0) {
       this.setVisible(menu, false);

@@ -3,6 +3,7 @@ import type { System } from "../../../ecs/System";
 import type { World } from "../../../ecs/World";
 import { FocusTarget } from "../components/FocusTarget";
 import { JournalPanel } from "../../ui/components/JournalPanel";
+import { MarketplacePanel } from "../../ui/components/MarketplacePanel";
 
 export class FocusInputSystem implements System {
   private readonly cycleKey?: Phaser.Input.Keyboard.Key;
@@ -15,8 +16,11 @@ export class FocusInputSystem implements System {
     const journalOpen = world
       .query(JournalPanel)
       .some(([, panel]) => panel.visible);
+    const marketplaceOpen = world
+      .query(MarketplacePanel)
+      .some(([, panel]) => panel.visible);
 
-    if (journalOpen) {
+    if (journalOpen || marketplaceOpen) {
       return;
     }
 

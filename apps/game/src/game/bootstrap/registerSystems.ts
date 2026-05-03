@@ -23,6 +23,7 @@ import { HeldItemPositionSystem } from "../player/systems/HeldItemPositionSystem
 import { InputSystem } from "../player/systems/InputSystem";
 import { ForageDropRenderSystem } from "../items/systems/ForageDropRenderSystem";
 import { JournalSystem } from "../ui/systems/JournalSystem";
+import { MarketplacePanelSystem } from "../ui/systems/MarketplacePanelSystem";
 import { MovementSystem } from "../player/systems/MovementSystem";
 import { MudHydrationSystem } from "../mud/systems/MudHydrationSystem";
 import { PlantGrowthSystem } from "../plants/systems/PlantGrowthSystem";
@@ -92,6 +93,7 @@ export function registerSystems(
   world.addSystem(new SleepVisualSystem());
   world.addSystem(new DayNightRenderSystem());
   world.addSystem(new TargetActionMenuSystem());
+  world.addSystem(new MarketplacePanelSystem());
   world.addSystem(new ToolInventoryHudSystem());
   world.addSystem(new BiomeMinimapSystem());
   world.addSystem(new ActionProgressBarSystem());

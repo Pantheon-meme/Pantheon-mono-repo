@@ -46,6 +46,20 @@ import {
   joystickPlainAsset,
   joystickPlainTextureKey,
   joystickControlTextureKey,
+  panelCloseButtonTextureKey,
+  panelHeaderAsset,
+  panelHeaderTextureKey,
+  panelItemsGridPanelAsset,
+  panelItemsGridPanelBuyTextureKey,
+  panelItemsGridPanelTextureKey,
+  panelPaginationButtonNextActiveTextureKey,
+  panelPaginationButtonPrevActiveTextureKey,
+  panelPaginationPanelAsset,
+  panelPaginationPanelTextureKey,
+  panelSlices,
+  panelTabLabelInactiveTextureKey,
+  panelTabStandTextureKey,
+  panelTextureKey,
   playerMarkerAsset,
   playerMarkerTextureKey,
   uiIconAssets,
@@ -94,6 +108,13 @@ import { InputState } from "../game/player/components/InputState";
 import { ItemUseConstraints } from "../game/shared/components/ItemUseConstraints";
 import { JournalPanel } from "../game/ui/components/JournalPanel";
 import { KnowledgeState } from "../game/ideas/components/KnowledgeState";
+import {
+  MarketplacePanel,
+  marketplacePanelTabs,
+  type MarketplaceOffer,
+  type MarketplacePanelSlot,
+  type MarketplacePanelTab,
+} from "../game/ui/components/MarketplacePanel";
 import { MudWorld } from "../game/mud/components/MudWorld";
 import { MudWorldBridge } from "../game/mud/MudWorldBridge";
 import { NeedState } from "../game/needs/components/NeedState";
@@ -116,6 +137,7 @@ import {
   ToolInventoryHud,
   type HudSlot,
 } from "../game/ui/components/ToolInventoryHud";
+import { itemDefinitions } from "../game/items/ItemDefinitions";
 import { TerrainBackground } from "../game/terrain/components/TerrainBackground";
 import { TerrainBaseLayer } from "../game/terrain/components/TerrainBaseLayer";
 import { TerrainDigDepth } from "../game/terrain/components/TerrainDigDepth";
@@ -164,6 +186,45 @@ const systemButtonHeight = 52;
 const systemButtonGap = 8;
 const systemButtonRowWidth = systemButtonWidth * 3 + systemButtonGap * 2;
 const systemButtonGapY = 6;
+const marketplacePanelX = 0;
+const marketplacePanelY = 150;
+const marketplacePanelDepth = 120;
+const marketplacePanelItemsPerPage = 8;
+const marketplacePanelCardColumns = 4;
+const marketplacePanelCardRows = 2;
+const marketplacePanelCardGapX = 12;
+const marketplacePanelCardGapY = 13;
+const marketplacePanelFrameInsetX = 48;
+const marketplacePanelFrameInsetY = 56;
+const marketplacePanelTopFrameInset = 48;
+const marketplacePanelCardGridWidth =
+  marketplacePanelCardColumns * panelItemsGridPanelAsset.width +
+  (marketplacePanelCardColumns - 1) * marketplacePanelCardGapX;
+const marketplacePanelCardGridHeight =
+  marketplacePanelCardRows * panelItemsGridPanelAsset.height +
+  (marketplacePanelCardRows - 1) * marketplacePanelCardGapY;
+const marketplacePanelWidth =
+  marketplacePanelCardGridWidth + marketplacePanelFrameInsetX * 2;
+const marketplacePanelHeight =
+  marketplacePanelTopFrameInset +
+  marketplacePanelCardGridHeight +
+  marketplacePanelFrameInsetY;
+const marketplacePanelCardLeft = marketplacePanelX + marketplacePanelFrameInsetX;
+const marketplacePanelCardTop = marketplacePanelY + marketplacePanelTopFrameInset;
+const marketplacePanelHeaderX = Math.round(
+  (marketplacePanelWidth - panelHeaderAsset.width) / 2,
+);
+const marketplacePanelHeaderY = 0;
+const marketplacePanelCloseX = marketplacePanelWidth + 54;
+const marketplacePanelCloseY = 51;
+const marketplacePanelTabY = 110;
+const marketplacePanelTabGap = 134;
+const marketplacePanelPaginationX = marketplacePanelWidth / 2;
+const marketplacePanelPaginationY =
+  marketplacePanelY + marketplacePanelHeight - 44;
+const marketplacePanelArtboardWidth = marketplacePanelCloseX + 32;
+const marketplacePanelArtboardHeight =
+  marketplacePanelPaginationY + 24 + panelPaginationPanelAsset.height / 2;
 
 export class MainGameScene extends Phaser.Scene {
   private world?: World;
@@ -214,6 +275,7 @@ export class MainGameScene extends Phaser.Scene {
     const dayNight = world.createEntity();
     const sleepHud = world.createEntity();
     const journal = world.createEntity();
+    const marketplace = world.createEntity();
     const actionToasts = world.createEntity();
     const toolInventoryHud = world.createEntity();
     const targetActionMenu = world.createEntity();
@@ -231,6 +293,7 @@ export class MainGameScene extends Phaser.Scene {
     const sleepProgressBar = this.createSleepProgressBar();
     const sleepVisual = this.createSleepVisual();
     const journalPanel = this.createJournalPanel();
+    const marketplacePanel = this.createMarketplacePanel();
     const actionToastDisplay = this.createActionToastStack();
     const toolInventoryDisplay = this.createToolInventoryHud();
     const targetActionMenuDisplay = this.createTargetActionMenu();
@@ -365,6 +428,7 @@ export class MainGameScene extends Phaser.Scene {
     world.addComponent(dayNight, DayNightOverlay, dayNightOverlay);
     world.addComponent(sleepHud, SleepProgressBar, sleepProgressBar);
     world.addComponent(journal, JournalPanel, journalPanel);
+    world.addComponent(marketplace, MarketplacePanel, marketplacePanel);
     world.addComponent(actionToasts, ActionToastStack, actionToastDisplay);
     world.addComponent(
       toolInventoryHud,
@@ -1341,6 +1405,548 @@ export class MainGameScene extends Phaser.Scene {
     return new SleepVisual(shadow, marker);
   }
 
+  private createMarketplacePanel(): MarketplacePanel {
+    const container = this.add
+      .container(0, 0)
+      .setDepth(marketplacePanelDepth)
+      .setVisible(false);
+    const background = this.add
+      .nineslice(
+        marketplacePanelX,
+        marketplacePanelY,
+        panelTextureKey,
+        undefined,
+        marketplacePanelWidth,
+        marketplacePanelHeight,
+        panelSlices.left,
+        panelSlices.right,
+        panelSlices.top,
+        panelSlices.bottom,
+      )
+      .setOrigin(0);
+    const header = this.add
+      .image(
+        marketplacePanelHeaderX,
+        marketplacePanelHeaderY,
+        panelHeaderTextureKey,
+      )
+      .setDisplaySize(panelHeaderAsset.width, panelHeaderAsset.height)
+      .setOrigin(0);
+    const title = this.add
+      .text(
+        marketplacePanelHeaderX + panelHeaderAsset.width / 2,
+        marketplacePanelHeaderY + panelHeaderAsset.height / 2 - 2,
+        "Marketplace",
+        {
+          align: "center",
+          color: "#3d2414",
+          fixedWidth: panelHeaderAsset.width - 130,
+          fontFamily: "Georgia, Times New Roman, serif",
+          fontSize: "34px",
+          fontStyle: "italic",
+          shadow: {
+            color: "#f7e3b8",
+            blur: 1,
+            fill: true,
+            offsetX: 0,
+            offsetY: 2,
+          },
+        },
+      )
+      .setOrigin(0.5);
+    const closeButtonContainer = this.add.container(
+      marketplacePanelCloseX,
+      marketplacePanelCloseY,
+    );
+    const closeButton = this.add
+      .image(0, 0, panelCloseButtonTextureKey)
+      .setDisplaySize(52, 51)
+      .setOrigin(0.5);
+    const closeHitArea = this.add
+      .zone(0, 0, 64, 64)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    const tabs = this.createMarketplaceTabs();
+    const slots = this.createMarketplaceSlots();
+    const pagination = this.createMarketplacePagination();
+    const panel = new MarketplacePanel(
+      container,
+      background,
+      header,
+      title,
+      closeButtonContainer,
+      closeButton,
+      closeHitArea,
+      tabs,
+      slots,
+      pagination,
+      marketplacePanelArtboardWidth,
+      marketplacePanelArtboardHeight,
+      marketplacePanelItemsPerPage,
+    );
+    const offers = createDefaultMarketplaceOffers();
+    let closePressed = false;
+
+    panel.setOffers("buy", offers.buy);
+    panel.setOffers("sell", offers.sell);
+
+    closeHitArea.on("pointerdown", () => {
+      closePressed = true;
+      this.tweenMarketplaceScale(
+        closeButtonContainer,
+        0.9,
+        70,
+        "Quad.easeOut",
+      );
+    });
+    closeHitArea.on("pointerup", () => {
+      if (closePressed) {
+        panel.close();
+      }
+
+      closePressed = false;
+      this.tweenMarketplaceScale(
+        closeButtonContainer,
+        1,
+        160,
+        "Back.easeOut",
+      );
+    });
+    closeHitArea.on("pointerout", () => {
+      closePressed = false;
+      this.tweenMarketplaceScale(
+        closeButtonContainer,
+        1,
+        130,
+        "Cubic.easeOut",
+      );
+    });
+    closeHitArea.on("pointerupoutside", () => {
+      closePressed = false;
+      this.tweenMarketplaceScale(
+        closeButtonContainer,
+        1,
+        130,
+        "Cubic.easeOut",
+      );
+    });
+
+    tabs.forEach((tab) => {
+      tab.hitArea.on("pointerdown", () => {
+        panel.setTab(tab.id);
+        this.tweenMarketplaceScale(tab.container, 0.96, 70, "Quad.easeOut");
+      });
+      tab.hitArea.on("pointerup", () => {
+        this.tweenMarketplaceScale(tab.container, 1, 150, "Back.easeOut");
+      });
+      tab.hitArea.on("pointerout", () => {
+        this.tweenMarketplaceScale(tab.container, 1, 120, "Cubic.easeOut");
+      });
+      tab.hitArea.on("pointerupoutside", () => {
+        this.tweenMarketplaceScale(tab.container, 1, 120, "Cubic.easeOut");
+      });
+    });
+
+    slots.forEach((slot, index) => {
+      slot.hitArea.on("pointerdown", () => {
+        panel.selectSlot(index);
+        this.tweenMarketplaceScale(
+          [slot.actionButton, slot.actionText],
+          0.94,
+          65,
+          "Quad.easeOut",
+        );
+      });
+      slot.hitArea.on("pointerup", () => {
+        this.tweenMarketplaceScale(
+          [slot.actionButton, slot.actionText],
+          1,
+          145,
+          "Back.easeOut",
+        );
+      });
+      slot.hitArea.on("pointerout", () => {
+        this.tweenMarketplaceScale(
+          [slot.actionButton, slot.actionText],
+          1,
+          120,
+          "Cubic.easeOut",
+        );
+      });
+      slot.hitArea.on("pointerupoutside", () => {
+        this.tweenMarketplaceScale(
+          [slot.actionButton, slot.actionText],
+          1,
+          120,
+          "Cubic.easeOut",
+        );
+      });
+    });
+
+    pagination.previousHitArea.on("pointerdown", () => {
+      panel.previousPage();
+      this.tweenMarketplaceScale(
+        pagination.previousButton,
+        0.9,
+        70,
+        "Quad.easeOut",
+      );
+    });
+    pagination.previousHitArea.on("pointerup", () => {
+      this.tweenMarketplaceScale(
+        pagination.previousButton,
+        1,
+        150,
+        "Back.easeOut",
+      );
+    });
+    pagination.previousHitArea.on("pointerout", () => {
+      this.tweenMarketplaceScale(
+        pagination.previousButton,
+        1,
+        120,
+        "Cubic.easeOut",
+      );
+    });
+    pagination.previousHitArea.on("pointerupoutside", () => {
+      this.tweenMarketplaceScale(
+        pagination.previousButton,
+        1,
+        120,
+        "Cubic.easeOut",
+      );
+    });
+    pagination.nextHitArea.on("pointerdown", () => {
+      panel.nextPage();
+      this.tweenMarketplaceScale(
+        pagination.nextButton,
+        0.9,
+        70,
+        "Quad.easeOut",
+      );
+    });
+    pagination.nextHitArea.on("pointerup", () => {
+      this.tweenMarketplaceScale(
+        pagination.nextButton,
+        1,
+        150,
+        "Back.easeOut",
+      );
+    });
+    pagination.nextHitArea.on("pointerout", () => {
+      this.tweenMarketplaceScale(
+        pagination.nextButton,
+        1,
+        120,
+        "Cubic.easeOut",
+      );
+    });
+    pagination.nextHitArea.on("pointerupoutside", () => {
+      this.tweenMarketplaceScale(
+        pagination.nextButton,
+        1,
+        120,
+        "Cubic.easeOut",
+      );
+    });
+
+    closeButtonContainer.add([closeButton, closeHitArea]);
+    container.add([
+      background,
+      ...slots.map((slot) => slot.container),
+      pagination.container,
+      ...tabs.map((tab) => tab.container),
+      header,
+      title,
+      closeButtonContainer,
+    ]);
+
+    if (shouldOpenMarketplacePanelPreview()) {
+      panel.open();
+    }
+
+    return panel;
+  }
+
+  private createMarketplaceTabs(): MarketplacePanelTab[] {
+    const centerX = marketplacePanelX + marketplacePanelWidth / 2;
+    const startX =
+      centerX - ((marketplacePanelTabs.length - 1) * marketplacePanelTabGap) / 2;
+
+    return marketplacePanelTabs.map((tab, index) => {
+      const container = this.add.container(
+        startX + index * marketplacePanelTabGap,
+        marketplacePanelTabY,
+      );
+      const stand = this.add
+        .image(0, 24, panelTabStandTextureKey)
+        .setDisplaySize(133, 45)
+        .setOrigin(0.5);
+      const background = this.add
+        .image(0, 16, panelTabLabelInactiveTextureKey)
+        .setDisplaySize(90, 41)
+        .setOrigin(0.5);
+      const text = this.add
+        .text(0, 15, tab.label, {
+          align: "center",
+          color: "#3d2414",
+          fixedWidth: 84,
+          fontFamily: "Georgia, Times New Roman, serif",
+          fontSize: "21px",
+          shadow: {
+            color: "#f6d9a4",
+            blur: 1,
+            fill: true,
+            offsetX: 0,
+            offsetY: 1,
+          },
+        })
+        .setOrigin(0.5);
+      const hitArea = this.add
+        .zone(0, 16, 108, 50)
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+
+      container.add([stand, background, text, hitArea]);
+
+      return {
+        id: tab.id,
+        label: tab.label,
+        container,
+        stand,
+        background,
+        text,
+        hitArea,
+      };
+    });
+  }
+
+  private createMarketplaceSlots(): MarketplacePanelSlot[] {
+    const slots: MarketplacePanelSlot[] = [];
+
+    for (let index = 0; index < marketplacePanelItemsPerPage; index += 1) {
+      const column = index % marketplacePanelCardColumns;
+      const row = Math.floor(index / marketplacePanelCardColumns);
+      const x =
+        marketplacePanelCardLeft +
+        column * (panelItemsGridPanelAsset.width + marketplacePanelCardGapX);
+      const y =
+        marketplacePanelCardTop +
+        row * (panelItemsGridPanelAsset.height + marketplacePanelCardGapY);
+
+      slots.push(this.createMarketplaceSlot(x, y));
+    }
+
+    return slots;
+  }
+
+  private createMarketplaceSlot(x: number, y: number): MarketplacePanelSlot {
+    const cardWidth = panelItemsGridPanelAsset.width;
+    const container = this.add.container(x, y).setVisible(false);
+    const background = this.add
+      .image(0, 0, panelItemsGridPanelTextureKey)
+      .setDisplaySize(cardWidth, panelItemsGridPanelAsset.height)
+      .setOrigin(0);
+    const iconSprite = this.add
+      .sprite(cardWidth / 2, 55, panelItemsGridPanelTextureKey)
+      .setOrigin(0.5)
+      .setVisible(false);
+    const placeholder = this.add.container(cardWidth / 2, 55);
+    const placeholderHalo = this.add
+      .circle(0, 0, 42, 0xf5dca1, 0.16)
+      .setStrokeStyle(2, 0x8b5b2d, 0.34);
+    const placeholderCore = this.add
+      .circle(0, 0, 19, 0xf8e8ba, 0.58)
+      .setStrokeStyle(1, 0x5c351c, 0.32);
+    const coin = this.createMarketplaceCoin(28, 122);
+    const priceText = this.add
+      .text(43, 122, "", {
+        align: "center",
+        color: "#4b2a13",
+        fixedWidth: 58,
+        fontFamily: "Georgia, Times New Roman, serif",
+        fontSize: "22px",
+        fontStyle: "700",
+        shadow: {
+          color: "#f6dfb4",
+          blur: 1,
+          fill: true,
+          offsetX: 0,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(0, 0.5);
+    const actionButton = this.add
+      .image(cardWidth / 2, 165, panelItemsGridPanelBuyTextureKey)
+      .setDisplaySize(101, 48)
+      .setOrigin(0.5);
+    const actionText = this.add
+      .text(cardWidth / 2, 164, "Buy", {
+        align: "center",
+        color: "#fff8dd",
+        fixedWidth: 92,
+        fontFamily: "Georgia, Times New Roman, serif",
+        fontSize: "24px",
+        fontStyle: "700",
+        shadow: {
+          color: "#143b59",
+          blur: 2,
+          fill: true,
+          offsetX: 0,
+          offsetY: 2,
+        },
+        stroke: "#183b52",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5);
+    const statusText = this.add
+      .text(cardWidth / 2, 98, "", {
+        align: "center",
+        color: "#6b4721",
+        fixedWidth: 92,
+        fontFamily: "Georgia, Times New Roman, serif",
+        fontSize: "13px",
+        fontStyle: "700",
+        shadow: {
+          color: "#f6dfb4",
+          blur: 1,
+          fill: true,
+          offsetX: 0,
+          offsetY: 1,
+        },
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+    const hitArea = this.add
+      .zone(cardWidth / 2, 165, 101, 48)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    placeholder.add([placeholderHalo, placeholderCore]);
+    container.add([
+      background,
+      iconSprite,
+      placeholder,
+      coin,
+      priceText,
+      actionButton,
+      actionText,
+      statusText,
+      hitArea,
+    ]);
+
+    return {
+      container,
+      background,
+      iconSprite,
+      placeholder,
+      placeholderHalo,
+      placeholderCore,
+      priceText,
+      actionButton,
+      actionText,
+      statusText,
+      hitArea,
+    };
+  }
+
+  private createMarketplaceCoin(
+    x: number,
+    y: number,
+  ): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
+    const rim = this.add
+      .circle(0, 0, 9, 0x8b4a12, 1)
+      .setStrokeStyle(1, 0xefd083, 0.8);
+    const face = this.add.circle(0, 0, 6, 0xf0b62e, 1);
+    const shine = this.add.ellipse(-2, -3, 4, 2, 0xffef9d, 0.86);
+
+    container.add([rim, face, shine]);
+
+    return container;
+  }
+
+  private createMarketplacePagination() {
+    const container = this.add
+      .container(marketplacePanelPaginationX, marketplacePanelPaginationY)
+      .setVisible(false);
+    const background = this.add
+      .image(0, 24, panelPaginationPanelTextureKey)
+      .setDisplaySize(
+        panelPaginationPanelAsset.width,
+        panelPaginationPanelAsset.height,
+      )
+      .setOrigin(0.5);
+    const previousButton = this.add
+      .image(-92, 24, panelPaginationButtonPrevActiveTextureKey)
+      .setDisplaySize(40, 45)
+      .setOrigin(0.5);
+    const nextButton = this.add
+      .image(92, 24, panelPaginationButtonNextActiveTextureKey)
+      .setDisplaySize(40, 45)
+      .setOrigin(0.5);
+    const pageText = this.add
+      .text(0, 24, "1 / 1", {
+        align: "center",
+        color: "#3d2414",
+        fixedWidth: 112,
+        fontFamily: "Georgia, Times New Roman, serif",
+        fontSize: "26px",
+        fontStyle: "700",
+        shadow: {
+          color: "#f6d9a4",
+          blur: 1,
+          fill: true,
+          offsetX: 0,
+          offsetY: 2,
+        },
+      })
+      .setOrigin(0.5);
+    const previousHitArea = this.add
+      .zone(-92, 24, 50, 54)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    const nextHitArea = this.add
+      .zone(92, 24, 50, 54)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    container.add([
+      background,
+      previousButton,
+      nextButton,
+      pageText,
+      previousHitArea,
+      nextHitArea,
+    ]);
+
+    return {
+      container,
+      background,
+      previousButton,
+      nextButton,
+      pageText,
+      previousHitArea,
+      nextHitArea,
+    };
+  }
+
+  private tweenMarketplaceScale(
+    targets: object | object[],
+    scale: number,
+    duration: number,
+    ease: string,
+  ): void {
+    this.tweens.killTweensOf(targets);
+    this.tweens.add({
+      duration,
+      ease,
+      scaleX: scale,
+      scaleY: scale,
+      targets,
+    });
+  }
+
   private createJournalPanel(): JournalPanel {
     const width = 520;
     const height = 440;
@@ -1436,6 +2042,43 @@ function shouldSpawnSeedTestRow(): boolean {
   const value = params.get("seedTest") ?? params.get("testSeeds");
 
   return value === "1" || value === "true" || value === "on";
+}
+
+function shouldOpenMarketplacePanelPreview(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const value =
+    params.get("marketplace") ??
+    params.get("marketplacePanel") ??
+    params.get("market");
+
+  return value === "1" || value === "true" || value === "on";
+}
+
+function createDefaultMarketplaceOffers(): Record<
+  "buy" | "sell",
+  MarketplaceOffer[]
+> {
+  const buy = Object.values(plantDefinitions)
+    .slice(0, 16)
+    .map((plant, index) => ({
+      id: `buy:${plant.seedId}`,
+      itemId: plant.seedId,
+      price: 12 + (index % 4) * 2,
+    }));
+  const sell = Object.values(itemDefinitions)
+    .filter((item) => item.category !== "seed")
+    .slice(0, 16)
+    .map((item, index) => ({
+      id: `sell:${item.id}`,
+      itemId: item.id,
+      price: 8 + (index % 5) * 2,
+    }));
+
+  return { buy, sell };
 }
 
 function isFreeExploreMode(): boolean {

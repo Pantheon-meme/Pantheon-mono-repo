@@ -21,9 +21,8 @@ import {
 } from "../../plants/PlantSpriteAssets";
 import { WeightInspectable } from "../../shared/components/WeightInspectable";
 import { WeightedObject } from "../../shared/components/WeightedObject";
-import {
-  uiIconAssets,
-} from "../../../assets/ui/UiImageAssets";
+import { uiIconAssets } from "../../../assets/ui/UiImageAssets";
+import { MarketplacePanel } from "../components/MarketplacePanel";
 import { ToolInventoryHud, type HudSlot } from "../components/ToolInventoryHud";
 
 const selectionShortcuts: Array<{ slotId: string; keyCode: number; label: string }> = [
@@ -64,8 +63,17 @@ export class ToolInventoryHudSystem implements System {
 
   update(world: World): void {
     const hands = world.query(Hands)[0]?.[1];
+    const marketplaceOpen = world
+      .query(MarketplacePanel)
+      .some(([, panel]) => panel.visible);
 
     for (const [, hud] of world.query(ToolInventoryHud)) {
+      hud.container.setVisible(!marketplaceOpen);
+
+      if (marketplaceOpen) {
+        continue;
+      }
+
       this.updateSelectionShortcuts(hud);
       this.positionHud(hud);
       this.updateTools(hud);
