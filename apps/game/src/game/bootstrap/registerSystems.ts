@@ -54,7 +54,7 @@ export function registerSystems(
   scene: Phaser.Scene,
   keyboard: Phaser.Input.Keyboard.KeyboardPlugin,
   bounds: Phaser.Geom.Rectangle,
-  weightLabel: Phaser.GameObjects.Text,
+  weightLabel: Phaser.GameObjects.Text | undefined,
   biome: BiomeDefinition,
   initialMudSnapshot?: PlayerSnapshot,
 ): void {
@@ -111,5 +111,7 @@ export function registerSystems(
   world.addSystem(new InventoryHudSystem(keyboard));
   world.addSystem(new EnergyBarSystem(biome));
   world.addSystem(new CurrencyDisplaySystem());
-  world.addSystem(new WeightDisplaySystem(weightLabel));
+  if (weightLabel) {
+    world.addSystem(new WeightDisplaySystem(weightLabel));
+  }
 }

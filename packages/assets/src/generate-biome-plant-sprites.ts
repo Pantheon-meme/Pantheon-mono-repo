@@ -11,10 +11,15 @@ import {
   uniswapBiomePlantSprites,
   type BiomePlantSpriteDefinition,
 } from "./uniswap-biome-asset-plan.js";
+import {
+  allProtocolPlantSprites,
+  protocolBiomeAssetPlans,
+} from "./protocol-biome-asset-plan.js";
 
 type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
 type CliOptions = {
+  biomeId?: string;
   plantId?: string;
   regionId?: string;
   imageModel?: string;
@@ -36,7 +41,7 @@ if (options.help) {
   process.exit(0);
 }
 
-const selectedPlants = uniswapBiomePlantSprites.filter(
+const selectedPlants = getPlantSprites(options.biomeId).filter(
   (plant) =>
     (!options.plantId || plant.id === options.plantId) &&
     (!options.regionId || plant.regionId === options.regionId),
@@ -86,7 +91,7 @@ for (const plant of selectedPlants) {
 
 function buildPlantPrompt(plant: BiomePlantSpriteDefinition): string {
   return [
-    uniswapBiomeCreativeBrief,
+    getCreativeBrief(plant),
     `${plant.name}: ${plant.prompt}.`,
     `Region: ${plant.regionId}.`,
     `Allowed terrain habitat ids: ${plant.terrainIds.join(", ")}.`,
@@ -97,6 +102,12 @@ function buildPlantPrompt(plant: BiomePlantSpriteDefinition): string {
 }
 
 function buildStylePrompt(plant: BiomePlantSpriteDefinition): string {
+  const palette = plant.id.startsWith("0g-")
+    ? "0G-inspired black space, electric violet, neon cyan, hot magenta, and luminous node-grid palette"
+    : plant.id.startsWith("gensyn-")
+      ? "Gensyn-inspired black and white base, bright green signal, amber verification light, and clean research-lab palette"
+      : "Uniswap-inspired violet, mint, pearl, pink, cyan, teal, and lavender-gray palette";
+
   return [
     plant.kind === "tree"
       ? "cozy hand-painted 2D game tree sprite"
@@ -104,7 +115,7 @@ function buildStylePrompt(plant: BiomePlantSpriteDefinition): string {
     "three-quarter top-down view",
     "transparent background",
     "readable silhouette at gameplay scale",
-    "Uniswap-inspired violet, mint, pearl, pink, cyan, teal, and lavender-gray palette",
+    palette,
     `native to ${plant.regionId}`,
     `visually compatible with ${plant.terrainIds.join(", ")}`,
     "soft natural edges",
@@ -155,7 +166,8 @@ function plantStates(): ObjectSpriteState[] {
     {
       id: "growing",
       title: "Growing",
-      prompt: "progressive young growth steps for the region-specific ground plant",
+      prompt:
+        "progressive young growth steps for the region-specific ground plant",
     },
     {
       id: "grown",
@@ -184,6 +196,10 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--plant-id":
         parsed.plantId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--biome-id":
+        parsed.biomeId = readValue(arg, next);
         index += 1;
         break;
       case "--region-id":
@@ -240,16 +256,20 @@ function parseReasoningEffort(value: string): ReasoningEffort {
 }
 
 function printHelp(): void {
-  const plantIds = uniswapBiomePlantSprites.map((plant) => plant.id).join(", ");
+  const plantIds = getPlantSprites(undefined)
+    .map((plant) => plant.id)
+    .join(", ");
 
-  console.log(`Generate Uniswap biome-specific plant and tree sprite sheets.
+  console.log(`Generate biome-specific plant and tree sprite sheets.
 
 Usage:
   pnpm --filter @pantheon/assets generate-biome-plant-sprites
+  pnpm --filter @pantheon/assets generate-biome-plant-sprites -- --biome-id 0g
   pnpm --filter @pantheon/assets generate-biome-plant-sprites -- --region-id liquidity-marsh
   pnpm --filter @pantheon/assets generate-biome-plant-sprites -- --plant-id oracle-fen-moonwillow
 
 Options:
+      --biome-id <id>        Generate one biome: uniswap, 0g, gensyn.
       --plant-id <id>        Generate one biome plant. Known ids: ${plantIds}
       --region-id <id>       Generate all plant sprites for one region.
       --image-model <model>  OpenRouter image-capable model id.
@@ -258,30 +278,50 @@ Options:
   -h, --help                 Show this help.`);
 }
 
-function loadNearestEnvFile(): void {
-  const envPath = findNearestFile(".env", process.cwd());
+function getPlantSprites(
+  biomeId: string | undefined,
+): BiomePlantSpriteDefinition[] {
+  if (!biomeId) {
+    return [...uniswapBiomePlantSprites, ...allProtocolPlantSprites];
+  }
 
-  if (envPath) {
+  if (biomeId === "uniswap") {
+    return uniswapBiomePlantSprites;
+  }
+
+  return allProtocolPlantSprites.filter((plant) =>
+    plant.id.startsWith(`${biomeId}-`),
+  );
+}
+
+function getCreativeBrief(plant: BiomePlantSpriteDefinition): string {
+  const plan = protocolBiomeAssetPlans.find((candidate) =>
+    plant.id.startsWith(`${candidate.id}-`),
+  );
+
+  return plan?.creativeBrief ?? uniswapBiomeCreativeBrief;
+}
+
+function loadNearestEnvFile(): void {
+  for (const envPath of findEnvFiles(".env", process.cwd())) {
     loadEnvFile(envPath);
   }
 }
 
-function findNearestFile(
-  fileName: string,
-  startDir: string,
-): string | undefined {
+function findEnvFiles(fileName: string, startDir: string): string[] {
   let currentDir = startDir;
   const rootDir = parse(startDir).root;
+  const envPaths: string[] = [];
 
   while (true) {
     const candidate = join(currentDir, fileName);
 
     if (existsSync(candidate)) {
-      return candidate;
+      envPaths.push(candidate);
     }
 
     if (currentDir === rootDir) {
-      return undefined;
+      return envPaths.reverse();
     }
 
     currentDir = dirname(currentDir);

@@ -10,7 +10,10 @@ const packageRoot = path.resolve(path.dirname(currentFilePath), "..");
 const repoRoot = path.resolve(packageRoot, "../..");
 const generatedAutotileRoot = path.join(packageRoot, "generated/autotiles");
 const gameAutotileRoot = path.join(repoRoot, "apps/game/src/assets/autotiles");
-const terrainAtlasRegistryPath = path.join(gameAutotileRoot, "TerrainAtlasAssets.ts");
+const terrainAtlasRegistryPath = path.join(
+  gameAutotileRoot,
+  "TerrainAtlasAssets.ts",
+);
 
 type PublishedTerrainAtlas = {
   id: string;
@@ -25,19 +28,29 @@ async function publishGameAssets(): Promise<void> {
   const copiedAssets: string[] = [];
   const publishedAtlases: PublishedTerrainAtlas[] = [];
 
-  for (const entry of generatedEntries.sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const entry of generatedEntries.sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
     if (!entry.isDirectory()) {
       continue;
     }
 
     const atlasName = entry.name;
-    const sourcePath = path.join(generatedAutotileRoot, atlasName, atlasFileName);
+    const sourcePath = path.join(
+      generatedAutotileRoot,
+      atlasName,
+      atlasFileName,
+    );
 
     if (!(await fileExists(sourcePath))) {
       continue;
     }
 
-    const destinationPath = path.join(gameAutotileRoot, atlasName, atlasFileName);
+    const destinationPath = path.join(
+      gameAutotileRoot,
+      atlasName,
+      atlasFileName,
+    );
 
     await fs.mkdir(path.dirname(destinationPath), { recursive: true });
     await fs.copyFile(sourcePath, destinationPath);
@@ -56,7 +69,10 @@ async function publishGameAssets(): Promise<void> {
     const hasCenterVariants = await fileExists(centerVariantsSourcePath);
 
     if (hasCenterVariants) {
-      await fs.copyFile(centerVariantsSourcePath, centerVariantsDestinationPath);
+      await fs.copyFile(
+        centerVariantsSourcePath,
+        centerVariantsDestinationPath,
+      );
       copiedAssets.push(path.relative(repoRoot, centerVariantsDestinationPath));
     }
 
@@ -86,7 +102,9 @@ async function publishGameAssets(): Promise<void> {
   console.log(`- ${path.relative(repoRoot, terrainAtlasRegistryPath)}`);
 }
 
-function buildTerrainAtlasRegistryModule(atlases: PublishedTerrainAtlas[]): string {
+function buildTerrainAtlasRegistryModule(
+  atlases: PublishedTerrainAtlas[],
+): string {
   const imports = atlases
     .flatMap((atlas) => [
       `import ${atlas.importName}AtlasUrl from "./${atlas.id}/${atlasFileName}?url";`,
@@ -165,7 +183,13 @@ function toImportName(value: string): string {
     )
     .join("");
 
-  return `${name || "terrain"}Terrain`;
+  const safeName = /^[A-Za-z_$]/.test(name) ? name : `asset${capitalize(name)}`;
+
+  return `${safeName || "terrain"}Terrain`;
+}
+
+function capitalize(value: string): string {
+  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : value;
 }
 
 publishGameAssets().catch((error: unknown) => {

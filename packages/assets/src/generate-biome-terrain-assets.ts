@@ -6,11 +6,15 @@ import { loadEnvFile } from "node:process";
 import { runAutotileWorkflow } from "./autotile-workflow.js";
 import { writeGeneratedImage } from "./files.js";
 import { generateOpenRouterImage } from "./openrouter.js";
-import { uniswapRegionTerrainAssets } from "./biome-terrain-definitions.js";
+import {
+  allBiomeTerrainAssets,
+  getBiomeTerrainAssets,
+} from "./biome-terrain-definitions.js";
 
 type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
 type CliOptions = {
+  biomeId?: string;
   terrainId?: string;
   imageModel?: string;
   reasoningEffort?: ReasoningEffort;
@@ -29,9 +33,10 @@ if (options.help) {
   process.exit(0);
 }
 
+const biomeTerrains = getBiomeTerrainAssets(options.biomeId);
 const selectedTerrains = options.terrainId
-  ? uniswapRegionTerrainAssets.filter((terrain) => terrain.id === options.terrainId)
-  : uniswapRegionTerrainAssets;
+  ? biomeTerrains.filter((terrain) => terrain.id === options.terrainId)
+  : biomeTerrains;
 
 if (selectedTerrains.length === 0) {
   throw new Error(`Unknown biome terrain id "${options.terrainId}".`);
@@ -42,48 +47,50 @@ await mapWithConcurrency(
   options.terrainConcurrency ??
     Number.parseInt(process.env.PANTHEON_BIOME_TERRAIN_CONCURRENCY ?? "3", 10),
   async (terrain) => {
-  console.log(`[biome-terrain] Generating ${terrain.id}`);
-  const imageModel =
-    options.imageModel ??
-    process.env.OPENROUTER_IMAGE_MODEL ??
-    "google/gemini-2.5-flash-image";
-  const reasoningEffort =
-    options.reasoningEffort ??
-    parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high");
-  const maskDir =
-    options.maskDir ?? process.env.PANTHEON_AUTOTILE_MASK_DIR ?? "masks";
+    console.log(`[biome-terrain] Generating ${terrain.id}`);
+    const imageModel =
+      options.imageModel ??
+      process.env.OPENROUTER_IMAGE_MODEL ??
+      "google/gemini-2.5-flash-image";
+    const reasoningEffort =
+      options.reasoningEffort ??
+      parseReasoningEffort(process.env.OPENROUTER_REASONING_EFFORT ?? "high");
+    const maskDir =
+      options.maskDir ?? process.env.PANTHEON_AUTOTILE_MASK_DIR ?? "masks";
 
-  if (!existsSync(maskDir)) {
-    throw new Error(`Autotile mask directory not found: ${maskDir}`);
-  }
+    if (!existsSync(maskDir)) {
+      throw new Error(`Autotile mask directory not found: ${maskDir}`);
+    }
 
-  const texture = await generateOpenRouterImage({
-    id: `${terrain.id}-source-texture`,
-    title: `${terrain.material} source texture`,
-    prompt: buildTexturePrompt(terrain.material, terrain.texture),
-    imageModel,
-    reasoningEffort,
-  });
-  const writtenTexture = await writeGeneratedImage(
-    `generated/terrain-textures/${terrain.id}`,
-    texture,
-  );
+    const texture = await generateOpenRouterImage({
+      id: `${terrain.id}-source-texture`,
+      title: `${terrain.material} source texture`,
+      prompt: buildTexturePrompt(terrain.material, terrain.texture),
+      imageModel,
+      reasoningEffort,
+    });
+    const writtenTexture = await writeGeneratedImage(
+      `generated/terrain-textures/${terrain.id}`,
+      texture,
+    );
 
-  if (!writtenTexture.filePath) {
-    throw new Error(`Terrain texture generator did not write a texture for ${terrain.id}.`);
-  }
+    if (!writtenTexture.filePath) {
+      throw new Error(
+        `Terrain texture generator did not write a texture for ${terrain.id}.`,
+      );
+    }
 
-  await runAutotileWorkflow({
-    texturePath: writtenTexture.filePath,
-    material: terrain.material,
-    imageModel,
-    reasoningEffort,
-    maskDir,
-    concurrency:
-      options.concurrency ??
-      Number.parseInt(process.env.PANTHEON_AUTOTILE_CONCURRENCY ?? "4", 10),
-    outputDir: `generated/autotiles/${terrain.id}`,
-  });
+    await runAutotileWorkflow({
+      texturePath: writtenTexture.filePath,
+      material: terrain.material,
+      imageModel,
+      reasoningEffort,
+      maskDir,
+      concurrency:
+        options.concurrency ??
+        Number.parseInt(process.env.PANTHEON_AUTOTILE_CONCURRENCY ?? "4", 10),
+      outputDir: `generated/autotiles/${terrain.id}`,
+    });
   },
 );
 
@@ -116,6 +123,10 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--terrain-id":
         parsed.terrainId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--biome-id":
+        parsed.biomeId = readValue(arg, next);
         index += 1;
         break;
       case "--image-model":
@@ -175,15 +186,19 @@ function parseReasoningEffort(value: string): ReasoningEffort {
 }
 
 function printHelp(): void {
-  const terrainIds = uniswapRegionTerrainAssets.map((terrain) => terrain.id).join(", ");
+  const terrainIds = allBiomeTerrainAssets
+    .map((terrain) => terrain.id)
+    .join(", ");
 
-  console.log(`Generate Uniswap region-specific terrain autotiles.
+  console.log(`Generate biome region-specific terrain autotiles.
 
 Usage:
   pnpm --filter @pantheon/assets generate-biome-terrain-assets
+  pnpm --filter @pantheon/assets generate-biome-terrain-assets -- --biome-id 0g
   pnpm --filter @pantheon/assets generate-biome-terrain-assets -- --terrain-id oracle-fen-glass-mud
 
 Options:
+      --biome-id <id>         Generate one biome: uniswap, 0g, gensyn.
       --terrain-id <id>        Generate one terrain. Known ids: ${terrainIds}
       --image-model <model>    OpenRouter image-capable model id.
       --reasoning-effort <n>   none, minimal, low, medium, high, xhigh. Default: high.
@@ -215,26 +230,25 @@ async function mapWithConcurrency<T>(
 }
 
 function loadNearestEnvFile(): void {
-  const envPath = findNearestFile(".env", process.cwd());
-
-  if (envPath) {
+  for (const envPath of findEnvFiles(".env", process.cwd())) {
     loadEnvFile(envPath);
   }
 }
 
-function findNearestFile(fileName: string, startDir: string): string | undefined {
+function findEnvFiles(fileName: string, startDir: string): string[] {
   let currentDir = startDir;
   const rootDir = parse(startDir).root;
+  const envPaths: string[] = [];
 
   while (true) {
     const candidate = join(currentDir, fileName);
 
     if (existsSync(candidate)) {
-      return candidate;
+      envPaths.push(candidate);
     }
 
     if (currentDir === rootDir) {
-      return undefined;
+      return envPaths.reverse();
     }
 
     currentDir = dirname(currentDir);

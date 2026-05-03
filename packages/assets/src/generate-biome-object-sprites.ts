@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { runObjectSpriteWorkflow } from "./object-sprite-workflow.js";
 import {
+  allBiomeObjectSheets,
   uniswapBiomeObjectSheets,
   uniswapCommonsObjectSheetId,
 } from "./biome-object-sprite-definitions.js";
@@ -16,6 +17,7 @@ type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
 type CliOptions = {
   sheetId?: string;
+  biomeId?: string;
   all?: boolean;
   imageModel?: string;
   reasoningEffort?: ReasoningEffort;
@@ -37,12 +39,8 @@ if (options.help) {
 }
 
 const selectedSheets = options.all
-  ? uniswapBiomeObjectSheets
-  : [
-      getObjectSheet(
-        options.sheetId ?? uniswapCommonsObjectSheetId,
-      ),
-    ];
+  ? filterSheetsByBiome(allBiomeObjectSheets, options.biomeId)
+  : [getObjectSheet(options.sheetId ?? uniswapCommonsObjectSheetId)];
 
 for (const sheet of selectedSheets) {
   const outputDir = options.out
@@ -85,12 +83,18 @@ for (const sheet of selectedSheets) {
 }
 
 function buildStylePrompt(sheet: BiomeObjectSheetDefinition): string {
+  const palette = sheet.id.startsWith("0g-")
+    ? "0G-inspired black space, electric violet, neon cyan, hot magenta, and luminous node-grid palette"
+    : sheet.id.startsWith("gensyn-")
+      ? "Gensyn-inspired black and white base, bright green signal, amber verification light, and clean research-lab palette"
+      : "Uniswap-inspired violet, mint, pearl, pink, cyan, and lavender-gray palette";
+
   return [
     "cozy hand-painted 2D biome scatter props",
     "three-quarter top-down view",
     "transparent background",
     "crisp readable silhouettes at small scale",
-    "Uniswap-inspired violet, mint, pearl, pink, cyan, and lavender-gray palette",
+    palette,
     sheet.regionId
       ? `props must feel native to ${sheet.regionId}`
       : "natural stones, bushes, reeds, moss, crystals, flowers, roots, puddles, and fallen branches",
@@ -103,9 +107,15 @@ function buildStylePrompt(sheet: BiomeObjectSheetDefinition): string {
 }
 
 function buildObjectPrompt(sheet: BiomeObjectSheetDefinition): string {
+  const biomeName = sheet.id.startsWith("0g-")
+    ? "0G"
+    : sheet.id.startsWith("gensyn-")
+      ? "Gensyn"
+      : "Uniswap";
+
   return [
     sheet.prompt,
-    "A cost-efficient batch sheet of separate static Uniswap biome and land scatter props.",
+    `A cost-efficient batch sheet of separate static ${biomeName} biome and land scatter props.`,
     "Each cell is a different independent object, not a variant or animation frame.",
     "These are natural biome objects for terrain richness: stones, bushes, reeds, moss, flowers, crystals, puddles, roots, fallen branches, and magical habitat details.",
     "Avoid buildings, furniture, civic architecture, tools, signs, benches, tables, and town decorations.",
@@ -148,6 +158,10 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--sheet-id":
         parsed.sheetId = readValue(arg, next);
+        index += 1;
+        break;
+      case "--biome-id":
+        parsed.biomeId = readValue(arg, next);
         index += 1;
         break;
       case "--all":
@@ -203,7 +217,9 @@ function parseReasoningEffort(value: string): ReasoningEffort {
 }
 
 function getObjectSheet(sheetId: string): BiomeObjectSheetDefinition {
-  const sheet = uniswapBiomeObjectSheets.find((candidate) => candidate.id === sheetId);
+  const sheet = allBiomeObjectSheets.find(
+    (candidate) => candidate.id === sheetId,
+  );
 
   if (!sheet) {
     throw new Error(`Unknown biome object sheet "${sheetId}".`);
@@ -213,16 +229,18 @@ function getObjectSheet(sheetId: string): BiomeObjectSheetDefinition {
 }
 
 function printHelp(): void {
-  const sheetIds = uniswapBiomeObjectSheets.map((sheet) => sheet.id).join(", ");
+  const sheetIds = allBiomeObjectSheets.map((sheet) => sheet.id).join(", ");
 
   console.log(`Generate batched static biome object sprite sheets.
 
 Usage:
   pnpm --filter @pantheon/assets generate-biome-object-sprites
+  pnpm --filter @pantheon/assets generate-biome-object-sprites -- --all --biome-id gensyn
   pnpm --filter @pantheon/assets generate-biome-object-sprites -- --all
 
 Options:
       --sheet-id <id>          Sheet to generate. Default: ${uniswapCommonsObjectSheetId}. Known ids: ${sheetIds}
+      --biome-id <id>          With --all, generate one biome: uniswap, 0g, gensyn.
       --all                    Generate every Uniswap biome object sheet.
       --image-model <model>    OpenRouter image-capable model id.
       --reasoning-effort <n>   none, minimal, low, medium, high, xhigh. Default: high.
@@ -230,30 +248,41 @@ Options:
   -h, --help                   Show this help.`);
 }
 
-function loadNearestEnvFile(): void {
-  const envPath = findNearestFile(".env", process.cwd());
+function filterSheetsByBiome(
+  sheets: BiomeObjectSheetDefinition[],
+  biomeId: string | undefined,
+): BiomeObjectSheetDefinition[] {
+  if (!biomeId) {
+    return sheets;
+  }
 
-  if (envPath) {
+  if (biomeId === "uniswap") {
+    return uniswapBiomeObjectSheets;
+  }
+
+  return sheets.filter((sheet) => sheet.id.startsWith(`${biomeId}-`));
+}
+
+function loadNearestEnvFile(): void {
+  for (const envPath of findEnvFiles(".env", process.cwd())) {
     loadEnvFile(envPath);
   }
 }
 
-function findNearestFile(
-  fileName: string,
-  startDir: string,
-): string | undefined {
+function findEnvFiles(fileName: string, startDir: string): string[] {
   let currentDir = startDir;
   const rootDir = parse(startDir).root;
+  const envPaths: string[] = [];
 
   while (true) {
     const candidate = join(currentDir, fileName);
 
     if (existsSync(candidate)) {
-      return candidate;
+      envPaths.push(candidate);
     }
 
     if (currentDir === rootDir) {
-      return undefined;
+      return envPaths.reverse();
     }
 
     currentDir = dirname(currentDir);

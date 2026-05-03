@@ -38,11 +38,15 @@ export function createBiomeSurfacePlan(
   spawnTileX: number,
   spawnTileY: number,
 ): BiomeSurfacePlan {
-  if (biome.id !== "uniswap") {
+  if (!usesPlannedBiomeSurface(biome)) {
     return createFallbackSurfacePlan(grid, biome);
   }
 
-  return createUniswapSurfacePlan(grid, biome, spawnTileX, spawnTileY);
+  return createProtocolSurfacePlan(grid, biome, spawnTileX, spawnTileY);
+}
+
+export function usesPlannedBiomeSurface(biome: BiomeDefinition): boolean {
+  return biome.regions.length > 1;
 }
 
 export function surfaceMatchesTerrainIds(
@@ -51,7 +55,7 @@ export function surfaceMatchesTerrainIds(
   tileY: number,
   terrainIds: readonly string[] | undefined,
 ): boolean | undefined {
-  if (!surfacePlan || surfacePlan.biomeId !== "uniswap" || !terrainIds) {
+  if (!surfacePlan || !terrainIds) {
     return undefined;
   }
 
@@ -66,10 +70,6 @@ export function isTreeAllowedOnSurface(
   tileY: number,
 ): boolean {
   if (!surfacePlan) {
-    return true;
-  }
-
-  if (surfacePlan.biomeId !== "uniswap") {
     return true;
   }
 
@@ -96,7 +96,7 @@ export function getSurfaceTreePlacementChance(
   tileX: number,
   tileY: number,
 ): number | undefined {
-  if (!surfacePlan || surfacePlan.biomeId !== "uniswap") {
+  if (!surfacePlan) {
     return undefined;
   }
 
@@ -130,10 +130,6 @@ export function isObjectAllowedOnSurface(
     return true;
   }
 
-  if (surfacePlan.biomeId !== "uniswap") {
-    return true;
-  }
-
   const tile = surfacePlan.getTile(tileX, tileY);
 
   if (!tile) {
@@ -162,7 +158,7 @@ export function getSurfacePlacementScore(
 ): number {
   const tile = surfacePlan?.getTile(tileX, tileY);
 
-  if (!surfacePlan || surfacePlan.biomeId !== "uniswap" || !tile) {
+  if (!surfacePlan || !tile) {
     return 1;
   }
 
@@ -173,7 +169,9 @@ export function getSurfacePlacementScore(
     case "path-edge":
       return tile.route > 0.25 && tile.terrainId !== "water" ? tile.route : 0;
     case "pool-edge":
-      return tile.shore > 0.24 || tile.terrainId === "swamp" ? Math.max(tile.shore, tile.wetness) : 0;
+      return tile.shore > 0.24 || tile.terrainId === "swamp"
+        ? Math.max(tile.shore, tile.wetness)
+        : 0;
     case "grove-edge":
       return tile.canopy > 0.28 && tile.terrainId !== "water" ? tile.canopy : 0;
     case "scattered":
@@ -215,7 +213,7 @@ function createFallbackSurfacePlan(
   };
 }
 
-function createUniswapSurfacePlan(
+function createProtocolSurfacePlan(
   grid: TerrainGrid,
   biome: BiomeDefinition,
   spawnTileX: number,

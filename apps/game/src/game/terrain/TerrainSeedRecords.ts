@@ -3,6 +3,7 @@ import { seedBiomeTerrainGrid } from "../biome/BiomeTerrainGeneration";
 import {
   createBiomeSurfacePlan,
   type BiomeSurfacePlan,
+  usesPlannedBiomeSurface,
 } from "../biome/BiomeSurfacePlan";
 import { TerrainGrid } from "./components/TerrainGrid";
 
@@ -57,7 +58,7 @@ export function generateTerrainSeedRecords(
 function createSurfacePlan(
   options: GenerateTerrainSeedRecordsOptions,
 ): BiomeSurfacePlan | undefined {
-  if (options.biome.id !== "uniswap") {
+  if (!usesPlannedBiomeSurface(options.biome)) {
     return undefined;
   }
 
