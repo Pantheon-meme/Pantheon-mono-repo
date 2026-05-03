@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import type { MastraModelConfig, OpenAICompatibleConfig } from '@mastra/core/llm';
 import { loadLocalEnvFiles } from '../load-env';
 
@@ -15,6 +16,7 @@ type ZeroGComputeRuntime = {
 
 let runtimePromise: Promise<ZeroGComputeRuntime> | undefined;
 let loggedRuntime = false;
+const require = createRequire(import.meta.url);
 
 export function isZeroGComputeWalletConfigured(): boolean {
   loadZeroGComputeEnv();
@@ -63,7 +65,7 @@ async function createZeroGComputeRuntime(): Promise<ZeroGComputeRuntime> {
   }
 
   const [{ createZGComputeNetworkBroker }, { ethers }] = await Promise.all([
-    import('@0gfoundation/0g-compute-ts-sdk'),
+    loadZeroGComputeSdk(),
     import('ethers'),
   ]);
   const rpcUrl = getZeroGComputeRpcUrl();
@@ -86,6 +88,10 @@ async function createZeroGComputeRuntime(): Promise<ZeroGComputeRuntime> {
 
   if (readBooleanEnv('OG_COMPUTE_AUTO_FUND', false)) {
     await broker.inference.startAutoFunding(providerAddress);
+  }
+
+  if (readBooleanEnv('OG_COMPUTE_BOOTSTRAP_ACCOUNT', false)) {
+    await bootstrapComputeAccount(broker, providerAddress);
   }
 
   const [{ endpoint, model }, headers, walletAddress] = await Promise.all([
@@ -114,6 +120,46 @@ async function createZeroGComputeRuntime(): Promise<ZeroGComputeRuntime> {
   return runtime;
 }
 
+async function loadZeroGComputeSdk(): Promise<
+  typeof import('@0gfoundation/0g-compute-ts-sdk')
+> {
+  return require('@0gfoundation/0g-compute-ts-sdk');
+}
+
+async function bootstrapComputeAccount(
+  broker: Awaited<
+    ReturnType<
+      typeof import('@0gfoundation/0g-compute-ts-sdk')['createZGComputeNetworkBroker']
+    >
+  >,
+  providerAddress: string,
+): Promise<void> {
+  const ledgerDeposit = readNumberEnv('OG_COMPUTE_LEDGER_DEPOSIT', 3);
+  const providerTransfer = readNumberEnv('OG_COMPUTE_PROVIDER_TRANSFER', 1);
+
+  try {
+    await broker.ledger.getLedger();
+  } catch {
+    console.info(
+      `[player-agent] 0G Compute creating ledger deposit=${ledgerDeposit}OG`,
+    );
+    await broker.ledger.addLedger(ledgerDeposit);
+  }
+
+  try {
+    await broker.inference.getAccount(providerAddress);
+  } catch {
+    console.info(
+      `[player-agent] 0G Compute funding provider sub-account provider=${providerAddress} amount=${providerTransfer}OG`,
+    );
+    await broker.ledger.transferFund(
+      providerAddress,
+      'inference',
+      toNeuron(providerTransfer),
+    );
+  }
+}
+
 async function discoverProviderAddress(
   broker: Awaited<
     ReturnType<
@@ -122,7 +168,7 @@ async function discoverProviderAddress(
   >,
   requestedModel: string,
 ): Promise<string | undefined> {
-  const services = await broker.inference.listService(0, 100);
+  const services = await broker.inference.listService(0, 50);
   const normalizedRequestedModel = normalizeModelId(requestedModel);
   const exact = services.find(
     (service) =>
@@ -219,4 +265,22 @@ function readBooleanEnv(name: string, fallback: boolean): boolean {
     : ['0', 'false', 'no', 'off'].includes(value)
       ? false
       : fallback;
+}
+
+function readNumberEnv(name: string, fallback: number): number {
+  const value = process.env[name]?.trim();
+
+  if (!value) return fallback;
+
+  const parsed = Number.parseFloat(value);
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toNeuron(amount: number): bigint {
+  const normalized = amount.toFixed(18);
+  const [whole, fraction = ''] = normalized.split('.');
+  const fractionPadded = fraction.padEnd(18, '0').slice(0, 18);
+
+  return BigInt(whole) * 10n ** 18n + BigInt(fractionPadded);
 }
