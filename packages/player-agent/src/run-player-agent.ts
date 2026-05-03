@@ -1,5 +1,6 @@
 import { playerAgent } from './mastra/agents/player-agent';
 import { rememberForageExpedition } from './mastra/agents/player-memory';
+import { PantheonInftClient } from './mastra/inft/inft-client';
 import { makePantheonMudClient } from './mastra/pantheon/mud-client';
 
 const turnDelayMs = readIntegerEnv('PLAYER_AGENT_TURN_DELAY_MS', 5000);
@@ -10,6 +11,10 @@ const resourceId = process.env.PLAYER_AGENT_RESOURCE_ID ?? 'pantheon-player';
 const useLlmLoop = readBooleanEnv('PLAYER_AGENT_USE_LLM', false);
 const llmEveryTurns = readIntegerEnv('PLAYER_AGENT_LLM_EVERY_TURNS', 0);
 const client = makePantheonMudClient();
+const requireMatchingPlayerAndExecutor = readBooleanEnv(
+  'PLAYER_AGENT_REQUIRE_EXECUTOR_MATCH',
+  true,
+);
 
 let stopping = false;
 
@@ -26,6 +31,8 @@ await runAutoplayer();
 
 async function runAutoplayer() {
   let turn = 0;
+
+  await assertPlayerExecutorMatch();
 
   console.log('[player-agent] autonomous loop started');
   console.log(
@@ -91,6 +98,33 @@ async function runAutoplayer() {
   }
 
   console.log('[player-agent] autonomous loop stopped');
+}
+
+async function assertPlayerExecutorMatch(): Promise<void> {
+  if (!requireMatchingPlayerAndExecutor) {
+    return;
+  }
+
+  if (!process.env.AGENT_INFT_ADDRESS || !process.env.AGENT_TOKEN_ID) {
+    return;
+  }
+
+  const inftClient = PantheonInftClient.fromEnv();
+  const playerAddress = client.playerAddress.toLowerCase();
+  const executorAddress = inftClient.executorAddress.toLowerCase();
+
+  if (playerAddress !== executorAddress) {
+    throw new Error(
+      [
+        'Player key and INFT executor key resolve to different addresses.',
+        `player=${client.playerAddress}`,
+        `executor=${inftClient.executorAddress}`,
+        'Set MUD_PRIVATE_KEY and AGENT_EXECUTOR_PRIVATE_KEY to the same private key, or set PLAYER_AGENT_REQUIRE_EXECUTOR_MATCH=false to allow split keys.',
+      ].join(' '),
+    );
+  }
+
+  console.log(`[player-agent] player/executor address=${client.playerAddress}`);
 }
 
 function nextTurnPrompt(turn: number): string {
@@ -170,10 +204,38 @@ function formatEconomicCycle(result: Awaited<ReturnType<typeof client.runEconomi
     `[player-agent] ${result.status}: ${result.summary}`,
     `[player-agent] decision=${result.decision} pos=${position} energy=${energy} cuc=${cuc} inventory=${inventory}`,
     `[player-agent] gained=${gained}; picked=${picked}; ${sold}`,
+    formatMemoryStatus(result.memory),
     result.actions.length ? `[player-agent] actions: ${result.actions.join(' | ')}` : undefined,
   ]
     .filter((line): line is string => Boolean(line))
     .join('\n');
+}
+
+function formatMemoryStatus(
+  memory: Awaited<ReturnType<typeof rememberEconomicCycle>> | undefined,
+): string | undefined {
+  if (!memory) return undefined;
+
+  const parts = [`local=${memory.stored ? 'stored' : 'skipped'}`];
+
+  if (memory.inft) {
+    parts.push(`inft=${memory.inft.stored ? 'stored' : 'skipped'}`);
+    if (memory.inft.uri) parts.push(`uri=${memory.inft.uri}`);
+    if (memory.inft.txHash) parts.push(`appendTx=${memory.inft.txHash}`);
+    if (memory.inft.intelligentData) {
+      parts.push(
+        `data=${memory.inft.intelligentData.description}:${memory.inft.intelligentData.updated ? 'updated' : 'not-updated'}`,
+      );
+      if (memory.inft.intelligentData.txHash) {
+        parts.push(`dataTx=${memory.inft.intelligentData.txHash}`);
+      }
+    }
+  }
+
+  const reason = memory.inft?.intelligentData?.reason ?? memory.inft?.reason ?? memory.reason;
+  if (reason) parts.push(`reason=${reason}`);
+
+  return `[player-agent] memory ${parts.join(' ')}`;
 }
 
 async function rememberEconomicCycle(
@@ -183,6 +245,8 @@ async function rememberEconomicCycle(
     return await rememberForageExpedition(result, {
       threadId,
       resourceId,
+      action: 'economic-cycle',
+      turnId: `autoplayer-${Date.now()}`,
     });
   } catch (error) {
     return {

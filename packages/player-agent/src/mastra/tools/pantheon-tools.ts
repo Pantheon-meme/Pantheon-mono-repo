@@ -80,6 +80,7 @@ export const runForageExpeditionTool = createTool({
     result.memory = await rememberForageExpedition(result, {
       threadId: context.agent?.threadId,
       resourceId: context.agent?.resourceId,
+      action: 'forage-expedition',
     });
 
     return result;
@@ -143,6 +144,7 @@ export const runEconomicCycleTool = createTool({
     result.memory = await rememberForageExpedition(result, {
       threadId: context.agent?.threadId,
       resourceId: context.agent?.resourceId,
+      action: 'economic-cycle',
     });
 
     return result;

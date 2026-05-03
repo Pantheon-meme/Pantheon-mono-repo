@@ -416,6 +416,20 @@ export type ForageExpeditionResult = {
     stored: boolean;
     note?: string;
     reason?: string;
+    inft?: {
+      stored: boolean;
+      uri?: string;
+      rootHash?: `0x${string}`;
+      txHash?: `0x${string}`;
+      intelligentData?: {
+        description: string;
+        dataHash: `0x${string}`;
+        txHash?: `0x${string}`;
+        updated: boolean;
+        reason?: string;
+      };
+      reason?: string;
+    };
   };
 };
 
@@ -507,6 +521,10 @@ export class PantheonMudClient {
         process.env.VITE_MUD_PRIVATE_KEY ??
         defaultPrivateKey) as Hex,
     );
+  }
+
+  get playerAddress(): Hex {
+    return this.walletClient.account.address;
   }
 
   async getPlayer(): Promise<PlayerSnapshot | undefined> {

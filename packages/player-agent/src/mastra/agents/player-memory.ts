@@ -1,5 +1,8 @@
 import { Memory } from '@mastra/memory';
 import type { ForageExpeditionResult } from '../pantheon/mud-client';
+import { PantheonInftClient } from '../inft/inft-client';
+import { writeAgentMemoryDelta } from '../inft/memory-writer';
+import { isZeroGStorageConfigured } from '../zerog/storage';
 
 const recentExpeditionLimit = 8;
 const terrainLearningLimit = 12;
@@ -37,37 +40,169 @@ export const playerAgentMemory = new Memory({
 export type ExpeditionMemoryContext = {
   threadId?: string;
   resourceId?: string;
+  action?: string;
+  turnId?: string;
 };
 
 export async function rememberForageExpedition(
   result: ForageExpeditionResult,
   context: ExpeditionMemoryContext | undefined,
-): Promise<{ stored: boolean; note?: string; reason?: string }> {
+): Promise<{
+  stored: boolean;
+  note?: string;
+  reason?: string;
+  inft?: {
+    stored: boolean;
+    uri?: string;
+    rootHash?: `0x${string}`;
+    txHash?: `0x${string}`;
+    intelligentData?: {
+      description: string;
+      dataHash: `0x${string}`;
+      txHash?: `0x${string}`;
+      updated: boolean;
+      reason?: string;
+    };
+    reason?: string;
+  };
+}> {
   const threadId = context?.threadId;
   const resourceId = context?.resourceId;
+  const note = formatExpeditionNote(result);
+  const inft = await attachMemoryToInft(result, context, note);
 
   if (!threadId || !resourceId) {
     return {
       stored: false,
       reason: 'Missing Mastra memory thread/resource id.',
+      note,
+      inft,
     };
   }
 
-  const existing =
-    (await playerAgentMemory.getWorkingMemory({
+  try {
+    const existing =
+      (await playerAgentMemory.getWorkingMemory({
+        threadId,
+        resourceId,
+      })) ?? '';
+    const workingMemory = buildWorkingMemory(existing, result, note);
+
+    await playerAgentMemory.updateWorkingMemory({
       threadId,
       resourceId,
-    })) ?? '';
-  const note = formatExpeditionNote(result);
-  const workingMemory = buildWorkingMemory(existing, result, note);
+      workingMemory,
+    });
+  } catch (error) {
+    return {
+      stored: false,
+      reason: `Mastra working memory unavailable: ${formatError(error)}`,
+      note,
+      inft,
+    };
+  }
 
-  await playerAgentMemory.updateWorkingMemory({
-    threadId,
-    resourceId,
-    workingMemory,
-  });
+  return {
+    stored: true,
+    note,
+    inft,
+  };
+}
 
-  return { stored: true, note };
+async function attachMemoryToInft(
+  result: ForageExpeditionResult,
+  context: ExpeditionMemoryContext | undefined,
+  note: string,
+): Promise<{
+  stored: boolean;
+  uri?: string;
+  rootHash?: `0x${string}`;
+  txHash?: `0x${string}`;
+  intelligentData?: {
+    description: string;
+    dataHash: `0x${string}`;
+    txHash?: `0x${string}`;
+    updated: boolean;
+    reason?: string;
+  };
+  reason?: string;
+}> {
+  if (!isInftMemoryEnabled()) {
+    return {
+      stored: false,
+      reason: 'INFT memory upload is not configured.',
+    };
+  }
+
+  try {
+    const client = PantheonInftClient.fromEnv();
+    const ownerClient = process.env.AGENT_OWNER_PRIVATE_KEY?.trim()
+      ? PantheonInftClient.fromEnv({ privateKeyEnv: 'AGENT_OWNER_PRIVATE_KEY' })
+      : undefined;
+    const write = await writeAgentMemoryDelta(client, {
+      turnId: context?.turnId ?? createTurnId(result),
+      action: context?.action ?? 'economic-cycle',
+      intelligentDataClient: ownerClient,
+      summary: result.summary,
+      observations: result.forages.map((forage) => ({
+        kind: 'forage',
+        terrainId: forage.terrainId,
+        itemId: forage.itemId,
+        amount: forage.amount,
+        x: forage.x,
+        y: forage.y,
+      })),
+      metadata: {
+        note,
+        status: result.status,
+        actions: result.actions,
+        tilesConsidered: result.tilesConsidered,
+        player: result.player
+          ? {
+              x: result.player.x,
+              y: result.player.y,
+              energy: result.player.energy,
+              maxEnergy: result.player.maxEnergy,
+              pendingAction: result.player.pendingAction,
+            }
+          : undefined,
+        threadId: context?.threadId,
+        resourceId: context?.resourceId,
+      },
+    });
+
+    return {
+      stored: true,
+      uri: write.encryptedDeltaURI,
+      rootHash: write.storage?.rootHash,
+      txHash: write.txHash,
+      intelligentData: write.intelligentData,
+    };
+  } catch (error) {
+    return {
+      stored: false,
+      reason: `INFT memory unavailable: ${formatError(error)}`,
+    };
+  }
+}
+
+function isInftMemoryEnabled(): boolean {
+  const configured =
+    Boolean(process.env.AGENT_INFT_ADDRESS?.trim()) &&
+    Boolean(process.env.AGENT_TOKEN_ID?.trim()) &&
+    isZeroGStorageConfigured();
+  const value = process.env.AGENT_MEMORY_0G_ENABLED?.trim().toLowerCase();
+
+  if (!value) return configured;
+
+  return ['1', 'true', 'yes', 'on'].includes(value);
+}
+
+function createTurnId(result: ForageExpeditionResult): string {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const position = result.player ? `${result.player.x}-${result.player.y}` : 'unknown';
+
+  return `${stamp}-${result.status}-${position}`;
 }
 
 function buildWorkingMemory(
@@ -212,4 +347,8 @@ function limitLines(lines: string[], limit: number): string[] {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
